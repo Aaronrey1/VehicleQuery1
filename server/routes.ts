@@ -233,26 +233,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Handle CSV
       if (req.file.mimetype === 'text/csv' || req.file.originalname.endsWith('.csv')) {
-        const csvData = await new Promise<any[]>((resolve, reject) => {
+        vehicleData = await new Promise<any[]>((resolve, reject) => {
           const results: any[] = [];
           const stream = Readable.from(req.file!.buffer.toString());
           
           stream
             .pipe(csv({
-              mapHeaders: ({ header }: { header: string }) => header.trim().toLowerCase()
+              mapHeaders: ({ header }) => header.trim().toLowerCase()
             }))
-            .on('data', (data) => {
-              // Trim all values
-              const trimmedData: any = {};
-              for (const key in data) {
-                trimmedData[key] = typeof data[key] === 'string' ? data[key].trim() : data[key];
-              }
-              results.push(trimmedData);
-            })
+            .on('data', (data) => results.push(data))
             .on('end', () => resolve(results))
             .on('error', reject);
         });
-        vehicleData = csvData;
       }
       // Handle JSON
       else if (req.file.mimetype === 'application/json' || req.file.originalname.endsWith('.json')) {

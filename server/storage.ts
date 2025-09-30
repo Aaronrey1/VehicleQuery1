@@ -114,11 +114,20 @@ export class DatabaseStorage implements IStorage {
   async createVehicles(vehicleData: InsertVehicle[]): Promise<Vehicle[]> {
     if (vehicleData.length === 0) return [];
     
-    const createdVehicles = await db
-      .insert(vehicles)
-      .values(vehicleData)
-      .returning();
-    return createdVehicles;
+    // Insert in batches to avoid stack overflow with large datasets
+    const batchSize = 1000;
+    const allCreatedVehicles: Vehicle[] = [];
+    
+    for (let i = 0; i < vehicleData.length; i += batchSize) {
+      const batch = vehicleData.slice(i, i + batchSize);
+      const createdVehicles = await db
+        .insert(vehicles)
+        .values(batch)
+        .returning();
+      allCreatedVehicles.push(...createdVehicles);
+    }
+    
+    return allCreatedVehicles;
   }
 
   async getMakes(): Promise<string[]> {
