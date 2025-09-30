@@ -10,6 +10,22 @@ import { Readable } from "stream";
 const upload = multer({ storage: multer.memoryStorage() });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth endpoint for admin password verification
+  app.post("/api/auth/verify", async (req, res) => {
+    try {
+      const { password } = req.body;
+      const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+      
+      if (password === adminPassword) {
+        res.json({ success: true });
+      } else {
+        res.status(401).json({ success: false, message: "Invalid password" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Authentication error" });
+    }
+  });
+
   // Bulk search vehicles
   app.post("/api/vehicles/bulk-search", async (req, res) => {
     try {

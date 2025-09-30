@@ -4,13 +4,28 @@ import DataImport from "@/components/data-import";
 import AnalyticsDashboard from "@/components/analytics-dashboard";
 import BulkSearch from "@/components/bulk-search";
 import AdminPanel from "@/components/admin-panel";
-import { Car, Upload, BarChart3, Menu, List, Settings } from "lucide-react";
+import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth-context";
+import { useLocation } from "wouter";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState("search");
   const [searchParams, setSearchParams] = useState<{ make?: string; model?: string; year?: number; deviceType?: string; portType?: string }>({});
+  const { isAuthenticated, logout } = useAuth();
+  const [, setLocation] = useLocation();
+
+  const handleProtectedSection = (section: string) => {
+    if (section === "admin" || section === "manage") {
+      if (!isAuthenticated) {
+        setLocation("/login");
+        return;
+      }
+    }
+    setActiveSection(section);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -42,13 +57,14 @@ export default function Home() {
                 Bulk Search
               </button>
               <button
-                onClick={() => setActiveSection("manage")}
-                className={`transition-colors ${
+                onClick={() => handleProtectedSection("manage")}
+                className={`transition-colors flex items-center gap-1 ${
                   activeSection === "manage" ? "text-primary" : "text-muted-foreground hover:text-primary"
                 }`}
                 data-testid="nav-manage"
               >
                 Manage Data
+                {!isAuthenticated && <Lock className="h-3 w-3" />}
               </button>
               <button
                 onClick={() => setActiveSection("analytics")}
@@ -60,22 +76,36 @@ export default function Home() {
                 Analytics
               </button>
               <button
-                onClick={() => setActiveSection("admin")}
-                className={`transition-colors ${
+                onClick={() => handleProtectedSection("admin")}
+                className={`transition-colors flex items-center gap-1 ${
                   activeSection === "admin" ? "text-primary" : "text-muted-foreground hover:text-primary"
                 }`}
                 data-testid="nav-admin"
               >
                 Admin
+                {!isAuthenticated && <Lock className="h-3 w-3" />}
               </button>
-              <Button
-                onClick={() => setActiveSection("manage")}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-                data-testid="button-import"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Import Data
-              </Button>
+              {isAuthenticated ? (
+                <Button
+                  onClick={logout}
+                  variant="outline"
+                  size="sm"
+                  data-testid="button-logout"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => setLocation("/login")}
+                  variant="outline"
+                  size="sm"
+                  data-testid="button-login"
+                >
+                  <Lock className="mr-2 h-4 w-4" />
+                  Login
+                </Button>
+              )}
             </nav>
             <Button variant="ghost" className="md:hidden" data-testid="button-menu">
               <Menu className="text-xl" />
