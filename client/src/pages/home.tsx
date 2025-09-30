@@ -2,13 +2,14 @@ import VehicleSearch from "@/components/vehicle-search";
 import SearchResults from "@/components/search-results";
 import DataImport from "@/components/data-import";
 import AnalyticsDashboard from "@/components/analytics-dashboard";
-import { Car, Upload, BarChart3, Menu } from "lucide-react";
+import BulkSearch from "@/components/bulk-search";
+import { Car, Upload, BarChart3, Menu, List } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState("search");
-  const [searchParams, setSearchParams] = useState<{ make?: string; model?: string; year?: number }>({});
+  const [searchParams, setSearchParams] = useState<{ make?: string; model?: string; year?: number; deviceType?: string; portType?: string }>({});
 
   return (
     <div className="min-h-screen bg-background">
@@ -29,6 +30,15 @@ export default function Home() {
                 data-testid="nav-search"
               >
                 Search
+              </button>
+              <button
+                onClick={() => setActiveSection("bulk")}
+                className={`transition-colors ${
+                  activeSection === "bulk" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                }`}
+                data-testid="nav-bulk"
+              >
+                Bulk Search
               </button>
               <button
                 onClick={() => setActiveSection("manage")}
@@ -72,6 +82,9 @@ export default function Home() {
             <SearchResults searchParams={searchParams} />
           </>
         )}
+
+        {/* Bulk Search Section */}
+        {activeSection === "bulk" && <BulkSearch />}
 
         {/* Data Management Section */}
         {activeSection === "manage" && <DataImport />}

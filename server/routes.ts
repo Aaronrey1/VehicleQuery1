@@ -10,6 +10,53 @@ import { Readable } from "stream";
 const upload = multer({ storage: multer.memoryStorage() });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Bulk search vehicles
+  app.post("/api/vehicles/bulk-search", async (req, res) => {
+    try {
+      const { queries } = req.body;
+      
+      if (!Array.isArray(queries) || queries.length === 0) {
+        return res.status(400).json({ message: "Invalid queries format" });
+      }
+
+      const allVehicles: any[] = [];
+
+      for (const query of queries) {
+        try {
+          // Validate each query
+          const validatedQuery = searchVehicleSchema.parse({
+            make: query.make,
+            model: query.model,
+            year: query.year
+          });
+
+          const searchParams = {
+            ...validatedQuery,
+            limit: 1000,
+            offset: 0,
+            sortBy: "make",
+            sortOrder: "asc" as 'asc' | 'desc'
+          };
+
+          const { vehicles } = await storage.searchVehicles(searchParams);
+          allVehicles.push(...vehicles);
+        } catch (validationError) {
+          // Skip invalid queries
+          console.warn("Skipping invalid query:", query, validationError);
+        }
+      }
+
+      // Return consistent response shape
+      res.json({
+        vehicles: allVehicles,
+        total: allVehicles.length
+      });
+    } catch (error) {
+      console.error("Bulk search error:", error);
+      res.status(500).json({ message: "Failed to perform bulk search" });
+    }
+  });
+
   // Search vehicles
   app.get("/api/vehicles/search", async (req, res) => {
     try {
