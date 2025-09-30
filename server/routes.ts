@@ -253,6 +253,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Unsupported file format. Please use CSV or JSON." });
       }
 
+      // Debug: Log first row to see what we're getting
+      if (vehicleData.length > 0) {
+        console.log("First row keys:", Object.keys(vehicleData[0]));
+        console.log("First row data:", vehicleData[0]);
+      }
+
       // Validate and transform data
       const validVehicles = [];
       const errors = [];
