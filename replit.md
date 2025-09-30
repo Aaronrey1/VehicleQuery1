@@ -29,11 +29,13 @@ Preferred communication style: Simple, everyday language.
 - Local component state for UI interactions
 
 **Key Pages & Components**
-- Home page with tabbed navigation (Search, Manage Data, Analytics)
-- VehicleSearch component for filtering vehicles by make/model/year with cascading dropdowns
-- SearchResults component with pagination, sorting, and export functionality
+- Home page with tabbed navigation (Search, Bulk Search, Manage Data, Analytics, Admin)
+- VehicleSearch component for filtering vehicles by make/model/year with cascading dropdowns and advanced filtering
+- SearchResults component with pagination, sorting, and export functionality (CSV)
+- BulkSearch component for searching multiple vehicles simultaneously
 - DataImport component for CSV file uploads with validation options
 - AnalyticsDashboard for database statistics and insights
+- AdminPanel component for CRUD operations on individual vehicle records
 
 ### Backend Architecture
 
@@ -48,12 +50,19 @@ Preferred communication style: Simple, everyday language.
 - Storage layer abstraction via `IStorage` interface in `server/storage.ts`
 
 **Key API Endpoints**
-- GET `/api/vehicles/search` - Search vehicles with pagination and sorting
+- GET `/api/vehicles/search` - Search vehicles with pagination, sorting, and filtering (device type, port type)
+- GET `/api/vehicles/:id` - Get single vehicle by ID
+- POST `/api/vehicles` - Create new vehicle with validation
+- PATCH `/api/vehicles/:id` - Update vehicle (partial updates)
+- DELETE `/api/vehicles/:id` - Delete single vehicle
+- POST `/api/vehicles/bulk-search` - Search multiple vehicles simultaneously
 - GET `/api/vehicles/stats` - Retrieve database statistics
 - GET `/api/vehicles/makes` - Get list of unique makes
 - GET `/api/vehicles/models` - Get models filtered by make
 - GET `/api/vehicles/years` - Get years filtered by make and model
-- POST `/api/vehicles/import` - Import vehicles from CSV (uses Multer for file handling)
+- GET `/api/vehicles/device-types` - Get list of unique device types
+- GET `/api/vehicles/port-types` - Get list of unique port types
+- POST `/api/vehicles/import` - Import vehicles from CSV/JSON (uses Multer for file handling)
 - DELETE `/api/vehicles` - Clear all vehicle data
 
 ### Data Storage
@@ -70,7 +79,7 @@ Preferred communication style: Simple, everyday language.
 
 **Database Schema**
 - `vehicles` table with columns: id (UUID), make, model, year, deviceType, portType
-- Indexes on make, model, year, and composite index on make+model+year for query optimization
+  - Indexes on make, model, year, and composite index on make+model+year for query optimization
 - `users` table for authentication (id, username, password)
 
 **Data Validation**
