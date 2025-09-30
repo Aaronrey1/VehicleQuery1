@@ -9,6 +9,15 @@ import { Readable } from "stream";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Authentication middleware
+function requireAuth(req: any, res: any, next: any) {
+  if (req.session && req.session.isAuthenticated) {
+    next();
+  } else {
+    res.status(401).json({ message: "Authentication required" });
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth endpoint for admin password verification
   app.post("/api/auth/verify", async (req, res) => {
@@ -17,6 +26,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
       
       if (password === adminPassword) {
+        req.session.isAuthenticated = true;
         res.json({ success: true });
       } else {
         res.status(401).json({ success: false, message: "Invalid password" });
@@ -24,6 +34,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ message: "Authentication error" });
     }
+  });
+
+  // Check authentication status
+  app.get("/api/auth/status", async (req, res) => {
+    res.json({ isAuthenticated: req.session?.isAuthenticated || false });
+  });
+
+  // Logout endpoint
+  app.post("/api/auth/logout", async (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        res.status(500).json({ message: "Logout failed" });
+      } else {
+        res.json({ success: true });
+      }
+    });
   });
 
   // Bulk search vehicles
@@ -183,8 +209,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a new vehicle
-  app.post("/api/vehicles", async (req, res) => {
+  // Create a new vehicle (protected)
+  app.post("/api/vehicles", requireAuth, async (req, res) => {
     try {
       const validatedVehicle = insertVehicleSchema.parse(req.body);
       const createdVehicle = await storage.createVehicle(validatedVehicle);
@@ -198,8 +224,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update a vehicle
-  app.patch("/api/vehicles/:id", async (req, res) => {
+  // Update a vehicle (protected)
+  app.patch("/api/vehicles/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const validatedVehicle = insertVehicleSchema.partial().parse(req.body);
@@ -219,8 +245,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a vehicle
-  app.delete("/api/vehicles/:id", async (req, res) => {
+  // Delete a vehicle (protected)
+  app.delete("/api/vehicles/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const vehicle = await storage.getVehicleById(id);
@@ -237,8 +263,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Import vehicles from CSV/JSON
-  app.post("/api/vehicles/import", upload.single('file'), async (req, res) => {
+  // Import vehicles from CSV/JSON (protected)
+  app.post("/api/vehicles/import", requireAuth, upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -374,8 +400,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Clear all vehicles
-  app.delete("/api/vehicles", async (req, res) => {
+  // Clear all vehicles (protected)
+  app.delete("/api/vehicles", requireAuth, async (req, res) => {
     try {
       await storage.deleteAllVehicles();
       res.json({ message: "All vehicles deleted successfully" });
