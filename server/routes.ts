@@ -238,8 +238,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const stream = Readable.from(req.file!.buffer.toString());
           
           stream
-            .pipe(csv())
-            .on('data', (data) => results.push(data))
+            .pipe(csv({
+              mapHeaders: ({ header }: { header: string }) => header.trim().toLowerCase()
+            }))
+            .on('data', (data) => {
+              // Trim all values
+              const trimmedData: any = {};
+              for (const key in data) {
+                trimmedData[key] = typeof data[key] === 'string' ? data[key].trim() : data[key];
+              }
+              results.push(trimmedData);
+            })
             .on('end', () => resolve(results))
             .on('error', reject);
         });
@@ -266,28 +275,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let i = 0; i < vehicleData.length; i++) {
         const row = vehicleData[i];
         try {
-          // Normalize all keys by trimming whitespace
-          const normalizedKeys: any = {};
-          for (const key in row) {
-            const trimmedKey = key.trim().toLowerCase().replace(/\s+/g, '_');
-            normalizedKeys[trimmedKey] = typeof row[key] === 'string' ? row[key].trim() : row[key];
-          }
-          
-          // Extract values with normalized keys
-          const make = normalizedKeys.make || normalizedKeys.Make || row.make || row.Make;
-          const model = normalizedKeys.model || normalizedKeys.Model || row.model || row.Model;
-          const yearStr = normalizedKeys.year || normalizedKeys.Year || row.year || row.Year;
-          const deviceType = normalizedKeys.device_type || normalizedKeys.devicetype || normalizedKeys['device_type'] || row.device_type || row.deviceType || row['Device Type'];
-          const portType = normalizedKeys.port_type || normalizedKeys.porttype || normalizedKeys['port_type'] || row.port_type || row.portType || row['Port Type'];
+          // Extract values (keys are already normalized to lowercase by csv parser)
+          const make = row.make || row.Make;
+          const model = row.model || row.Model;
+          const yearStr = row.year || row.Year;
+          const deviceType = row.device_type || row.devicetype || row.deviceType || row['device type'];
+          const portType = row.port_type || row.porttype || row.portType || row['port type'];
           
           // Parse year
           const year = parseInt(yearStr);
           
-          if (!make || !model || !year || !deviceType || !portType) {
+          if (!make || !model || isNaN(year) || !deviceType || !portType) {
             throw new Error(`Missing required fields. Found: make=${make}, model=${model}, year=${year}, deviceType=${deviceType}, portType=${portType}`);
           }
           
-          // Normalize column names
+          // Normalize data
           const normalizedRow = {
             make: make,
             model: model,
