@@ -260,31 +260,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let i = 0; i < vehicleData.length; i++) {
         const row = vehicleData[i];
         try {
-          // Check if device_type and port_type are combined in one column
-          let deviceType = row.device_type || row.deviceType || row['Device Type'];
-          let portType = row.port_type || row.portType || row['Port Type'];
+          // Normalize all keys by trimming whitespace
+          const normalizedKeys: any = {};
+          for (const key in row) {
+            const trimmedKey = key.trim().toLowerCase().replace(/\s+/g, '_');
+            normalizedKeys[trimmedKey] = typeof row[key] === 'string' ? row[key].trim() : row[key];
+          }
           
-          // Handle merged device_type/port_type column (e.g., "DCM9702 Hardwired")
-          if (!deviceType && !portType) {
-            const combinedKey = Object.keys(row).find(k => 
-              k.includes('device') || k.includes('Device')
-            );
-            if (combinedKey && row[combinedKey]) {
-              const combined = String(row[combinedKey]);
-              // Try to split on common patterns
-              const parts = combined.split(/\s+/);
-              if (parts.length >= 2) {
-                deviceType = parts[0]; // First part is device type
-                portType = parts.slice(1).join(' '); // Rest is port type
-              }
-            }
+          // Extract values with normalized keys
+          const make = normalizedKeys.make || normalizedKeys.Make || row.make || row.Make;
+          const model = normalizedKeys.model || normalizedKeys.Model || row.model || row.Model;
+          const yearStr = normalizedKeys.year || normalizedKeys.Year || row.year || row.Year;
+          const deviceType = normalizedKeys.device_type || normalizedKeys.devicetype || normalizedKeys['device_type'] || row.device_type || row.deviceType || row['Device Type'];
+          const portType = normalizedKeys.port_type || normalizedKeys.porttype || normalizedKeys['port_type'] || row.port_type || row.portType || row['Port Type'];
+          
+          // Parse year
+          const year = parseInt(yearStr);
+          
+          if (!make || !model || !year || !deviceType || !portType) {
+            throw new Error(`Missing required fields. Found: make=${make}, model=${model}, year=${year}, deviceType=${deviceType}, portType=${portType}`);
           }
           
           // Normalize column names
           const normalizedRow = {
-            make: row.make || row.Make,
-            model: row.model || row.Model,
-            year: parseInt(row.year || row.Year),
+            make: make,
+            model: model,
+            year: year,
             deviceType: deviceType,
             portType: portType
           };
