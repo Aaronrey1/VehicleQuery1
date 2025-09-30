@@ -25,6 +25,8 @@ export interface IStorage {
   }>;
   getDeviceTypes(): Promise<string[]>;
   getPortTypes(): Promise<string[]>;
+  updateVehicle(id: string, vehicle: Partial<InsertVehicle>): Promise<Vehicle | undefined>;
+  deleteVehicle(id: string): Promise<void>;
   deleteAllVehicles(): Promise<void>;
 }
 
@@ -189,6 +191,19 @@ export class DatabaseStorage implements IStorage {
       .from(vehicles)
       .orderBy(asc(vehicles.portType));
     return results.map(r => r.portType);
+  }
+
+  async updateVehicle(id: string, vehicleData: Partial<InsertVehicle>): Promise<Vehicle | undefined> {
+    const [updatedVehicle] = await db
+      .update(vehicles)
+      .set(vehicleData)
+      .where(eq(vehicles.id, id))
+      .returning();
+    return updatedVehicle || undefined;
+  }
+
+  async deleteVehicle(id: string): Promise<void> {
+    await db.delete(vehicles).where(eq(vehicles.id, id));
   }
 
   async deleteAllVehicles(): Promise<void> {

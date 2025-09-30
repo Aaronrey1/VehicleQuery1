@@ -150,6 +150,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get vehicle by ID
+  app.get("/api/vehicles/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const vehicle = await storage.getVehicleById(id);
+      
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      
+      res.json(vehicle);
+    } catch (error) {
+      console.error("Get vehicle error:", error);
+      res.status(500).json({ message: "Failed to get vehicle" });
+    }
+  });
+
+  // Create a new vehicle
+  app.post("/api/vehicles", async (req, res) => {
+    try {
+      const validatedVehicle = insertVehicleSchema.parse(req.body);
+      const createdVehicle = await storage.createVehicle(validatedVehicle);
+      res.status(201).json(createdVehicle);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid vehicle data", errors: error.errors });
+      }
+      console.error("Create vehicle error:", error);
+      res.status(500).json({ message: "Failed to create vehicle" });
+    }
+  });
+
+  // Update a vehicle
+  app.patch("/api/vehicles/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedVehicle = insertVehicleSchema.partial().parse(req.body);
+      const updatedVehicle = await storage.updateVehicle(id, validatedVehicle);
+      
+      if (!updatedVehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      
+      res.json(updatedVehicle);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid vehicle data", errors: error.errors });
+      }
+      console.error("Update vehicle error:", error);
+      res.status(500).json({ message: "Failed to update vehicle" });
+    }
+  });
+
+  // Delete a vehicle
+  app.delete("/api/vehicles/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const vehicle = await storage.getVehicleById(id);
+      
+      if (!vehicle) {
+        return res.status(404).json({ message: "Vehicle not found" });
+      }
+      
+      await storage.deleteVehicle(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Delete vehicle error:", error);
+      res.status(500).json({ message: "Failed to delete vehicle" });
+    }
+  });
+
   // Import vehicles from CSV/JSON
   app.post("/api/vehicles/import", upload.single('file'), async (req, res) => {
     try {

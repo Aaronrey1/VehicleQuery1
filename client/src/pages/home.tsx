@@ -3,7 +3,8 @@ import SearchResults from "@/components/search-results";
 import DataImport from "@/components/data-import";
 import AnalyticsDashboard from "@/components/analytics-dashboard";
 import BulkSearch from "@/components/bulk-search";
-import { Car, Upload, BarChart3, Menu, List } from "lucide-react";
+import AdminPanel from "@/components/admin-panel";
+import { Car, Upload, BarChart3, Menu, List, Settings } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -58,6 +59,15 @@ export default function Home() {
               >
                 Analytics
               </button>
+              <button
+                onClick={() => setActiveSection("admin")}
+                className={`transition-colors ${
+                  activeSection === "admin" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                }`}
+                data-testid="nav-admin"
+              >
+                Admin
+              </button>
               <Button
                 onClick={() => setActiveSection("manage")}
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
@@ -91,6 +101,9 @@ export default function Home() {
 
         {/* Analytics Section */}
         {activeSection === "analytics" && <AnalyticsDashboard />}
+
+        {/* Admin Section */}
+        {activeSection === "admin" && <AdminPanel />}
       </main>
 
       {/* Footer */}
