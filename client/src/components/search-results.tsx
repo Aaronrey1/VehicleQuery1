@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,27 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const limit = 10;
 
+  // Reset page when search params change
+  useEffect(() => {
+    setPage(1);
+  }, [searchParams.make, searchParams.model, searchParams.year]);
+
   const { data: searchResults, isLoading } = useQuery<SearchResults>({
-    queryKey: ["/api/vehicles/search", { ...searchParams, page, limit, sortBy, sortOrder }],
+    queryKey: ["/api/vehicles/search", searchParams, page, limit, sortBy, sortOrder],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (searchParams.make) params.append("make", searchParams.make);
+      if (searchParams.model) params.append("model", searchParams.model);
+      if (searchParams.year) params.append("year", searchParams.year.toString());
+      params.append("page", page.toString());
+      params.append("limit", limit.toString());
+      params.append("sortBy", sortBy);
+      params.append("sortOrder", sortOrder);
+      
+      const response = await fetch(`/api/vehicles/search?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch search results");
+      return response.json();
+    },
     enabled: !!(searchParams.make || searchParams.model || searchParams.year),
   });
 
