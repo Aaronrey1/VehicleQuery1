@@ -61,7 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bulk search vehicles
   app.post("/api/vehicles/bulk-search", async (req, res) => {
     try {
-      const { queries } = req.body;
+      const { queries, oneToOne = false } = req.body;
       
       if (!Array.isArray(queries) || queries.length === 0) {
         return res.status(400).json({ message: "Invalid queries format" });
@@ -80,14 +80,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const searchParams = {
             ...validatedQuery,
-            limit: 1000,
+            limit: oneToOne ? 1 : 1000, // Limit to 1 result in 1-to-1 mode
             offset: 0,
             sortBy: "make",
             sortOrder: "asc" as 'asc' | 'desc'
           };
 
           const { vehicles } = await storage.searchVehicles(searchParams);
-          allVehicles.push(...vehicles);
+          
+          if (oneToOne && vehicles.length > 0) {
+            // In 1-to-1 mode, only take the first result
+            allVehicles.push(vehicles[0]);
+          } else {
+            // In all-results mode, add all matches
+            allVehicles.push(...vehicles);
+          }
         } catch (validationError) {
           // Skip invalid queries
           console.warn("Skipping invalid query:", query, validationError);

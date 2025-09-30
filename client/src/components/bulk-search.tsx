@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Search, Upload, Download, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -14,12 +16,16 @@ export default function BulkSearch() {
   const [inputText, setInputText] = useState("");
   const [results, setResults] = useState<Vehicle[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [oneToOneMode, setOneToOneMode] = useState(true);
   const { toast } = useToast();
 
   // Bulk search mutation
   const bulkSearchMutation = useMutation({
     mutationFn: async (queries: Array<{ make: string; model: string; year: number }>) => {
-      const response = await apiRequest("POST", "/api/vehicles/bulk-search", { queries });
+      const response = await apiRequest("POST", "/api/vehicles/bulk-search", { 
+        queries,
+        oneToOne: oneToOneMode 
+      });
       const data: SearchResults = await response.json();
       return data;
     },
@@ -154,6 +160,23 @@ export default function BulkSearch() {
             <p className="text-xs text-muted-foreground mt-2">
               Supported formats: comma-separated, space-separated, or tab-separated
             </p>
+          </div>
+
+          <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg">
+            <Switch
+              id="one-to-one-mode"
+              checked={oneToOneMode}
+              onCheckedChange={setOneToOneMode}
+              data-testid="switch-one-to-one"
+            />
+            <Label htmlFor="one-to-one-mode" className="text-sm cursor-pointer">
+              <span className="font-medium">1-to-1 Lookup</span>
+              <span className="text-muted-foreground block text-xs">
+                {oneToOneMode 
+                  ? "Returns one result per vehicle (recommended)" 
+                  : "Returns all matching results"}
+              </span>
+            </Label>
           </div>
 
           <div className="flex items-center space-x-3">
