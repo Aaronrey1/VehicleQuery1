@@ -260,13 +260,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let i = 0; i < vehicleData.length; i++) {
         const row = vehicleData[i];
         try {
+          // Check if device_type and port_type are combined in one column
+          let deviceType = row.device_type || row.deviceType || row['Device Type'];
+          let portType = row.port_type || row.portType || row['Port Type'];
+          
+          // Handle merged device_type/port_type column (e.g., "DCM9702 Hardwired")
+          if (!deviceType && !portType) {
+            const combinedKey = Object.keys(row).find(k => 
+              k.includes('device') || k.includes('Device')
+            );
+            if (combinedKey && row[combinedKey]) {
+              const combined = String(row[combinedKey]);
+              // Try to split on common patterns
+              const parts = combined.split(/\s+/);
+              if (parts.length >= 2) {
+                deviceType = parts[0]; // First part is device type
+                portType = parts.slice(1).join(' '); // Rest is port type
+              }
+            }
+          }
+          
           // Normalize column names
           const normalizedRow = {
             make: row.make || row.Make,
             model: row.model || row.Model,
             year: parseInt(row.year || row.Year),
-            deviceType: row.device_type || row.deviceType || row['Device Type'],
-            portType: row.port_type || row.portType || row['Port Type']
+            deviceType: deviceType,
+            portType: portType
           };
 
           const validVehicle = insertVehicleSchema.parse(normalizedRow);
