@@ -30,10 +30,21 @@ export default function DataImport() {
       return response.json();
     },
     onSuccess: (data) => {
+      const errorMessage = data.errors > 0 && data.errorDetails 
+        ? `First error: ${data.errorDetails[0]?.error || 'Unknown error'} (Row ${data.errorDetails[0]?.row || '?'})`
+        : '';
+      
       toast({
-        title: "Import Completed",
-        description: `Successfully imported ${data.imported} vehicles. ${data.errors} errors encountered.`,
+        title: data.imported > 0 ? "Import Completed" : "Import Failed",
+        description: `Successfully imported ${data.imported} vehicles. ${data.errors} errors encountered. ${errorMessage}`,
+        variant: data.imported === 0 && data.errors > 0 ? "destructive" : "default",
       });
+      
+      // Log all error details to console for debugging
+      if (data.errorDetails && data.errorDetails.length > 0) {
+        console.log("Import errors:", data.errorDetails);
+      }
+      
       // Invalidate all vehicle-related queries
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles/makes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles/models"] });
