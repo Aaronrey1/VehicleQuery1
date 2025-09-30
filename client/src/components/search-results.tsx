@@ -54,7 +54,14 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
   };
 
   const handleExport = () => {
-    window.open("/api/vehicles/export", "_blank");
+    const params = new URLSearchParams();
+    if (searchParams.make) params.append("make", searchParams.make);
+    if (searchParams.model) params.append("model", searchParams.model);
+    if (searchParams.year) params.append("year", searchParams.year.toString());
+    if (searchParams.deviceType) params.append("deviceType", searchParams.deviceType);
+    if (searchParams.portType) params.append("portType", searchParams.portType);
+    
+    window.open(`/api/vehicles/export?${params.toString()}`, "_blank");
   };
 
   const getDeviceTypeColor = (deviceType: string) => {

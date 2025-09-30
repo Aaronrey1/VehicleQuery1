@@ -176,20 +176,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export vehicles
+  // Export vehicles (with optional filters)
   app.get("/api/vehicles/export", async (req, res) => {
     try {
-      const { vehicles } = await storage.searchVehicles({ limit: 100000, offset: 0 });
+      const { make, model, year, deviceType, portType } = req.query;
+      
+      const searchParams = {
+        make: make as string,
+        model: model as string,
+        year: year ? parseInt(year as string) : undefined,
+        deviceType: deviceType as string,
+        portType: portType as string,
+        limit: 100000,
+        offset: 0,
+        sortBy: "make",
+        sortOrder: "asc" as 'asc' | 'desc'
+      };
+      
+      const { vehicles } = await storage.searchVehicles(searchParams);
       
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename=vehicles.csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=vehicles-export.csv');
       
       // CSV header
       res.write('make,model,year,device_type,port_type\n');
       
       // CSV data
       for (const vehicle of vehicles) {
-        res.write(`${vehicle.make},${vehicle.model},${vehicle.year},${vehicle.deviceType},${vehicle.portType}\n`);
+        // Escape values that might contain commas
+        const escapeCsv = (val: string | number) => {
+          const str = String(val);
+          return str.includes(',') || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
+        };
+        
+        res.write(`${escapeCsv(vehicle.make)},${escapeCsv(vehicle.model)},${vehicle.year},${escapeCsv(vehicle.deviceType)},${escapeCsv(vehicle.portType)}\n`);
       }
       
       res.end();
