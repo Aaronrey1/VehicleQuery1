@@ -40,7 +40,6 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
       if (!response.ok) throw new Error("Failed to fetch search results");
       return response.json();
     },
-    enabled: !!(searchParams.make || searchParams.model || searchParams.year || searchParams.deviceType || searchParams.portType),
   });
 
   const handleSort = (column: string) => {
@@ -90,18 +89,6 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
       </div>
     );
   };
-
-  if (!searchParams.make && !searchParams.model && !searchParams.year && !searchParams.deviceType && !searchParams.portType) {
-    return (
-      <Card>
-        <CardContent className="p-12 text-center">
-          <div className="text-muted-foreground">
-            Select search criteria above to view results
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <section className="mb-12">
