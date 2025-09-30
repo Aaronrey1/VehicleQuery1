@@ -26,8 +26,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
       
       if (password === adminPassword) {
-        req.session.isAuthenticated = true;
-        res.json({ success: true });
+        // Regenerate session to prevent session fixation attacks
+        req.session.regenerate((err) => {
+          if (err) {
+            return res.status(500).json({ message: "Session error" });
+          }
+          req.session.isAuthenticated = true;
+          res.json({ success: true });
+        });
       } else {
         res.status(401).json({ success: false, message: "Invalid password" });
       }
