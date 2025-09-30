@@ -8,7 +8,7 @@ import { ArrowUpDown, Download, CheckCircle, AlertTriangle } from "lucide-react"
 import type { Vehicle, SearchResults } from "@shared/schema";
 
 interface SearchResultsProps {
-  searchParams: { make?: string; model?: string; year?: number };
+  searchParams: { make?: string; model?: string; year?: number; deviceType?: string; portType?: string };
 }
 
 export default function SearchResults({ searchParams }: SearchResultsProps) {
@@ -20,7 +20,7 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
   // Reset page when search params change
   useEffect(() => {
     setPage(1);
-  }, [searchParams.make, searchParams.model, searchParams.year]);
+  }, [searchParams.make, searchParams.model, searchParams.year, searchParams.deviceType, searchParams.portType]);
 
   const { data: searchResults, isLoading } = useQuery<SearchResults>({
     queryKey: ["/api/vehicles/search", searchParams, page, limit, sortBy, sortOrder],
@@ -29,6 +29,8 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
       if (searchParams.make) params.append("make", searchParams.make);
       if (searchParams.model) params.append("model", searchParams.model);
       if (searchParams.year) params.append("year", searchParams.year.toString());
+      if (searchParams.deviceType) params.append("deviceType", searchParams.deviceType);
+      if (searchParams.portType) params.append("portType", searchParams.portType);
       params.append("page", page.toString());
       params.append("limit", limit.toString());
       params.append("sortBy", sortBy);
@@ -38,7 +40,7 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
       if (!response.ok) throw new Error("Failed to fetch search results");
       return response.json();
     },
-    enabled: !!(searchParams.make || searchParams.model || searchParams.year),
+    enabled: !!(searchParams.make || searchParams.model || searchParams.year || searchParams.deviceType || searchParams.portType),
   });
 
   const handleSort = (column: string) => {
@@ -82,7 +84,7 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
     );
   };
 
-  if (!searchParams.make && !searchParams.model && !searchParams.year) {
+  if (!searchParams.make && !searchParams.model && !searchParams.year && !searchParams.deviceType && !searchParams.portType) {
     return (
       <Card>
         <CardContent className="p-12 text-center">

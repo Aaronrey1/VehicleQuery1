@@ -25,6 +25,8 @@ export const searchVehicleSchema = z.object({
   make: z.string().optional(),
   model: z.string().optional(),
   year: z.number().optional(),
+  deviceType: z.string().optional(),
+  portType: z.string().optional(),
 });
 
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;

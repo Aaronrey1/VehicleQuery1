@@ -8,13 +8,16 @@ import { Search, ChevronDown, SlidersHorizontal } from "lucide-react";
 import type { VehicleStats } from "@shared/schema";
 
 interface VehicleSearchProps {
-  onSearch: (params: { make?: string; model?: string; year?: number }) => void;
+  onSearch: (params: { make?: string; model?: string; year?: number; deviceType?: string; portType?: string }) => void;
 }
 
 export default function VehicleSearch({ onSearch }: VehicleSearchProps) {
   const [selectedMake, setSelectedMake] = useState<string>("");
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>("");
+  const [selectedDeviceType, setSelectedDeviceType] = useState<string>("");
+  const [selectedPortType, setSelectedPortType] = useState<string>("");
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
 
   // Fetch makes
   const { data: makes = [] } = useQuery<string[]>({
@@ -31,6 +34,16 @@ export default function VehicleSearch({ onSearch }: VehicleSearchProps) {
   const { data: years = [] } = useQuery<number[]>({
     queryKey: ["/api/vehicles/years", selectedMake, selectedModel],
     enabled: !!selectedMake && !!selectedModel,
+  });
+
+  // Fetch device types
+  const { data: deviceTypes = [] } = useQuery<string[]>({
+    queryKey: ["/api/vehicles/device-types"],
+  });
+
+  // Fetch port types
+  const { data: portTypes = [] } = useQuery<string[]>({
+    queryKey: ["/api/vehicles/port-types"],
   });
 
   // Fetch vehicle stats
@@ -54,14 +67,18 @@ export default function VehicleSearch({ onSearch }: VehicleSearchProps) {
       make: selectedMake || undefined,
       model: selectedModel || undefined,
       year: selectedYear ? parseInt(selectedYear) : undefined,
+      deviceType: selectedDeviceType || undefined,
+      portType: selectedPortType || undefined,
     };
     onSearch(searchParams);
-  }, [selectedMake, selectedModel, selectedYear, onSearch]);
+  }, [selectedMake, selectedModel, selectedYear, selectedDeviceType, selectedPortType, onSearch]);
 
   const handleClearAll = () => {
     setSelectedMake("");
     setSelectedModel("");
     setSelectedYear("");
+    setSelectedDeviceType("");
+    setSelectedPortType("");
   };
 
   const handleSearch = () => {
@@ -69,6 +86,8 @@ export default function VehicleSearch({ onSearch }: VehicleSearchProps) {
       make: selectedMake || undefined,
       model: selectedModel || undefined,
       year: selectedYear ? parseInt(selectedYear) : undefined,
+      deviceType: selectedDeviceType || undefined,
+      portType: selectedPortType || undefined,
     };
     onSearch(searchParams);
   };
@@ -140,12 +159,60 @@ export default function VehicleSearch({ onSearch }: VehicleSearchProps) {
             </div>
 
             {/* Advanced Search Toggle */}
-            <div className="flex items-center justify-between pt-4 border-t border-border">
-              <Button type="button" variant="ghost" className="text-primary hover:text-primary/80 text-sm font-medium" data-testid="button-advanced">
+            <div className="pt-4 border-t border-border">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                className="text-primary hover:text-primary/80 text-sm font-medium mb-4" 
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                data-testid="button-advanced"
+              >
                 <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Advanced Search
+                {showAdvanced ? "Hide" : "Show"} Advanced Filters
+                <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
               </Button>
-              <div className="flex items-center space-x-3">
+
+              {/* Advanced Filters */}
+              {showAdvanced && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  {/* Device Type Dropdown */}
+                  <div className="space-y-2">
+                    <Label htmlFor="deviceType" className="text-sm font-medium text-foreground">Device Type</Label>
+                    <Select value={selectedDeviceType} onValueChange={setSelectedDeviceType}>
+                      <SelectTrigger data-testid="select-device-type">
+                        <SelectValue placeholder="All Device Types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {deviceTypes.map((deviceType: string) => (
+                          <SelectItem key={deviceType} value={deviceType} data-testid={`option-device-type-${deviceType.toLowerCase().replace(/\s+/g, '-')}`}>
+                            {deviceType}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Port Type Dropdown */}
+                  <div className="space-y-2">
+                    <Label htmlFor="portType" className="text-sm font-medium text-foreground">Port Type</Label>
+                    <Select value={selectedPortType} onValueChange={setSelectedPortType}>
+                      <SelectTrigger data-testid="select-port-type">
+                        <SelectValue placeholder="All Port Types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {portTypes.map((portType: string) => (
+                          <SelectItem key={portType} value={portType} data-testid={`option-port-type-${portType.toLowerCase().replace(/\s+/g, '-')}`}>
+                            {portType}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end space-x-3">
                 <Button type="button" variant="ghost" onClick={handleClearAll} data-testid="button-clear">
                   Clear All
                 </Button>

@@ -23,6 +23,8 @@ export interface IStorage {
     totalModels: number;
     deviceTypes: number;
   }>;
+  getDeviceTypes(): Promise<string[]>;
+  getPortTypes(): Promise<string[]>;
   deleteAllVehicles(): Promise<void>;
 }
 
@@ -43,7 +45,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchVehicles(params: SearchVehicle & { limit?: number; offset?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }): Promise<{ vehicles: Vehicle[], total: number }> {
-    const { make, model, year, limit = 50, offset = 0, sortBy = 'make', sortOrder = 'asc' } = params;
+    const { make, model, year, deviceType, portType, limit = 50, offset = 0, sortBy = 'make', sortOrder = 'asc' } = params;
     
     const conditions = [];
     if (make) {
@@ -54,6 +56,12 @@ export class DatabaseStorage implements IStorage {
     }
     if (year) {
       conditions.push(eq(vehicles.year, year));
+    }
+    if (deviceType) {
+      conditions.push(ilike(vehicles.deviceType, `%${deviceType}%`));
+    }
+    if (portType) {
+      conditions.push(ilike(vehicles.portType, `%${portType}%`));
     }
     
     const whereClause = conditions.length === 0 ? undefined : 
@@ -165,6 +173,22 @@ export class DatabaseStorage implements IStorage {
       totalModels: modelCount?.count || 0,
       deviceTypes: deviceTypeCount?.count || 0,
     };
+  }
+
+  async getDeviceTypes(): Promise<string[]> {
+    const results = await db
+      .selectDistinct({ deviceType: vehicles.deviceType })
+      .from(vehicles)
+      .orderBy(asc(vehicles.deviceType));
+    return results.map(r => r.deviceType);
+  }
+
+  async getPortTypes(): Promise<string[]> {
+    const results = await db
+      .selectDistinct({ portType: vehicles.portType })
+      .from(vehicles)
+      .orderBy(asc(vehicles.portType));
+    return results.map(r => r.portType);
   }
 
   async deleteAllVehicles(): Promise<void> {

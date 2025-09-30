@@ -13,12 +13,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Search vehicles
   app.get("/api/vehicles/search", async (req, res) => {
     try {
-      const { make, model, year, page = "1", limit = "50", sortBy = "make", sortOrder = "asc" } = req.query;
+      const { make, model, year, deviceType, portType, page = "1", limit = "50", sortBy = "make", sortOrder = "asc" } = req.query;
       
       const searchParams = {
         make: make as string,
         model: model as string,
         year: year ? parseInt(year as string) : undefined,
+        deviceType: deviceType as string,
+        portType: portType as string,
         limit: parseInt(limit as string),
         offset: (parseInt(page as string) - 1) * parseInt(limit as string),
         sortBy: sortBy as string,
@@ -76,6 +78,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Years error:", error);
       res.status(500).json({ message: "Failed to get years" });
+    }
+  });
+
+  // Get device types
+  app.get("/api/vehicles/device-types", async (req, res) => {
+    try {
+      const deviceTypes = await storage.getDeviceTypes();
+      res.json(deviceTypes);
+    } catch (error) {
+      console.error("Device types error:", error);
+      res.status(500).json({ message: "Failed to get device types" });
+    }
+  });
+
+  // Get port types
+  app.get("/api/vehicles/port-types", async (req, res) => {
+    try {
+      const portTypes = await storage.getPortTypes();
+      res.json(portTypes);
+    } catch (error) {
+      console.error("Port types error:", error);
+      res.status(500).json({ message: "Failed to get port types" });
     }
   });
 
