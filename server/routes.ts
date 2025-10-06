@@ -205,6 +205,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export vehicles (with optional filters)
+  app.get("/api/vehicles/export", async (req, res) => {
+    try {
+      const { make, model, year, deviceType, portType } = req.query;
+      
+      const searchParams = {
+        make: make as string,
+        model: model as string,
+        year: year ? parseInt(year as string) : undefined,
+        deviceType: deviceType as string,
+        portType: portType as string,
+        limit: 100000,
+        offset: 0,
+        sortBy: "make",
+        sortOrder: "asc" as 'asc' | 'desc'
+      };
+      
+      const { vehicles } = await storage.searchVehicles(searchParams);
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=vehicles-export.csv');
+      
+      // CSV header
+      res.write('make,model,year,device_type,port_type\n');
+      
+      // CSV data
+      for (const vehicle of vehicles) {
+        // Escape values that might contain commas
+        const escapeCsv = (val: string | number) => {
+          const str = String(val);
+          return str.includes(',') || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
+        };
+        
+        res.write(`${escapeCsv(vehicle.make)},${escapeCsv(vehicle.model)},${vehicle.year},${escapeCsv(vehicle.deviceType)},${escapeCsv(vehicle.portType)}\n`);
+      }
+      
+      res.end();
+    } catch (error) {
+      console.error("Export error:", error);
+      res.status(500).json({ message: "Failed to export vehicles" });
+    }
+  });
+
   // Get vehicle by ID
   app.get("/api/vehicles/:id", async (req, res) => {
     try {
@@ -367,49 +410,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Import error:", error);
       res.status(500).json({ message: "Failed to import vehicles" });
-    }
-  });
-
-  // Export vehicles (with optional filters)
-  app.get("/api/vehicles/export", async (req, res) => {
-    try {
-      const { make, model, year, deviceType, portType } = req.query;
-      
-      const searchParams = {
-        make: make as string,
-        model: model as string,
-        year: year ? parseInt(year as string) : undefined,
-        deviceType: deviceType as string,
-        portType: portType as string,
-        limit: 100000,
-        offset: 0,
-        sortBy: "make",
-        sortOrder: "asc" as 'asc' | 'desc'
-      };
-      
-      const { vehicles } = await storage.searchVehicles(searchParams);
-      
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename=vehicles-export.csv');
-      
-      // CSV header
-      res.write('make,model,year,device_type,port_type\n');
-      
-      // CSV data
-      for (const vehicle of vehicles) {
-        // Escape values that might contain commas
-        const escapeCsv = (val: string | number) => {
-          const str = String(val);
-          return str.includes(',') || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
-        };
-        
-        res.write(`${escapeCsv(vehicle.make)},${escapeCsv(vehicle.model)},${vehicle.year},${escapeCsv(vehicle.deviceType)},${escapeCsv(vehicle.portType)}\n`);
-      }
-      
-      res.end();
-    } catch (error) {
-      console.error("Export error:", error);
-      res.status(500).json({ message: "Failed to export vehicles" });
     }
   });
 
