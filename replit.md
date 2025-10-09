@@ -75,6 +75,8 @@ Harness Endpoints (Geometris):
 - GET `/api/harnesses/models/:make` - Get harness models for a specific make
 - GET `/api/harnesses/stats` - Retrieve harness database statistics
 - POST `/api/harnesses/import` - Import harnesses from CSV (requires authentication)
+- PATCH `/api/harnesses/:id` - Update individual harness record (requires authentication)
+- DELETE `/api/harnesses/:id` - Delete individual harness record (requires authentication)
 - DELETE `/api/harnesses` - Clear all harness data (requires authentication)
 
 ### Data Storage
