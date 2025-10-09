@@ -4,7 +4,8 @@ import DataImport from "@/components/data-import";
 import AnalyticsDashboard from "@/components/analytics-dashboard";
 import BulkSearch from "@/components/bulk-search";
 import AdminPanel from "@/components/admin-panel";
-import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut } from "lucide-react";
+import Geometris from "@/components/geometris";
+import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
@@ -67,6 +68,15 @@ export default function Home() {
                 {!isAuthenticated && <Lock className="h-3 w-3" />}
               </button>
               <button
+                onClick={() => setActiveSection("geometris")}
+                className={`transition-colors ${
+                  activeSection === "geometris" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                }`}
+                data-testid="nav-geometris"
+              >
+                Geometris
+              </button>
+              <button
                 onClick={() => setActiveSection("analytics")}
                 className={`transition-colors ${
                   activeSection === "analytics" ? "text-primary" : "text-muted-foreground hover:text-primary"
@@ -125,6 +135,9 @@ export default function Home() {
 
         {/* Bulk Search Section */}
         {activeSection === "bulk" && <BulkSearch />}
+
+        {/* Geometris Section */}
+        {activeSection === "geometris" && <Geometris />}
 
         {/* Data Management Section */}
         {activeSection === "manage" && <DataImport />}
