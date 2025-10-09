@@ -4,6 +4,15 @@
 
 VehicleDB Pro is a full-stack vehicle database management system that allows users to search, manage, and analyze vehicle compatibility data. The application provides functionality to search vehicles by make, model, and year, import vehicle data from CSV files, and view analytics on the database contents. Additionally, the Geometris feature enables searching for harness types based on vehicle make, model, and year ranges. Built with React on the frontend and Express on the backend, it uses PostgreSQL for data storage with Drizzle ORM for database operations.
 
+## Recent Changes
+
+Implemented auto-seeding for Geometris harness data:
+- **525 harness records automatically load** on server startup if database is empty
+- Harness data stored in `server/seed-harnesses.ts` and loads on both preview and published environments
+- Updated schema to make yearFrom/yearTo nullable to support all harness configurations
+- Fixed session cookie settings for published app authentication (sameSite: "none" in production)
+- Data persists across republishing - no manual CSV import needed on published app
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
