@@ -2,7 +2,7 @@
 
 ## Overview
 
-VehicleDB Pro is a full-stack vehicle database management system that allows users to search, manage, and analyze vehicle compatibility data. The application provides functionality to search vehicles by make, model, and year, import vehicle data from CSV files, and view analytics on the database contents. Built with React on the frontend and Express on the backend, it uses PostgreSQL for data storage with Drizzle ORM for database operations.
+VehicleDB Pro is a full-stack vehicle database management system that allows users to search, manage, and analyze vehicle compatibility data. The application provides functionality to search vehicles by make, model, and year, import vehicle data from CSV files, and view analytics on the database contents. Additionally, the Geometris feature enables searching for harness types based on vehicle make, model, and year ranges. Built with React on the frontend and Express on the backend, it uses PostgreSQL for data storage with Drizzle ORM for database operations.
 
 ## User Preferences
 
@@ -27,12 +27,14 @@ Preferred communication style: Simple, everyday language.
 - TanStack Query (React Query) for server state management
 - Custom query client with configured defaults (no refetch on window focus, infinite stale time)
 - Local component state for UI interactions
+- Important: Due to `staleTime: Infinity`, mutations must use `refetchQueries` instead of `invalidateQueries` to force immediate cache updates (see Geometris component for reference implementation)
 
 **Key Pages & Components**
-- Home page with tabbed navigation (Search, Bulk Search, Manage Data, Analytics, Admin)
+- Home page with tabbed navigation (Search, Bulk Search, Geometris, Manage Data, Analytics, Admin)
 - VehicleSearch component for filtering vehicles by make/model/year with cascading dropdowns and advanced filtering
 - SearchResults component with pagination, sorting, and export functionality (CSV)
 - BulkSearch component for searching multiple vehicles simultaneously
+- Geometris component for searching harness types by make/model/year with year range support
 - DataImport component for CSV file uploads with validation options
 - AnalyticsDashboard for database statistics and insights
 - AdminPanel component for CRUD operations on individual vehicle records
@@ -50,6 +52,8 @@ Preferred communication style: Simple, everyday language.
 - Storage layer abstraction via `IStorage` interface in `server/storage.ts`
 
 **Key API Endpoints**
+
+Vehicle Endpoints:
 - GET `/api/vehicles/search` - Search vehicles with pagination, sorting, and filtering (device type, port type)
 - GET `/api/vehicles/:id` - Get single vehicle by ID
 - POST `/api/vehicles` - Create new vehicle with validation
@@ -64,6 +68,14 @@ Preferred communication style: Simple, everyday language.
 - GET `/api/vehicles/port-types` - Get list of unique port types
 - POST `/api/vehicles/import` - Import vehicles from CSV/JSON (uses Multer for file handling)
 - DELETE `/api/vehicles` - Clear all vehicle data
+
+Harness Endpoints (Geometris):
+- GET `/api/harnesses/search` - Search harnesses by make, model, and year with year range matching
+- GET `/api/harnesses/makes` - Get list of unique harness makes
+- GET `/api/harnesses/models/:make` - Get harness models for a specific make
+- GET `/api/harnesses/stats` - Retrieve harness database statistics
+- POST `/api/harnesses/import` - Import harnesses from CSV (requires authentication)
+- DELETE `/api/harnesses` - Clear all harness data (requires authentication)
 
 ### Data Storage
 
@@ -80,6 +92,9 @@ Preferred communication style: Simple, everyday language.
 **Database Schema**
 - `vehicles` table with columns: id (UUID), make, model, year, deviceType, portType
   - Indexes on make, model, year, and composite index on make+model+year for query optimization
+- `harnesses` table with columns: id (UUID), make, model, yearFrom, yearTo, harnessType, comments
+  - Supports year range searches (e.g., find harnesses where search year falls within yearFrom-yearTo range)
+  - Indexes on make, model for efficient filtering
 - `users` table for authentication (id, username, password)
 
 **Data Validation**
