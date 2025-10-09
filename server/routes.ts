@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertVehicleSchema, searchVehicleSchema } from "@shared/schema";
+import { insertVehicleSchema, searchVehicleSchema, insertHarnessSchema, searchHarnessSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import csv from "csv-parser";
@@ -421,6 +421,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Delete error:", error);
       res.status(500).json({ message: "Failed to delete vehicles" });
+    }
+  });
+
+  // ==================== HARNESS ROUTES ====================
+
+  // Search harnesses
+  app.get("/api/harnesses/search", async (req, res) => {
+    try {
+      const { make, model, year, page = "1", limit = "50" } = req.query;
+      
+      const searchParams = {
+        make: make as string,
+        model: model as string,
+        year: year ? parseInt(year as string) : undefined,
+        limit: parseInt(limit as string),
+        offset: (parseInt(page as string) - 1) * parseInt(limit as string),
+      };
+      
+      const result = await storage.searchHarnesses(searchParams);
+      res.json(result);
+    } catch (error) {
+      console.error("Harness search error:", error);
+      res.status(500).json({ message: "Failed to search harnesses" });
+    }
+  });
+
+  // Get harness statistics
+  app.get("/api/harnesses/stats", async (req, res) => {
+    try {
+      const stats = await storage.getHarnessStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Harness stats error:", error);
+      res.status(500).json({ message: "Failed to get harness statistics" });
+    }
+  });
+
+  // Get harness makes
+  app.get("/api/harnesses/makes", async (req, res) => {
+    try {
+      const makes = await storage.getHarnessMakes();
+      res.json(makes);
+    } catch (error) {
+      console.error("Harness makes error:", error);
+      res.status(500).json({ message: "Failed to get harness makes" });
+    }
+  });
+
+  // Get harness models by make
+  app.get("/api/harnesses/models/:make", async (req, res) => {
+    try {
+      const { make } = req.params;
+      const models = await storage.getHarnessModelsByMake(make);
+      res.json(models);
+    } catch (error) {
+      console.error("Harness models error:", error);
+      res.status(500).json({ message: "Failed to get harness models" });
+    }
+  });
+
+  // Import harnesses from CSV (protected)
+  app.post("/api/harnesses/import", requireAuth, upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const { mode = "append" } = req.body;
+      let harnessData: any[] = [];
+
+      // Handle CSV
+      if (req.file.mimetype === 'text/csv' || req.file.originalname.endsWith('.csv')) {
+        harnessData = await new Promise<any[]>((resolve, reject) => {
+          const results: any[] = [];
+          const stream = Readable.from(req.file!.buffer.toString());
+          
+          stream
+            .pipe(csv({
+              mapHeaders: ({ header }) => header.trim().toLowerCase()
+            }))
+            .on('data', (data) => results.push(data))
+            .on('end', () => resolve(results))
+            .on('error', reject);
+        });
+      }
+      // Handle JSON
+      else if (req.file.mimetype === 'application/json' || req.file.originalname.endsWith('.json')) {
+        harnessData = JSON.parse(req.file.buffer.toString());
+      }
+      else {
+        return res.status(400).json({ message: "Unsupported file format. Please use CSV or JSON." });
+      }
+
+      // Debug: Log first row to see what we're getting
+      if (harnessData.length > 0) {
+        console.log("First harness row keys:", Object.keys(harnessData[0]));
+        console.log("First harness row data:", harnessData[0]);
+      }
+
+      // Validate and transform data
+      const validHarnesses = [];
+      const errors = [];
+
+      for (let i = 0; i < harnessData.length; i++) {
+        const row = harnessData[i];
+        try {
+          // Extract values (keys are already normalized to lowercase by csv parser)
+          const make = row.make || row.Make;
+          const model = row.model || row.Model;
+          const yearFromStr = row.year_from || row.yearfrom || row.yearFrom || row['year from'];
+          const yearToStr = row.year_to || row.yearto || row.yearTo || row['year to'];
+          const harnessType = row.harness_type || row.harnesstype || row.harnessType || row['harness type'];
+          const comments = row.comments || row.Comments || '';
+          
+          // Parse years
+          const yearFrom = parseInt(yearFromStr);
+          const yearTo = parseInt(yearToStr);
+          
+          if (!make || !model || isNaN(yearFrom) || isNaN(yearTo) || !harnessType) {
+            throw new Error(`Missing required fields. Found: make=${make}, model=${model}, yearFrom=${yearFrom}, yearTo=${yearTo}, harnessType=${harnessType}`);
+          }
+          
+          // Normalize data
+          const normalizedRow = {
+            make: make,
+            model: model,
+            yearFrom: yearFrom,
+            yearTo: yearTo,
+            harnessType: harnessType,
+            comments: comments
+          };
+
+          const validHarness = insertHarnessSchema.parse(normalizedRow);
+          validHarnesses.push(validHarness);
+        } catch (error) {
+          errors.push({ row: i + 1, error: error instanceof Error ? error.message : "Validation failed" });
+        }
+      }
+
+      if (mode === "replace") {
+        await storage.deleteAllHarnesses();
+      }
+
+      const createdHarnesses = await storage.createHarnesses(validHarnesses);
+
+      res.json({
+        message: "Import completed",
+        imported: createdHarnesses.length,
+        errors: errors.length,
+        errorDetails: errors.slice(0, 10) // Return first 10 errors
+      });
+    } catch (error) {
+      console.error("Harness import error:", error);
+      res.status(500).json({ message: "Failed to import harnesses" });
+    }
+  });
+
+  // Clear all harnesses (protected)
+  app.delete("/api/harnesses", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteAllHarnesses();
+      res.json({ message: "All harnesses deleted successfully" });
+    } catch (error) {
+      console.error("Delete harness error:", error);
+      res.status(500).json({ message: "Failed to delete harnesses" });
     }
   });
 
