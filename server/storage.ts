@@ -39,6 +39,8 @@ export interface IStorage {
     totalMakes: number;
     totalModels: number;
   }>;
+  updateHarness(id: string, harness: Partial<InsertHarness>): Promise<Harness | undefined>;
+  deleteHarness(id: string): Promise<void>;
   deleteAllHarnesses(): Promise<void>;
 }
 
@@ -333,6 +335,19 @@ export class DatabaseStorage implements IStorage {
       totalMakes: makeCount?.count || 0,
       totalModels: modelCount?.count || 0,
     };
+  }
+
+  async updateHarness(id: string, harnessData: Partial<InsertHarness>): Promise<Harness | undefined> {
+    const [updatedHarness] = await db
+      .update(harnesses)
+      .set(harnessData)
+      .where(eq(harnesses.id, id))
+      .returning();
+    return updatedHarness || undefined;
+  }
+
+  async deleteHarness(id: string): Promise<void> {
+    await db.delete(harnesses).where(eq(harnesses.id, id));
   }
 
   async deleteAllHarnesses(): Promise<void> {
