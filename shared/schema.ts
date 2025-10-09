@@ -63,8 +63,8 @@ export type User = typeof users.$inferSelect;
 // Harness/Geometris table
 export const harnesses = pgTable("harnesses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  yearFrom: integer("year_from").notNull(),
-  yearTo: integer("year_to").notNull(),
+  yearFrom: integer("year_from"),
+  yearTo: integer("year_to"),
   make: text("make").notNull(),
   model: text("model").notNull(),
   harnessType: text("harness_type").notNull(),

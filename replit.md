@@ -94,9 +94,10 @@ Harness Endpoints (Geometris):
 **Database Schema**
 - `vehicles` table with columns: id (UUID), make, model, year, deviceType, portType
   - Indexes on make, model, year, and composite index on make+model+year for query optimization
-- `harnesses` table with columns: id (UUID), make, model, yearFrom, yearTo, harnessType, comments
+- `harnesses` table with columns: id (UUID), make, model, yearFrom (nullable), yearTo (nullable), harnessType, comments
+  - yearFrom and yearTo are nullable to support vehicles with unknown or unspecified year ranges
   - Supports year range searches (e.g., find harnesses where search year falls within yearFrom-yearTo range)
-  - Indexes on make, model for efficient filtering
+  - Indexes on make, model, yearFrom, yearTo for efficient filtering
 - `users` table for authentication (id, username, password)
 
 **Data Validation**
