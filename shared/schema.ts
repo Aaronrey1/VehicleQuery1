@@ -59,3 +59,45 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// Harness/Geometris table
+export const harnesses = pgTable("harnesses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  yearFrom: integer("year_from").notNull(),
+  yearTo: integer("year_to").notNull(),
+  make: text("make").notNull(),
+  model: text("model").notNull(),
+  harnessType: text("harness_type").notNull(),
+  comments: text("comments"),
+}, (table) => ({
+  makeIdx: index("harness_make_idx").on(table.make),
+  modelIdx: index("harness_model_idx").on(table.model),
+  yearFromIdx: index("harness_year_from_idx").on(table.yearFrom),
+  yearToIdx: index("harness_year_to_idx").on(table.yearTo),
+  makeModelIdx: index("harness_make_model_idx").on(table.make, table.model),
+}));
+
+export const insertHarnessSchema = createInsertSchema(harnesses).omit({
+  id: true,
+});
+
+export const searchHarnessSchema = z.object({
+  make: z.string().optional(),
+  model: z.string().optional(),
+  year: z.number().optional(),
+});
+
+export type InsertHarness = z.infer<typeof insertHarnessSchema>;
+export type Harness = typeof harnesses.$inferSelect;
+export type SearchHarness = z.infer<typeof searchHarnessSchema>;
+
+export type HarnessStats = {
+  totalHarnesses: number;
+  totalMakes: number;
+  totalModels: number;
+};
+
+export type HarnessSearchResults = {
+  harnesses: Harness[];
+  total: number;
+};

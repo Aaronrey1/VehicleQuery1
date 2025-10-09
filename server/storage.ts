@@ -1,6 +1,6 @@
-import { vehicles, users, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser } from "@shared/schema";
+import { vehicles, users, harnesses, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, sql, ilike, desc, asc } from "drizzle-orm";
+import { eq, and, sql, ilike, desc, asc, gte, lte } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -28,6 +28,18 @@ export interface IStorage {
   updateVehicle(id: string, vehicle: Partial<InsertVehicle>): Promise<Vehicle | undefined>;
   deleteVehicle(id: string): Promise<void>;
   deleteAllVehicles(): Promise<void>;
+
+  // Harness methods
+  searchHarnesses(params: SearchHarness & { limit?: number; offset?: number }): Promise<{ harnesses: Harness[], total: number }>;
+  createHarnesses(harnesses: InsertHarness[]): Promise<Harness[]>;
+  getHarnessMakes(): Promise<string[]>;
+  getHarnessModelsByMake(make: string): Promise<string[]>;
+  getHarnessStats(): Promise<{
+    totalHarnesses: number;
+    totalMakes: number;
+    totalModels: number;
+  }>;
+  deleteAllHarnesses(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -217,6 +229,114 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAllVehicles(): Promise<void> {
     await db.delete(vehicles);
+  }
+
+  // Harness methods implementation
+  async searchHarnesses(params: SearchHarness & { limit?: number; offset?: number }): Promise<{ harnesses: Harness[], total: number }> {
+    const { make, model, year, limit = 50, offset = 0 } = params;
+    
+    const conditions = [];
+    if (make) {
+      conditions.push(ilike(harnesses.make, `%${make}%`));
+    }
+    if (model) {
+      conditions.push(ilike(harnesses.model, `%${model}%`));
+    }
+    if (year) {
+      // Check if year falls within the yearFrom and yearTo range
+      conditions.push(and(
+        lte(harnesses.yearFrom, year),
+        gte(harnesses.yearTo, year)
+      ));
+    }
+    
+    const whereClause = conditions.length === 0 ? undefined : 
+      conditions.length === 1 ? conditions[0] : and(...conditions);
+    
+    // Build queries with conditional where clause
+    const baseHarnessQuery = db.select().from(harnesses);
+    const harnessQuery = whereClause 
+      ? baseHarnessQuery.where(whereClause).orderBy(asc(harnesses.make), asc(harnesses.model)).limit(limit).offset(offset)
+      : baseHarnessQuery.orderBy(asc(harnesses.make), asc(harnesses.model)).limit(limit).offset(offset);
+    
+    const baseCountQuery = db.select({ count: sql<number>`count(*)` }).from(harnesses);
+    const countQuery = whereClause 
+      ? baseCountQuery.where(whereClause)
+      : baseCountQuery;
+    
+    const [harnessResults, countResults] = await Promise.all([
+      harnessQuery,
+      countQuery
+    ]);
+    
+    return {
+      harnesses: harnessResults,
+      total: Number(countResults[0]?.count || 0)
+    };
+  }
+
+  async createHarnesses(harnessData: InsertHarness[]): Promise<Harness[]> {
+    if (harnessData.length === 0) return [];
+    
+    // Insert in batches to avoid stack overflow with large datasets
+    const batchSize = 1000;
+    const allCreatedHarnesses: Harness[] = [];
+    
+    for (let i = 0; i < harnessData.length; i += batchSize) {
+      const batch = harnessData.slice(i, i + batchSize);
+      const createdHarnesses = await db
+        .insert(harnesses)
+        .values(batch)
+        .returning();
+      allCreatedHarnesses.push(...createdHarnesses);
+    }
+    
+    return allCreatedHarnesses;
+  }
+
+  async getHarnessMakes(): Promise<string[]> {
+    const results = await db
+      .selectDistinct({ make: harnesses.make })
+      .from(harnesses)
+      .orderBy(asc(harnesses.make));
+    return results.map(r => r.make);
+  }
+
+  async getHarnessModelsByMake(make: string): Promise<string[]> {
+    const results = await db
+      .selectDistinct({ model: harnesses.model })
+      .from(harnesses)
+      .where(eq(harnesses.make, make))
+      .orderBy(asc(harnesses.model));
+    return results.map(r => r.model);
+  }
+
+  async getHarnessStats(): Promise<{
+    totalHarnesses: number;
+    totalMakes: number;
+    totalModels: number;
+  }> {
+    const [harnessCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(harnesses);
+    
+    const [makeCount] = await db
+      .select({ count: sql<number>`count(distinct ${harnesses.make})` })
+      .from(harnesses);
+    
+    const [modelCount] = await db
+      .select({ count: sql<number>`count(distinct ${harnesses.model})` })
+      .from(harnesses);
+    
+    return {
+      totalHarnesses: harnessCount?.count || 0,
+      totalMakes: makeCount?.count || 0,
+      totalModels: modelCount?.count || 0,
+    };
+  }
+
+  async deleteAllHarnesses(): Promise<void> {
+    await db.delete(harnesses);
   }
 }
 
