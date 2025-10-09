@@ -578,6 +578,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update individual harness (protected)
+  app.patch("/api/harnesses/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const harnessData = insertHarnessSchema.partial().parse(req.body);
+      
+      const updatedHarness = await storage.updateHarness(id, harnessData);
+      
+      if (!updatedHarness) {
+        return res.status(404).json({ message: "Harness not found" });
+      }
+      
+      res.json(updatedHarness);
+    } catch (error) {
+      console.error("Update harness error:", error);
+      res.status(500).json({ message: "Failed to update harness" });
+    }
+  });
+
+  // Delete individual harness (protected)
+  app.delete("/api/harnesses/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteHarness(id);
+      res.json({ message: "Harness deleted successfully" });
+    } catch (error) {
+      console.error("Delete harness error:", error);
+      res.status(500).json({ message: "Failed to delete harness" });
+    }
+  });
+
   // Clear all harnesses (protected)
   app.delete("/api/harnesses", requireAuth, async (req, res) => {
     try {
