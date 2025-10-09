@@ -5,11 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Upload, Trash2, Download } from "lucide-react";
+import { Search, Upload, Trash2, Download, Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth-context";
+import { useLocation } from "wouter";
 import type { Harness, HarnessStats } from "@shared/schema";
 
 export default function Geometris() {
@@ -19,6 +21,8 @@ export default function Geometris() {
   const fileInputRef = useState<HTMLInputElement | null>(null)[0];
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
 
   // Fetch makes
   const { data: makes = [] } = useQuery<string[]>({
@@ -229,36 +233,50 @@ export default function Geometris() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-2xl">Search Results</CardTitle>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => document.getElementById('harness-file-input')?.click()}
-                data-testid="button-import-harness"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Import CSV
-              </Button>
-              <input
-                id="harness-file-input"
-                type="file"
-                accept=".csv,.json"
-                onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
-                className="hidden"
-              />
-              {stats && stats.totalHarnesses > 0 && (
+              {isAuthenticated ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => document.getElementById('harness-file-input')?.click()}
+                    data-testid="button-import-harness"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import CSV
+                  </Button>
+                  <input
+                    id="harness-file-input"
+                    type="file"
+                    accept=".csv,.json"
+                    onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+                    className="hidden"
+                  />
+                  {stats && stats.totalHarnesses > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm("Are you sure you want to delete all harness data? This action cannot be undone.")) {
+                          clearDataMutation.mutate();
+                        }
+                      }}
+                      disabled={clearDataMutation.isPending}
+                      data-testid="button-clear-harness-data"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Clear Data
+                    </Button>
+                  )}
+                </>
+              ) : (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    if (confirm("Are you sure you want to delete all harness data? This action cannot be undone.")) {
-                      clearDataMutation.mutate();
-                    }
-                  }}
-                  disabled={clearDataMutation.isPending}
-                  data-testid="button-clear-harness-data"
+                  onClick={() => setLocation("/login")}
+                  data-testid="button-login-for-import"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Clear Data
+                  <Lock className="mr-2 h-4 w-4" />
+                  Login to Import
                 </Button>
               )}
             </div>
