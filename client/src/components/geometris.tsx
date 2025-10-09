@@ -75,7 +75,10 @@ export default function Geometris() {
         variant: data.imported === 0 && data.errors > 0 ? "destructive" : "default",
       });
       
-      queryClient.invalidateQueries({ queryKey: ["/api/harnesses"] });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/makes"] });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/models"] });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/search"] });
     },
     onError: (error) => {
       toast({
@@ -97,7 +100,10 @@ export default function Geometris() {
         title: "Data Cleared",
         description: "All harness data has been deleted successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/harnesses"] });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/makes"] });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/models"] });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/search"] });
     },
     onError: (error) => {
       toast({
