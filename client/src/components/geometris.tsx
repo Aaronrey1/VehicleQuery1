@@ -5,19 +5,22 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Upload, Trash2, Download, Lock } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Search, Upload, Trash2, Download, Lock, Edit, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
-import type { Harness, HarnessStats } from "@shared/schema";
+import type { Harness, HarnessStats, InsertHarness } from "@shared/schema";
 
 export default function Geometris() {
   const [selectedMake, setSelectedMake] = useState<string>("");
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>("");
+  const [editingHarness, setEditingHarness] = useState<Harness | null>(null);
+  const [editForm, setEditForm] = useState<Partial<InsertHarness>>({});
   const fileInputRef = useState<HTMLInputElement | null>(null)[0];
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -87,6 +90,58 @@ export default function Geometris() {
     onError: (error) => {
       toast({
         title: "Import Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update harness mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertHarness> }) => {
+      const response = await apiRequest("PATCH", `/api/harnesses/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Harness Updated",
+        description: "Harness configuration has been updated successfully.",
+      });
+      setEditingHarness(null);
+      setEditForm({});
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/makes"] });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/models"] });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/search"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete individual harness mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/harnesses/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Harness Deleted",
+        description: "Harness configuration has been deleted successfully.",
+      });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/makes"] });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/models"] });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/harnesses/search"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Delete Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -298,6 +353,7 @@ export default function Geometris() {
                     <TableHead>Year Range</TableHead>
                     <TableHead>Harness Type</TableHead>
                     <TableHead>Comments</TableHead>
+                    {isAuthenticated && <TableHead>Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -316,6 +372,42 @@ export default function Geometris() {
                         </Badge>
                       </TableCell>
                       <TableCell className="max-w-xs truncate">{harness.comments || '-'}</TableCell>
+                      {isAuthenticated && (
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingHarness(harness);
+                                setEditForm({
+                                  make: harness.make,
+                                  model: harness.model,
+                                  yearFrom: harness.yearFrom,
+                                  yearTo: harness.yearTo,
+                                  harnessType: harness.harnessType,
+                                  comments: harness.comments || '',
+                                });
+                              }}
+                              data-testid={`button-edit-harness-${harness.id}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm("Are you sure you want to delete this harness?")) {
+                                  deleteMutation.mutate(harness.id);
+                                }
+                              }}
+                              data-testid={`button-delete-harness-${harness.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -359,6 +451,89 @@ export default function Geometris() {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingHarness} onOpenChange={(open) => !open && setEditingHarness(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Harness Configuration</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Make</Label>
+              <Input
+                value={editForm.make || ''}
+                onChange={(e) => setEditForm({ ...editForm, make: e.target.value })}
+                data-testid="input-edit-make"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Model</Label>
+              <Input
+                value={editForm.model || ''}
+                onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
+                data-testid="input-edit-model"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Year From</Label>
+                <Input
+                  type="number"
+                  value={editForm.yearFrom || ''}
+                  onChange={(e) => setEditForm({ ...editForm, yearFrom: parseInt(e.target.value) })}
+                  data-testid="input-edit-year-from"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Year To</Label>
+                <Input
+                  type="number"
+                  value={editForm.yearTo || ''}
+                  onChange={(e) => setEditForm({ ...editForm, yearTo: parseInt(e.target.value) })}
+                  data-testid="input-edit-year-to"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Harness Type</Label>
+              <Input
+                value={editForm.harnessType || ''}
+                onChange={(e) => setEditForm({ ...editForm, harnessType: e.target.value })}
+                data-testid="input-edit-harness-type"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Comments</Label>
+              <Input
+                value={editForm.comments || ''}
+                onChange={(e) => setEditForm({ ...editForm, comments: e.target.value })}
+                data-testid="input-edit-comments"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditingHarness(null)}
+              data-testid="button-cancel-edit"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (editingHarness) {
+                  updateMutation.mutate({ id: editingHarness.id, data: editForm });
+                }
+              }}
+              disabled={updateMutation.isPending}
+              data-testid="button-save-edit"
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
