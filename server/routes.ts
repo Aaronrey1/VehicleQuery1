@@ -32,7 +32,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return res.status(500).json({ message: "Session error" });
           }
           req.session.isAuthenticated = true;
-          res.json({ success: true });
+          // Explicitly save session before sending response
+          req.session.save((saveErr) => {
+            if (saveErr) {
+              return res.status(500).json({ message: "Session save error" });
+            }
+            res.json({ success: true });
+          });
         });
       } else {
         res.status(401).json({ success: false, message: "Invalid password" });
