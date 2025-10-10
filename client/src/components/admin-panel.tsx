@@ -76,8 +76,8 @@ export default function AdminPanel() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/search"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/vehicles/search"] });
+      queryClient.refetchQueries({ queryKey: ["/api/vehicles/stats"] });
       setIsCreateDialogOpen(false);
       form.reset();
       toast({
@@ -101,8 +101,8 @@ export default function AdminPanel() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/search"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/vehicles/search"] });
+      queryClient.refetchQueries({ queryKey: ["/api/vehicles/stats"] });
       setEditingVehicle(null);
       form.reset();
       toast({
@@ -126,8 +126,8 @@ export default function AdminPanel() {
       return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/search"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/vehicles/search"] });
+      queryClient.refetchQueries({ queryKey: ["/api/vehicles/stats"] });
       toast({
         title: "Success",
         description: "Vehicle deleted successfully",
