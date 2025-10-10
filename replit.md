@@ -10,10 +10,11 @@ Implemented auto-seeding for Geometris harness data and fixed authentication:
 - **525 harness records automatically load** on server startup if database is empty
 - Harness data stored in `server/seed-harnesses.ts` and loads on both preview and published environments
 - Updated schema to make yearFrom/yearTo nullable to support all harness configurations
-- Fixed session persistence on published app by using memorystore and explicit session.save()
-- Fixed session cookie settings for authentication (sameSite: "lax" - works on both preview and published)
+- Fixed session persistence on published app by using memorystore, explicit session.save(), and trust proxy configuration
+- Fixed session cookie settings for authentication (sameSite: "lax", resave: true, saveUninitialized: true)
 - Fixed admin panel cache refresh by using refetchQueries instead of invalidateQueries
 - Data persists across republishing - no manual CSV import needed on published app
+- Added 9 Peterbilt, Kenworth, and Mack vehicles to development database
 
 ## User Preferences
 

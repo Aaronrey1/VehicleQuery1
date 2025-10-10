@@ -26,24 +26,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
       
       if (password === adminPassword) {
-        // Regenerate session to prevent session fixation attacks
-        req.session.regenerate((err) => {
-          if (err) {
-            return res.status(500).json({ message: "Session error" });
+        req.session.isAuthenticated = true;
+        // Explicitly save session before sending response
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.status(500).json({ message: "Session save error" });
           }
-          req.session.isAuthenticated = true;
-          // Explicitly save session before sending response
-          req.session.save((saveErr) => {
-            if (saveErr) {
-              return res.status(500).json({ message: "Session save error" });
-            }
-            res.json({ success: true });
-          });
+          console.log("Session saved successfully, cookie should be set");
+          res.json({ success: true });
         });
       } else {
         res.status(401).json({ success: false, message: "Invalid password" });
       }
     } catch (error) {
+      console.error("Authentication error:", error);
       res.status(500).json({ message: "Authentication error" });
     }
   });

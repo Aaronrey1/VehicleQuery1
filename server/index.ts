@@ -7,6 +7,9 @@ import { seedHarnesses } from "./seed-harnesses";
 
 const app = express();
 
+// Trust proxy - required for cookies to work behind Replit's proxy
+app.set('trust proxy', 1);
+
 // Add session type declarations
 declare module 'express-session' {
   interface SessionData {
@@ -29,13 +32,14 @@ app.use(session({
     checkPeriod: 86400000 // prune expired entries every 24h
   }),
   secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
-  resave: false,
-  saveUninitialized: false,
+  resave: true,
+  saveUninitialized: true,
   cookie: {
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     sameSite: "lax",
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    path: "/"
   }
 }));
 
