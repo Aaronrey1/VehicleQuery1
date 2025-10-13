@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Sparkles, TrendingUp, Search, AlertCircle } from "lucide-react";
@@ -32,17 +31,6 @@ export default function AISearch() {
   const [model, setModel] = useState("");
   const [year, setYear] = useState("");
   const [searchTriggered, setSearchTriggered] = useState(false);
-
-  // Fetch makes for dropdown
-  const { data: makes = [] } = useQuery<string[]>({
-    queryKey: ["/api/vehicles/makes"],
-  });
-
-  // Fetch models based on selected make
-  const { data: models = [] } = useQuery<string[]>({
-    queryKey: ["/api/vehicles/models", make],
-    enabled: !!make,
-  });
 
   // AI prediction query
   const { data: prediction, isLoading, refetch } = useQuery<PredictionResult>({
@@ -85,34 +73,26 @@ export default function AISearch() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="ai-make">Make</Label>
-              <Select value={make} onValueChange={(value) => { setMake(value); setModel(""); setSearchTriggered(false); }}>
-                <SelectTrigger id="ai-make" data-testid="select-ai-make">
-                  <SelectValue placeholder="Select make" />
-                </SelectTrigger>
-                <SelectContent>
-                  {makes.map((m) => (
-                    <SelectItem key={m} value={m}>
-                      {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                id="ai-make"
+                type="text"
+                placeholder="Type any make (e.g., Tesla)"
+                value={make}
+                onChange={(e) => { setMake(e.target.value); setSearchTriggered(false); }}
+                data-testid="input-ai-make"
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="ai-model">Model</Label>
-              <Select value={model} onValueChange={(value) => { setModel(value); setSearchTriggered(false); }} disabled={!make}>
-                <SelectTrigger id="ai-model" data-testid="select-ai-model">
-                  <SelectValue placeholder="Select model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {models.map((m) => (
-                    <SelectItem key={m} value={m}>
-                      {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                id="ai-model"
+                type="text"
+                placeholder="Type any model (e.g., Model 3)"
+                value={model}
+                onChange={(e) => { setModel(e.target.value); setSearchTriggered(false); }}
+                data-testid="input-ai-model"
+              />
             </div>
 
             <div className="space-y-2">

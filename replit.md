@@ -8,6 +8,7 @@ VehicleDB Pro is a full-stack vehicle database management system that allows use
 
 Added AI Search feature with pattern-based predictions (Phase 1 free implementation):
 - **New "AI Search" tab** provides intelligent predictions for vehicles not in database
+- **Free text input** - Type ANY make/model, even those not in the database (e.g., Tesla Model 3, future vehicles)
 - Uses pattern matching and statistics from existing 31K+ vehicle records - **100% free, no external API costs**
 - Implements ±5 year window for same make/model predictions with high confidence scores
 - Fallback ±10 year window for broader manufacturer matches with reduced confidence (60%)
