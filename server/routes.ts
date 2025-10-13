@@ -138,9 +138,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const query of queries) {
         try {
-          // Validate each query
+          // Validate and normalize each query
           const validatedQuery = searchVehicleSchema.parse({
-            make: query.make,
+            make: normalizeMake(query.make),
             model: query.model,
             year: query.year
           });
@@ -179,13 +179,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manufacturer alias mapping for smart search across ALL endpoints
+  // Shared utility function used by search, AI prediction, bulk search, etc.
+  const normalizeMake = (make: string | undefined): string | undefined => {
+    if (!make) return undefined;
+    
+    const makeUpper = make.toUpperCase().trim();
+    
+    const aliases: Record<string, string> = {
+      'CHEVY': 'CHEVROLET',
+      'CHEV': 'CHEVROLET',
+      'VW': 'VOLKSWAGEN',
+      'BENZ': 'MERCEDES-BENZ',
+      'MERCEDES': 'MERCEDES-BENZ',
+      'MB': 'MERCEDES-BENZ',
+      'BMW': 'BMW',
+      'MERC': 'MERCURY',
+      'CADDY': 'CADILLAC',
+      'CAD': 'CADILLAC',
+      'FORD': 'FORD',
+      'GMC': 'GMC',
+      'DODGE': 'DODGE',
+      'RAM': 'RAM',
+      'JEEP': 'JEEP',
+      'CHRYSLER': 'CHRYSLER',
+      'TOYOTA': 'TOYOTA',
+      'HONDA': 'HONDA',
+      'NISSAN': 'NISSAN',
+      'HYUNDAI': 'HYUNDAI',
+      'KIA': 'KIA',
+      'MAZDA': 'MAZDA',
+      'SUBARU': 'SUBARU',
+      'MITSUBISHI': 'MITSUBISHI',
+      'INFINITI': 'INFINITI',
+      'LEXUS': 'LEXUS',
+      'ACURA': 'ACURA',
+      'BUICK': 'BUICK',
+      'PONTIAC': 'PONTIAC',
+      'OLDSMOBILE': 'OLDSMOBILE',
+      'OLDS': 'OLDSMOBILE',
+      'SATURN': 'SATURN',
+      'HUMMER': 'HUMMER',
+      'LINCOLN': 'LINCOLN',
+      'VOLVO': 'VOLVO',
+      'SAAB': 'SAAB',
+      'AUDI': 'AUDI',
+      'PORSCHE': 'PORSCHE',
+      'JAGUAR': 'JAGUAR',
+      'JAG': 'JAGUAR',
+      'LAND ROVER': 'LAND ROVER',
+      'ROVER': 'LAND ROVER',
+      'MINI': 'MINI',
+      'FIAT': 'FIAT',
+      'ALFA ROMEO': 'ALFA ROMEO',
+      'ALFA': 'ALFA ROMEO',
+      'MASERATI': 'MASERATI',
+      'FERRARI': 'FERRARI',
+      'LAMBORGHINI': 'LAMBORGHINI',
+      'LAMBO': 'LAMBORGHINI',
+      'BENTLEY': 'BENTLEY',
+      'ROLLS ROYCE': 'ROLLS-ROYCE',
+      'ROLLS': 'ROLLS-ROYCE',
+      'TESLA': 'TESLA',
+      'RIVIAN': 'RIVIAN',
+      'LUCID': 'LUCID',
+      'POLESTAR': 'POLESTAR',
+      'GENESIS': 'GENESIS',
+      'SCION': 'SCION',
+      'ISUZU': 'ISUZU',
+      'SUZUKI': 'SUZUKI',
+      'DAEWOO': 'DAEWOO',
+      'SMART': 'SMART',
+      'PETERBILT': 'PETERBILT',
+      'KENWORTH': 'KENWORTH',
+      'MACK': 'MACK',
+      'FREIGHTLINER': 'FREIGHTLINER',
+      'INTERNATIONAL': 'INTERNATIONAL',
+      'WESTERN STAR': 'WESTERN STAR',
+    };
+    
+    // Return normalized make if alias exists, otherwise return original (title cased)
+    if (aliases[makeUpper]) {
+      return aliases[makeUpper];
+    }
+    
+    // Title case the original if not found in aliases
+    return make.split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
+  };
+
   // Search vehicles
   app.get("/api/vehicles/search", async (req, res) => {
     try {
       const { make, model, year, deviceType, portType, page = "1", limit = "50", sortBy = "make", sortOrder = "asc" } = req.query;
       
       const searchParams = {
-        make: make as string,
+        make: normalizeMake(make as string),
         model: model as string,
         year: year ? parseInt(year as string) : undefined,
         deviceType: deviceType as string,
@@ -697,10 +787,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const yearNum = parseInt(year as string);
+      
+      // Normalize the make to handle common aliases (Chevy → Chevrolet, VW → Volkswagen, etc.)
+      const normalizedMake = normalizeMake(make as string);
 
       // First, check if exact vehicle exists
       const exactMatch = await storage.searchVehicles({
-        make: make as string,
+        make: normalizedMake,
         model: model as string,
         year: yearNum,
         limit: 1,
@@ -719,7 +812,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // No exact match - find similar vehicles for prediction
       // Search for same make+model with all years, then filter to ±5 year window
       const allSimilarVehicles = await storage.searchVehicles({
-        make: make as string,
+        make: normalizedMake,
         model: model as string,
         limit: 1000, // Get more to ensure we have enough in the year range
         offset: 0,
@@ -736,7 +829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (nearbyYearVehicles.length === 0) {
         // No similar vehicles in year range - try broader manufacturer match
         const allManufacturerVehicles = await storage.searchVehicles({
-          make: make as string,
+          make: normalizedMake,
           limit: 1000,
           offset: 0,
           sortBy: "year",
