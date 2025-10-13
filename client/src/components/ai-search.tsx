@@ -207,38 +207,13 @@ export default function AISearch() {
                   </AlertDescription>
                 </Alert>
 
-{prediction.predictions.source === 'google' && prediction.predictions.searchResults ? (
-                  <Card className="bg-muted/50">
-                    <CardHeader>
-                      <CardTitle className="text-lg">Google Search Results</CardTitle>
-                      <CardDescription>
-                        This prediction is based on information found through Google Search
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {prediction.predictions.searchResults.map((result, idx) => (
-                          <div key={idx} className="p-3 bg-background rounded-lg border">
-                            <a 
-                              href={result.link} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-sm font-medium text-blue-600 hover:underline"
-                            >
-                              {result.title}
-                            </a>
-                            <p className="text-xs text-muted-foreground mt-1">{result.snippet}</p>
-                          </div>
-                        ))}
-                      </div>
-                      <Alert className="mt-4 border-orange-500 bg-orange-50 dark:bg-orange-950">
-                        <AlertCircle className="h-4 w-4 text-orange-600" />
-                        <AlertDescription className="text-xs text-orange-800 dark:text-orange-200">
-                          Note: Google predictions have lower confidence as they may not match your exact device/port specifications. Consider adding this vehicle to your database for accurate future predictions.
-                        </AlertDescription>
-                      </Alert>
-                    </CardContent>
-                  </Card>
+{prediction.predictions.source === 'google' ? (
+                  <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950">
+                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                    <AlertDescription className="text-xs text-orange-800 dark:text-orange-200">
+                      Note: This prediction is based on external search data and has lower confidence. Consider adding this vehicle to your database for accurate future predictions.
+                    </AlertDescription>
+                  </Alert>
                 ) : prediction.predictions.similarVehicles && prediction.predictions.similarVehicles.length > 0 ? (
                   <Card className="bg-muted/50">
                     <CardHeader>
