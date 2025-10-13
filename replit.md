@@ -6,16 +6,20 @@ VehicleDB Pro is a full-stack vehicle database management system that allows use
 
 ## Recent Changes
 
-Added AI Search feature with pattern-based predictions (Phase 1 free implementation):
+Added AI Search feature with hybrid prediction system (Database + Google Custom Search):
 - **New "AI Search" tab** provides intelligent predictions for vehicles not in database
-- **Free text input** - Type ANY make/model, even those not in the database (e.g., Tesla Model 3, future vehicles)
-- Uses pattern matching and statistics from existing 31K+ vehicle records - **100% free, no external API costs**
-- Implements ±5 year window for same make/model predictions with high confidence scores
-- Fallback ±10 year window for broader manufacturer matches with reduced confidence (60%)
-- Shows similar vehicles used for predictions with confidence indicators
-- Smart year filtering ensures accurate predictions based on nearby vehicle data
+- **Free text input** - Type ANY make/model, even those not in the database (e.g., Tesla Model 3, Rivian R1T, future vehicles)
+- **3-Tier Hybrid System**:
+  1. **Tier 1 (Database - Free)**: Two-step prediction using 31K+ vehicle records with ±5 year window for same make/model (high confidence 80-100%)
+  2. **Tier 2 (Database - Free)**: Fallback ±10 year window for broader manufacturer matches (reduced confidence 60%)
+  3. **Tier 3 (Google - Paid)**: Google Custom Search API when no database matches found (low confidence 20-40%, $5 per 1,000 searches after 100 free daily)
+- **Two-Step Prediction Algorithm**: First predicts port type from similar vehicles, then filters by port and predicts device type
+- Shows separate confidence scores for port type and device type predictions
+- UI distinguishes Google predictions (purple badge) from database predictions (blue badge)
+- Displays Google search result snippets with links when using external data
+- Cost-efficient: Google only called as last resort when database has no matches
 - Component: `client/src/components/ai-search.tsx`
-- Backend endpoint: GET `/api/ai/predict` with year window filtering
+- Backend endpoint: GET `/api/ai/predict` with Google Custom Search fallback
 
 Previously implemented:
 - 525 harness records automatically load on server startup if database is empty
