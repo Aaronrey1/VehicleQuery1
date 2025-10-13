@@ -17,6 +17,12 @@ interface PredictionResult {
     deviceType: string;
     deviceConfidence: number;
     basedOn: number;
+    source?: string;
+    searchResults?: Array<{
+      title: string;
+      link: string;
+      snippet: string;
+    }>;
     similarVehicles: Array<{
       make: string;
       model: string;

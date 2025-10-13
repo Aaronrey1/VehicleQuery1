@@ -6,8 +6,72 @@ import { z } from "zod";
 import multer from "multer";
 import csv from "csv-parser";
 import { Readable } from "stream";
+import axios from "axios";
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Helper function to search Google for vehicle information
+async function searchGoogleForVehicle(make: string, model: string, year: number) {
+  const apiKey = process.env.GOOGLE_CUSTOM_SEARCH_API_KEY;
+  const cx = process.env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID;
+  
+  if (!apiKey || !cx) {
+    throw new Error("Google API credentials not configured");
+  }
+
+  const query = `${year} ${make} ${model} OBD port type diagnostic connector`;
+  const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}`;
+
+  try {
+    const response = await axios.get(url);
+    return response.data;
+  } catch (error) {
+    console.error("Google search error:", error);
+    return null;
+  }
+}
+
+// Parse Google results to extract vehicle specifications
+function parseGoogleResults(searchResults: any, make: string, model: string) {
+  if (!searchResults || !searchResults.items || searchResults.items.length === 0) {
+    return null;
+  }
+
+  // Extract text from search results
+  const combinedText = searchResults.items
+    .slice(0, 5)
+    .map((item: any) => `${item.title} ${item.snippet}`)
+    .join(' ')
+    .toLowerCase();
+
+  // Common port types to look for
+  const portTypes = ['OBD', 'OBD-II', 'OBD2', 'J1939', '16pin', '9pin'];
+  let detectedPort = null;
+
+  for (const portType of portTypes) {
+    if (combinedText.includes(portType.toLowerCase())) {
+      detectedPort = portType === 'OBD-II' || portType === 'OBD2' ? 'OBD' : portType;
+      break;
+    }
+  }
+
+  // Default to OBD if found in results
+  if (!detectedPort && combinedText.includes('diagnostic')) {
+    detectedPort = 'OBD';
+  }
+
+  return {
+    portType: detectedPort || 'OBD',
+    deviceType: 'DCM97021ZB', // Default device type
+    confidence: detectedPort ? 40 : 20, // Low confidence from Google
+    source: 'google',
+    searchResults: searchResults.items.slice(0, 3).map((item: any) => ({
+      title: item.title,
+      link: item.link,
+      snippet: item.snippet
+    }))
+  };
+}
 
 // Authentication middleware
 function requireAuth(req: any, res: any, next: any) {
@@ -686,9 +750,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
 
         if (nearbyManufacturerVehicles.length === 0) {
+          // No database matches found - try Google Custom Search
+          console.log(`No database matches for ${make} ${model} ${yearNum}, calling Google API...`);
+          
+          const googleResults = await searchGoogleForVehicle(make as string, model as string, yearNum);
+          const parsedResults = parseGoogleResults(googleResults, make as string, model as string);
+
+          if (!parsedResults) {
+            return res.json({
+              found: false,
+              predictions: null
+            });
+          }
+
           return res.json({
             found: false,
-            predictions: null
+            predictions: {
+              portType: parsedResults.portType,
+              portConfidence: parsedResults.confidence,
+              deviceType: parsedResults.deviceType,
+              deviceConfidence: parsedResults.confidence,
+              basedOn: 0,
+              source: 'google',
+              searchResults: parsedResults.searchResults,
+              similarVehicles: []
+            }
           });
         }
 
