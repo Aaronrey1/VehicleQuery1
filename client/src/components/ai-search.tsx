@@ -156,29 +156,36 @@ export default function AISearch() {
                   <Sparkles className="h-4 w-4 text-blue-600" />
                   <AlertDescription className="text-blue-800 dark:text-blue-200">
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <p className="font-semibold">AI Prediction Based on Similar Vehicles</p>
-                        <div className="flex items-center gap-2">
-                          <div className={`h-2 w-2 rounded-full ${getConfidenceColor(prediction.predictions.confidence)}`} />
-                          <span className="text-xs font-medium">{getConfidenceLabel(prediction.predictions.confidence)}</span>
-                        </div>
-                      </div>
+                      <p className="font-semibold">Two-Step AI Prediction</p>
                       
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Predicted Device Type</p>
-                          <Badge className="mt-1 bg-blue-600">{prediction.predictions.deviceType}</Badge>
+                      <div className="space-y-3">
+                        <div className="border rounded-lg p-3 bg-background">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm font-medium">Step 1: Port Type Prediction</p>
+                            <div className="flex items-center gap-2">
+                              <div className={`h-2 w-2 rounded-full ${getConfidenceColor(prediction.predictions.portConfidence)}`} />
+                              <span className="text-xs">{prediction.predictions.portConfidence}%</span>
+                            </div>
+                          </div>
+                          <Badge className="bg-blue-600">{prediction.predictions.portType}</Badge>
                         </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Predicted Port Type</p>
-                          <Badge className="mt-1 bg-blue-600">{prediction.predictions.portType}</Badge>
+
+                        <div className="border rounded-lg p-3 bg-background">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm font-medium">Step 2: Device Type (for {prediction.predictions.portType})</p>
+                            <div className="flex items-center gap-2">
+                              <div className={`h-2 w-2 rounded-full ${getConfidenceColor(prediction.predictions.deviceConfidence)}`} />
+                              <span className="text-xs">{prediction.predictions.deviceConfidence}%</span>
+                            </div>
+                          </div>
+                          <Badge className="bg-purple-600">{prediction.predictions.deviceType}</Badge>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 text-sm">
                         <TrendingUp className="h-4 w-4" />
                         <span>
-                          {prediction.predictions.confidence.toFixed(0)}% confidence based on {prediction.predictions.basedOn} similar vehicles
+                          Based on analysis of {prediction.predictions.basedOn} similar vehicles
                         </span>
                       </div>
                     </div>
@@ -234,7 +241,7 @@ export default function AISearch() {
 
       <Card className="bg-muted/30">
         <CardHeader>
-          <CardTitle className="text-lg">How It Works</CardTitle>
+          <CardTitle className="text-lg">How Two-Step Prediction Works</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <div className="flex items-start gap-3">
@@ -243,15 +250,19 @@ export default function AISearch() {
           </div>
           <div className="flex items-start gap-3">
             <Badge className="mt-0.5">2</Badge>
-            <p>AI analyzes similar vehicles (same make/model from nearby years)</p>
+            <p>AI finds similar vehicles (same make/model from nearby years)</p>
           </div>
           <div className="flex items-start gap-3">
             <Badge className="mt-0.5">3</Badge>
-            <p>Predicts most likely Device Type and Port Type with confidence score</p>
+            <p><strong>Step 1:</strong> Predicts Port Type from all similar vehicles</p>
           </div>
           <div className="flex items-start gap-3">
             <Badge className="mt-0.5">4</Badge>
-            <p>Shows which vehicles were used to make the prediction</p>
+            <p><strong>Step 2:</strong> Filters to vehicles with that port, then predicts Device Type</p>
+          </div>
+          <div className="flex items-start gap-3">
+            <Badge className="mt-0.5">5</Badge>
+            <p>Shows separate confidence scores for each prediction step</p>
           </div>
         </CardContent>
       </Card>
