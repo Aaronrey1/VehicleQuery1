@@ -23,6 +23,19 @@ Added AI Search feature with hybrid prediction system (Database + Google Custom 
 - Component: `client/src/components/ai-search.tsx`
 - Backend endpoint: GET `/api/ai/predict` with Google Custom Search fallback
 
+Added smart manufacturer alias matching across ALL search features:
+- **Manufacturer Nicknames**: System recognizes common abbreviations and aliases
+  - "Chevy" or "Chev" → "CHEVROLET"
+  - "VW" → "VOLKSWAGEN"
+  - "Benz", "Mercedes", or "MB" → "MERCEDES-BENZ"
+  - "Jag" → "JAGUAR"
+  - "Lambo" → "LAMBORGHINI"
+  - "Olds" → "OLDSMOBILE"
+  - And 50+ more common aliases
+- **Works everywhere**: Regular Search, Bulk Search, and AI Search all use the same normalization
+- **Consistent UX**: Users can type "Chevy Silverado" and it will find "CHEVROLET Silverado" vehicles
+- Implementation: `normalizeMake()` function in `server/routes.ts` applied to all search endpoints
+
 Previously implemented:
 - 525 harness records automatically load on server startup if database is empty
 - Harness data stored in `server/seed-harnesses.ts` and loads on both preview and published environments
