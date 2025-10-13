@@ -75,6 +75,18 @@ export default function AISearch() {
           <CardDescription>
             Get intelligent predictions for vehicles not in the database, based on pattern analysis of 31,000+ existing records
           </CardDescription>
+          
+          <Alert className="mt-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              <strong>How Prediction Confidence Works:</strong>
+              <ul className="mt-2 space-y-1 text-xs">
+                <li>• <strong>80-100% (High):</strong> Based on very similar vehicles (same make/model, ±5 years) - highly reliable</li>
+                <li>• <strong>60-79% (Medium):</strong> Based on manufacturer patterns (same make, ±10 years) - generally accurate</li>
+                <li>• <strong>20-59% (Low):</strong> Based on external search data - use with caution, consider adding to database</li>
+              </ul>
+            </AlertDescription>
+          </Alert>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -182,7 +194,7 @@ export default function AISearch() {
                               <span className="text-xs">{prediction.predictions.portConfidence}%</span>
                             </div>
                           </div>
-                          <Badge className="bg-blue-600">{prediction.predictions.portType}</Badge>
+                          <Badge className={getConfidenceColor(prediction.predictions.portConfidence)}>{prediction.predictions.portType}</Badge>
                         </div>
 
                         <div className="border rounded-lg p-3 bg-background">
@@ -193,7 +205,7 @@ export default function AISearch() {
                               <span className="text-xs">{prediction.predictions.deviceConfidence}%</span>
                             </div>
                           </div>
-                          <Badge className="bg-purple-600">{prediction.predictions.deviceType}</Badge>
+                          <Badge className={getConfidenceColor(prediction.predictions.deviceConfidence)}>{prediction.predictions.deviceType}</Badge>
                         </div>
                       </div>
 
