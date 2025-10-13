@@ -14,9 +14,11 @@ Added AI Search feature with hybrid prediction system (Database + Google Custom 
   2. **Tier 2 (Database - Free)**: Fallback ±10 year window for broader manufacturer matches (reduced confidence 60%)
   3. **Tier 3 (Google - Paid)**: Google Custom Search API when no database matches found (low confidence 20-40%, $5 per 1,000 searches after 100 free daily)
 - **Two-Step Prediction Algorithm**: First predicts port type from similar vehicles, then filters by port and predicts device type
+- **Confidence Explanation UI**: Info box at top explains what prediction percentages mean (80-100% high, 60-79% medium, 20-59% low)
+- **Color-Coded Badges**: Green (high confidence), Yellow (medium), Orange (low) - matches explanation
 - Shows separate confidence scores for port type and device type predictions
-- UI distinguishes Google predictions (purple badge) from database predictions (blue badge)
-- Displays Google search result snippets with links when using external data
+- UI distinguishes Google predictions (purple alert) from database predictions (blue alert)
+- Google search results hidden from UI to keep interface clean (predictions still shown)
 - Cost-efficient: Google only called as last resort when database has no matches
 - Component: `client/src/components/ai-search.tsx`
 - Backend endpoint: GET `/api/ai/predict` with Google Custom Search fallback
