@@ -12,9 +12,10 @@ interface PredictionResult {
   found: boolean;
   exactMatch?: any;
   predictions?: {
-    deviceType: string;
     portType: string;
-    confidence: number;
+    portConfidence: number;
+    deviceType: string;
+    deviceConfidence: number;
     basedOn: number;
     similarVehicles: Array<{
       make: string;

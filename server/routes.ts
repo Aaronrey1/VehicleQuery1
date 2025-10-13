@@ -693,62 +693,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Use nearby manufacturer vehicles for broader prediction
-        const deviceTypeCounts = new Map<string, number>();
+        // TWO-STEP: First predict port type, then device type
+        
+        // STEP 1: Predict PORT TYPE from manufacturer vehicles
         const portTypeCounts = new Map<string, number>();
-
         nearbyManufacturerVehicles.forEach(v => {
-          deviceTypeCounts.set(v.deviceType, (deviceTypeCounts.get(v.deviceType) || 0) + 1);
           portTypeCounts.set(v.portType, (portTypeCounts.get(v.portType) || 0) + 1);
         });
 
-        const mostCommonDevice = Array.from(deviceTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
         const mostCommonPort = Array.from(portTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
-
-        const deviceConfidence = (mostCommonDevice[1] / nearbyManufacturerVehicles.length) * 100;
         const portConfidence = (mostCommonPort[1] / nearbyManufacturerVehicles.length) * 100;
-        const avgConfidence = (deviceConfidence + portConfidence) / 2;
+
+        // STEP 2: Filter to vehicles with that port type, then predict DEVICE TYPE
+        const vehiclesWithPort = nearbyManufacturerVehicles.filter(v => v.portType === mostCommonPort[0]);
+        
+        const deviceTypeCounts = new Map<string, number>();
+        vehiclesWithPort.forEach(v => {
+          deviceTypeCounts.set(v.deviceType, (deviceTypeCounts.get(v.deviceType) || 0) + 1);
+        });
+
+        const mostCommonDevice = Array.from(deviceTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+        const deviceConfidence = (mostCommonDevice[1] / vehiclesWithPort.length) * 100;
 
         return res.json({
           found: false,
           predictions: {
-            deviceType: mostCommonDevice[0],
             portType: mostCommonPort[0],
-            confidence: Math.round(avgConfidence * 0.6), // Lower confidence for broader match
+            portConfidence: Math.round(portConfidence * 0.6), // Lower confidence for broader match
+            deviceType: mostCommonDevice[0],
+            deviceConfidence: Math.round(deviceConfidence * 0.6), // Lower confidence for broader match
             basedOn: nearbyManufacturerVehicles.length,
             similarVehicles: nearbyManufacturerVehicles.slice(0, 10)
           }
         });
       }
 
-      // Calculate frequency of device types and port types from nearby year vehicles
-      const deviceTypeCounts = new Map<string, number>();
+      // TWO-STEP PREDICTION: First predict port type, then device type
+      
+      // STEP 1: Predict PORT TYPE from all nearby vehicles
       const portTypeCounts = new Map<string, number>();
-      const combinations = new Map<string, number>();
-
       nearbyYearVehicles.forEach(v => {
-        deviceTypeCounts.set(v.deviceType, (deviceTypeCounts.get(v.deviceType) || 0) + 1);
         portTypeCounts.set(v.portType, (portTypeCounts.get(v.portType) || 0) + 1);
-        const combo = `${v.deviceType}|${v.portType}`;
-        combinations.set(combo, (combinations.get(combo) || 0) + 1);
       });
 
-      // Find most common device type and port type
-      const mostCommonDevice = Array.from(deviceTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
       const mostCommonPort = Array.from(portTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
-      const mostCommonCombo = Array.from(combinations.entries()).sort((a, b) => b[1] - a[1])[0];
+      const portConfidence = (mostCommonPort[1] / nearbyYearVehicles.length) * 100;
 
-      // Calculate confidence score based on frequency within year window
-      const comboConfidence = (mostCommonCombo[1] / nearbyYearVehicles.length) * 100;
+      // STEP 2: Filter to vehicles with predicted port type, then predict DEVICE TYPE
+      const vehiclesWithPort = nearbyYearVehicles.filter(v => v.portType === mostCommonPort[0]);
       
-      // Prefer the combination if it's common
-      const [predictedDevice, predictedPort] = mostCommonCombo[0].split('|');
+      const deviceTypeCounts = new Map<string, number>();
+      vehiclesWithPort.forEach(v => {
+        deviceTypeCounts.set(v.deviceType, (deviceTypeCounts.get(v.deviceType) || 0) + 1);
+      });
+
+      const mostCommonDevice = Array.from(deviceTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+      const deviceConfidence = (mostCommonDevice[1] / vehiclesWithPort.length) * 100;
 
       res.json({
         found: false,
         predictions: {
-          deviceType: predictedDevice,
-          portType: predictedPort,
-          confidence: Math.round(comboConfidence),
+          portType: mostCommonPort[0],
+          portConfidence: Math.round(portConfidence),
+          deviceType: mostCommonDevice[0],
+          deviceConfidence: Math.round(deviceConfidence),
           basedOn: nearbyYearVehicles.length,
           similarVehicles: nearbyYearVehicles.slice(0, 10)
         }
