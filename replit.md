@@ -6,8 +6,18 @@ VehicleDB Pro is a full-stack vehicle database management system that allows use
 
 ## Recent Changes
 
-Implemented auto-seeding for Geometris harness data and fixed authentication:
-- **525 harness records automatically load** on server startup if database is empty
+Added AI Search feature with pattern-based predictions (Phase 1 free implementation):
+- **New "AI Search" tab** provides intelligent predictions for vehicles not in database
+- Uses pattern matching and statistics from existing 31K+ vehicle records - **100% free, no external API costs**
+- Implements ±5 year window for same make/model predictions with high confidence scores
+- Fallback ±10 year window for broader manufacturer matches with reduced confidence (60%)
+- Shows similar vehicles used for predictions with confidence indicators
+- Smart year filtering ensures accurate predictions based on nearby vehicle data
+- Component: `client/src/components/ai-search.tsx`
+- Backend endpoint: GET `/api/ai/predict` with year window filtering
+
+Previously implemented:
+- 525 harness records automatically load on server startup if database is empty
 - Harness data stored in `server/seed-harnesses.ts` and loads on both preview and published environments
 - Updated schema to make yearFrom/yearTo nullable to support all harness configurations
 - Fixed session persistence on published app by using memorystore, explicit session.save(), and trust proxy configuration
@@ -42,10 +52,15 @@ Preferred communication style: Simple, everyday language.
 - Important: Due to `staleTime: Infinity`, mutations must use `refetchQueries` instead of `invalidateQueries` to force immediate cache updates (see Geometris component for reference implementation)
 
 **Key Pages & Components**
-- Home page with tabbed navigation (Search, Bulk Search, Geometris, Manage Data, Analytics, Admin)
+- Home page with tabbed navigation (Search, Bulk Search, AI Search, Manage Data, Geometris, Analytics, Admin)
 - VehicleSearch component for filtering vehicles by make/model/year with cascading dropdowns and advanced filtering
 - SearchResults component with pagination, sorting, and export functionality (CSV)
 - BulkSearch component for searching multiple vehicles simultaneously
+- AISearch component for pattern-based predictions using existing database (free AI features)
+  - Smart predictions for vehicles not in database
+  - ±5 year window matching for same make/model with high confidence
+  - ±10 year fallback for broader manufacturer matches with reduced confidence
+  - Displays similar vehicles used for predictions with confidence scoring
 - Geometris component for searching harness types by make/model/year with year range support
 - DataImport component for CSV file uploads with validation options
 - AnalyticsDashboard for database statistics and insights
@@ -90,6 +105,14 @@ Harness Endpoints (Geometris):
 - PATCH `/api/harnesses/:id` - Update individual harness record (requires authentication)
 - DELETE `/api/harnesses/:id` - Delete individual harness record (requires authentication)
 - DELETE `/api/harnesses` - Clear all harness data (requires authentication)
+
+AI Prediction Endpoint:
+- GET `/api/ai/predict` - Pattern-based predictions for vehicles not in database
+  - Query params: make, model, year
+  - Returns exact match if found, otherwise generates prediction using:
+    - Primary: Same make/model vehicles within ±5 years (high confidence)
+    - Fallback: Same make vehicles within ±10 years (reduced confidence 60%)
+  - Response includes deviceType, portType, confidence score, and similar vehicles used
 
 ### Data Storage
 

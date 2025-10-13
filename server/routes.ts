@@ -623,6 +623,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Prediction endpoint - pattern-based suggestions
+  app.get("/api/ai/predict", async (req, res) => {
+    try {
+      const { make, model, year } = req.query;
+      
+      if (!make || !model || !year) {
+        return res.status(400).json({ message: "Make, model, and year are required" });
+      }
+
+      const yearNum = parseInt(year as string);
+
+      // First, check if exact vehicle exists
+      const exactMatch = await storage.searchVehicles({
+        make: make as string,
+        model: model as string,
+        year: yearNum,
+        limit: 1,
+        offset: 0,
+        sortBy: "year",
+        sortOrder: "asc"
+      });
+
+      if (exactMatch.vehicles.length > 0) {
+        return res.json({
+          found: true,
+          exactMatch: exactMatch.vehicles[0]
+        });
+      }
+
+      // No exact match - find similar vehicles for prediction
+      // Search for same make+model with all years, then filter to ±5 year window
+      const allSimilarVehicles = await storage.searchVehicles({
+        make: make as string,
+        model: model as string,
+        limit: 1000, // Get more to ensure we have enough in the year range
+        offset: 0,
+        sortBy: "year",
+        sortOrder: "desc"
+      });
+
+      // Filter to vehicles within ±5 years of requested year
+      const yearWindow = 5;
+      const nearbyYearVehicles = allSimilarVehicles.vehicles.filter(
+        v => Math.abs(v.year - yearNum) <= yearWindow
+      );
+
+      if (nearbyYearVehicles.length === 0) {
+        // No similar vehicles in year range - try broader manufacturer match
+        const allManufacturerVehicles = await storage.searchVehicles({
+          make: make as string,
+          limit: 1000,
+          offset: 0,
+          sortBy: "year",
+          sortOrder: "desc"
+        });
+
+        // Filter manufacturer vehicles to ±10 year window for broader match
+        const broaderYearWindow = 10;
+        const nearbyManufacturerVehicles = allManufacturerVehicles.vehicles.filter(
+          v => Math.abs(v.year - yearNum) <= broaderYearWindow
+        );
+
+        if (nearbyManufacturerVehicles.length === 0) {
+          return res.json({
+            found: false,
+            predictions: null
+          });
+        }
+
+        // Use nearby manufacturer vehicles for broader prediction
+        const deviceTypeCounts = new Map<string, number>();
+        const portTypeCounts = new Map<string, number>();
+
+        nearbyManufacturerVehicles.forEach(v => {
+          deviceTypeCounts.set(v.deviceType, (deviceTypeCounts.get(v.deviceType) || 0) + 1);
+          portTypeCounts.set(v.portType, (portTypeCounts.get(v.portType) || 0) + 1);
+        });
+
+        const mostCommonDevice = Array.from(deviceTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+        const mostCommonPort = Array.from(portTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+
+        const deviceConfidence = (mostCommonDevice[1] / nearbyManufacturerVehicles.length) * 100;
+        const portConfidence = (mostCommonPort[1] / nearbyManufacturerVehicles.length) * 100;
+        const avgConfidence = (deviceConfidence + portConfidence) / 2;
+
+        return res.json({
+          found: false,
+          predictions: {
+            deviceType: mostCommonDevice[0],
+            portType: mostCommonPort[0],
+            confidence: Math.round(avgConfidence * 0.6), // Lower confidence for broader match
+            basedOn: nearbyManufacturerVehicles.length,
+            similarVehicles: nearbyManufacturerVehicles.slice(0, 10)
+          }
+        });
+      }
+
+      // Calculate frequency of device types and port types from nearby year vehicles
+      const deviceTypeCounts = new Map<string, number>();
+      const portTypeCounts = new Map<string, number>();
+      const combinations = new Map<string, number>();
+
+      nearbyYearVehicles.forEach(v => {
+        deviceTypeCounts.set(v.deviceType, (deviceTypeCounts.get(v.deviceType) || 0) + 1);
+        portTypeCounts.set(v.portType, (portTypeCounts.get(v.portType) || 0) + 1);
+        const combo = `${v.deviceType}|${v.portType}`;
+        combinations.set(combo, (combinations.get(combo) || 0) + 1);
+      });
+
+      // Find most common device type and port type
+      const mostCommonDevice = Array.from(deviceTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+      const mostCommonPort = Array.from(portTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+      const mostCommonCombo = Array.from(combinations.entries()).sort((a, b) => b[1] - a[1])[0];
+
+      // Calculate confidence score based on frequency within year window
+      const comboConfidence = (mostCommonCombo[1] / nearbyYearVehicles.length) * 100;
+      
+      // Prefer the combination if it's common
+      const [predictedDevice, predictedPort] = mostCommonCombo[0].split('|');
+
+      res.json({
+        found: false,
+        predictions: {
+          deviceType: predictedDevice,
+          portType: predictedPort,
+          confidence: Math.round(comboConfidence),
+          basedOn: nearbyYearVehicles.length,
+          similarVehicles: nearbyYearVehicles.slice(0, 10)
+        }
+      });
+    } catch (error) {
+      console.error("AI prediction error:", error);
+      res.status(500).json({ message: "Failed to generate prediction" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

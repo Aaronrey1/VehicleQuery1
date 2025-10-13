@@ -5,7 +5,8 @@ import AnalyticsDashboard from "@/components/analytics-dashboard";
 import BulkSearch from "@/components/bulk-search";
 import AdminPanel from "@/components/admin-panel";
 import Geometris from "@/components/geometris";
-import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable } from "lucide-react";
+import AISearch from "@/components/ai-search";
+import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
@@ -56,6 +57,16 @@ export default function Home() {
                 data-testid="nav-bulk"
               >
                 Bulk Search
+              </button>
+              <button
+                onClick={() => setActiveSection("ai")}
+                className={`transition-colors flex items-center gap-1 ${
+                  activeSection === "ai" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                }`}
+                data-testid="nav-ai"
+              >
+                <Sparkles className="h-3 w-3" />
+                AI Search
               </button>
               <button
                 onClick={() => handleProtectedSection("manage")}
@@ -135,6 +146,9 @@ export default function Home() {
 
         {/* Bulk Search Section */}
         {activeSection === "bulk" && <BulkSearch />}
+
+        {/* AI Search Section */}
+        {activeSection === "ai" && <AISearch />}
 
         {/* Geometris Section */}
         {activeSection === "geometris" && <Geometris />}
