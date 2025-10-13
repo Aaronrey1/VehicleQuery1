@@ -158,11 +158,20 @@ export default function AISearch() {
               </Alert>
             ) : prediction.predictions ? (
               <div className="space-y-4">
-                <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950">
-                  <Sparkles className="h-4 w-4 text-blue-600" />
-                  <AlertDescription className="text-blue-800 dark:text-blue-200">
+                <Alert className={prediction.predictions.source === 'google' ? "border-purple-500 bg-purple-50 dark:bg-purple-950" : "border-blue-500 bg-blue-50 dark:bg-blue-950"}>
+                  <Sparkles className={prediction.predictions.source === 'google' ? "h-4 w-4 text-purple-600" : "h-4 w-4 text-blue-600"} />
+                  <AlertDescription className={prediction.predictions.source === 'google' ? "text-purple-800 dark:text-purple-200" : "text-blue-800 dark:text-blue-200"}>
                     <div className="space-y-3">
-                      <p className="font-semibold">Two-Step AI Prediction</p>
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold">
+                          {prediction.predictions.source === 'google' ? 'Google AI Prediction' : 'Two-Step AI Prediction'}
+                        </p>
+                        {prediction.predictions.source === 'google' && (
+                          <Badge variant="outline" className="text-purple-600 border-purple-400">
+                            From Google Search
+                          </Badge>
+                        )}
+                      </div>
                       
                       <div className="space-y-3">
                         <div className="border rounded-lg p-3 bg-background">
@@ -198,40 +207,74 @@ export default function AISearch() {
                   </AlertDescription>
                 </Alert>
 
-                <Card className="bg-muted/50">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Similar Vehicles Used for Prediction</CardTitle>
-                    <CardDescription>
-                      These {prediction.predictions.similarVehicles.length} vehicles were analyzed to make this prediction
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {prediction.predictions.similarVehicles.slice(0, 10).map((vehicle, idx) => (
-                        <div 
-                          key={idx} 
-                          className="flex items-center justify-between p-3 bg-background rounded-lg border"
-                          data-testid={`similar-vehicle-${idx}`}
-                        >
-                          <div className="flex-1">
-                            <p className="font-medium">
-                              {vehicle.year} {vehicle.make} {vehicle.model}
-                            </p>
+{prediction.predictions.source === 'google' && prediction.predictions.searchResults ? (
+                  <Card className="bg-muted/50">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Google Search Results</CardTitle>
+                      <CardDescription>
+                        This prediction is based on information found through Google Search
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {prediction.predictions.searchResults.map((result, idx) => (
+                          <div key={idx} className="p-3 bg-background rounded-lg border">
+                            <a 
+                              href={result.link} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm font-medium text-blue-600 hover:underline"
+                            >
+                              {result.title}
+                            </a>
+                            <p className="text-xs text-muted-foreground mt-1">{result.snippet}</p>
                           </div>
-                          <div className="flex gap-2">
-                            <Badge variant="outline" className="text-xs">{vehicle.deviceType}</Badge>
-                            <Badge variant="outline" className="text-xs">{vehicle.portType}</Badge>
+                        ))}
+                      </div>
+                      <Alert className="mt-4 border-orange-500 bg-orange-50 dark:bg-orange-950">
+                        <AlertCircle className="h-4 w-4 text-orange-600" />
+                        <AlertDescription className="text-xs text-orange-800 dark:text-orange-200">
+                          Note: Google predictions have lower confidence as they may not match your exact device/port specifications. Consider adding this vehicle to your database for accurate future predictions.
+                        </AlertDescription>
+                      </Alert>
+                    </CardContent>
+                  </Card>
+                ) : prediction.predictions.similarVehicles && prediction.predictions.similarVehicles.length > 0 ? (
+                  <Card className="bg-muted/50">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Similar Vehicles Used for Prediction</CardTitle>
+                      <CardDescription>
+                        These {prediction.predictions.similarVehicles.length} vehicles were analyzed to make this prediction
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {prediction.predictions.similarVehicles.slice(0, 10).map((vehicle, idx) => (
+                          <div 
+                            key={idx} 
+                            className="flex items-center justify-between p-3 bg-background rounded-lg border"
+                            data-testid={`similar-vehicle-${idx}`}
+                          >
+                            <div className="flex-1">
+                              <p className="font-medium">
+                                {vehicle.year} {vehicle.make} {vehicle.model}
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Badge variant="outline" className="text-xs">{vehicle.deviceType}</Badge>
+                              <Badge variant="outline" className="text-xs">{vehicle.portType}</Badge>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      {prediction.predictions.similarVehicles.length > 10 && (
-                        <p className="text-sm text-muted-foreground text-center py-2">
-                          ... and {prediction.predictions.similarVehicles.length - 10} more
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                        ))}
+                        {prediction.predictions.similarVehicles.length > 10 && (
+                          <p className="text-sm text-muted-foreground text-center py-2">
+                            ... and {prediction.predictions.similarVehicles.length - 10} more
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null}
               </div>
             ) : (
               <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950">
