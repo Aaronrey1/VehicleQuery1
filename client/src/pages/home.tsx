@@ -6,7 +6,8 @@ import BulkSearch from "@/components/bulk-search";
 import AdminPanel from "@/components/admin-panel";
 import Geometris from "@/components/geometris";
 import AISearch from "@/components/ai-search";
-import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles } from "lucide-react";
+import Billing from "@/components/billing";
+import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
@@ -97,6 +98,16 @@ export default function Home() {
                 Analytics
               </button>
               <button
+                onClick={() => setActiveSection("billing")}
+                className={`transition-colors flex items-center gap-1 ${
+                  activeSection === "billing" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                }`}
+                data-testid="nav-billing"
+              >
+                <DollarSign className="h-3 w-3" />
+                Billing
+              </button>
+              <button
                 onClick={() => handleProtectedSection("admin")}
                 className={`transition-colors flex items-center gap-1 ${
                   activeSection === "admin" ? "text-primary" : "text-muted-foreground hover:text-primary"
@@ -158,6 +169,9 @@ export default function Home() {
 
         {/* Analytics Section */}
         {activeSection === "analytics" && <AnalyticsDashboard />}
+
+        {/* Billing Section */}
+        {activeSection === "billing" && <Billing />}
 
         {/* Admin Section */}
         {activeSection === "admin" && <AdminPanel />}
