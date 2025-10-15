@@ -6,8 +6,21 @@ VehicleDB Pro is a full-stack vehicle database management system for searching, 
 
 ## Recent Changes
 
-**Smart Year Validation (Latest):**
-- AI Search now validates if the searched year makes sense for the vehicle
+**Smart Input Validation & Universal Pending Approval (Latest):**
+- **Make/Model Validation:** AI Search now detects nonsensical inputs (e.g., "ABC") and warns users
+  - Checks if make exists in database or is too short (<2 characters)
+  - Shows red warning: "No vehicles found for make..." or "seems invalid"
+  - Prevents wasted predictions on invalid inputs
+- **All Predictions Now Require Admin Approval:** Changed prediction workflow to require approval for ALL AI predictions
+  - Tier 1 (same make/model, ±5 years), Tier 2 (same make, ±10 years), and Google API predictions all go to pending_vehicles table
+  - Users see blue info message: "Prediction submitted for admin approval"
+  - NO prediction details shown to users until admin approves
+  - Exact matches still show immediately (no pending approval needed)
+  - Admin must review and approve predictions in Pending tab before they're added to main database
+  - Ensures data quality and prevents incorrect predictions from polluting the database
+
+**Smart Year Validation:**
+- AI Search validates if the searched year makes sense for the vehicle
 - Checks database for known production years of that make/model
 - Shows prominent red warning when year is >5 years outside known range
 - Example: Searching "Tata Nano 1998" shows warning "This vehicle model was first produced in 2015"
