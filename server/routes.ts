@@ -1006,6 +1006,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get pending vehicles (protected - admin only)
+  app.get("/api/pending-vehicles", requireAuth, async (req, res) => {
+    try {
+      const pending = await storage.getPendingVehicles();
+      res.json(pending);
+    } catch (error) {
+      console.error("Get pending vehicles error:", error);
+      res.status(500).json({ message: "Failed to get pending vehicles" });
+    }
+  });
+
+  // Approve pending vehicle (protected - admin only)
+  app.post("/api/pending-vehicles/:id/approve", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.approvePendingVehicle(id);
+      res.json({ message: "Vehicle approved and added to database" });
+    } catch (error) {
+      console.error("Approve pending vehicle error:", error);
+      res.status(500).json({ message: "Failed to approve vehicle" });
+    }
+  });
+
+  // Reject pending vehicle (protected - admin only)
+  app.post("/api/pending-vehicles/:id/reject", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.rejectPendingVehicle(id);
+      res.json({ message: "Vehicle rejected" });
+    } catch (error) {
+      console.error("Reject pending vehicle error:", error);
+      res.status(500).json({ message: "Failed to reject vehicle" });
+    }
+  });
+
+  // Delete pending vehicle (protected - admin only)
+  app.delete("/api/pending-vehicles/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deletePendingVehicle(id);
+      res.json({ message: "Pending vehicle deleted" });
+    } catch (error) {
+      console.error("Delete pending vehicle error:", error);
+      res.status(500).json({ message: "Failed to delete pending vehicle" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
