@@ -190,22 +190,6 @@ export default function AISearch() {
                   </div>
                 </AlertDescription>
               </Alert>
-            ) : prediction.pendingApproval ? (
-              <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950">
-                <Sparkles className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-800 dark:text-blue-200">
-                  <div className="space-y-2">
-                    <p className="font-semibold">{prediction.message}</p>
-                    <p className="text-sm">
-                      An AI prediction has been generated and saved for admin review. 
-                      Once approved by an admin, it will be added to the database for future searches.
-                    </p>
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                      💡 Check the "Pending" tab in the Admin section to review predictions
-                    </p>
-                  </div>
-                </AlertDescription>
-              </Alert>
             ) : prediction.predictions ? (
               <div className="space-y-4">
                 <Alert className={prediction.predictions.source === 'google' ? "border-purple-500 bg-purple-50 dark:bg-purple-950" : "border-blue-500 bg-blue-50 dark:bg-blue-950"}>
@@ -300,6 +284,23 @@ export default function AISearch() {
                     </CardContent>
                   </Card>
                 ) : null}
+                
+                {prediction.pendingApproval && (
+                  <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950">
+                    <Sparkles className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800 dark:text-blue-200">
+                      <div className="space-y-2">
+                        <p className="font-semibold">{prediction.message}</p>
+                        <p className="text-sm">
+                          This prediction has been saved for admin review. Once approved, it will be added to the database for future searches.
+                        </p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                          💡 Check the "Pending" tab in the Admin section to review predictions
+                        </p>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             ) : (
               <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950">

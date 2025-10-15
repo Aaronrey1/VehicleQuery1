@@ -940,6 +940,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             found: false,
             pendingApproval: true,
             message: 'Prediction submitted for admin approval',
+            predictions: {
+              portType: parsedResults.portType,
+              portConfidence: parsedResults.confidence,
+              deviceType: parsedResults.deviceType,
+              deviceConfidence: parsedResults.confidence,
+              basedOn: 0,
+              source: 'google',
+              searchResults: parsedResults.searchResults,
+              similarVehicles: []
+            },
             yearWarning,
             makeModelWarning
           });
@@ -1001,6 +1011,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           found: false,
           pendingApproval: true,
           message: 'Prediction submitted for admin approval',
+          predictions: {
+            portType: mostCommonPort[0],
+            portConfidence: tier2PortConfidence,
+            deviceType: mostCommonDevice[0],
+            deviceConfidence: tier2DeviceConfidence,
+            basedOn: nearbyManufacturerVehicles.length,
+            source: 'database_tier2',
+            similarVehicles: nearbyManufacturerVehicles.slice(0, 10)
+          },
           yearWarning,
           makeModelWarning
         });
@@ -1061,6 +1080,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         found: false,
         pendingApproval: true,
         message: 'Prediction submitted for admin approval',
+        predictions: {
+          portType: mostCommonPort[0],
+          portConfidence: tier1PortConfidence,
+          deviceType: mostCommonDevice[0],
+          deviceConfidence: tier1DeviceConfidence,
+          basedOn: nearbyYearVehicles.length,
+          source: 'database_tier1',
+          similarVehicles: nearbyYearVehicles.slice(0, 10)
+        },
         yearWarning,
         makeModelWarning
       });
