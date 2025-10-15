@@ -6,7 +6,15 @@ VehicleDB Pro is a full-stack vehicle database management system for searching, 
 
 ## Recent Changes
 
-**Navigation Reorganization (Latest):**
+**Smart Year Validation (Latest):**
+- AI Search now validates if the searched year makes sense for the vehicle
+- Checks database for known production years of that make/model
+- Shows prominent red warning when year is >5 years outside known range
+- Example: Searching "Tata Nano 1998" shows warning "This vehicle model was first produced in 2015"
+- Helps prevent impossible vehicle/year combinations from showing predictions
+- Works for both too-early and too-late years
+
+**Navigation Reorganization:**
 - Grouped locked tabs (Admin, Manage Data, Billing, Pending) under single "Admin" section with sub-navigation
 - Cleaner main navigation with Settings icon for Admin section
 - Sub-tabs appear in secondary navigation bar when Admin section is active
