@@ -7,7 +7,8 @@ import AdminPanel from "@/components/admin-panel";
 import Geometris from "@/components/geometris";
 import AISearch from "@/components/ai-search";
 import Billing from "@/components/billing";
-import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign } from "lucide-react";
+import { PendingApprovals } from "@/components/pending-approvals";
+import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
@@ -21,7 +22,7 @@ export default function Home() {
   const [, setLocation] = useLocation();
 
   const handleProtectedSection = (section: string) => {
-    if (section === "admin" || section === "manage") {
+    if (section === "admin" || section === "manage" || section === "pending") {
       if (!isAuthenticated) {
         setLocation("/login");
         return;
@@ -108,6 +109,17 @@ export default function Home() {
                 Billing
               </button>
               <button
+                onClick={() => handleProtectedSection("pending")}
+                className={`transition-colors flex items-center gap-1 ${
+                  activeSection === "pending" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                }`}
+                data-testid="nav-pending"
+              >
+                <ClipboardCheck className="h-3 w-3" />
+                Pending
+                {!isAuthenticated && <Lock className="h-3 w-3" />}
+              </button>
+              <button
                 onClick={() => handleProtectedSection("admin")}
                 className={`transition-colors flex items-center gap-1 ${
                   activeSection === "admin" ? "text-primary" : "text-muted-foreground hover:text-primary"
@@ -172,6 +184,9 @@ export default function Home() {
 
         {/* Billing Section */}
         {activeSection === "billing" && <Billing />}
+
+        {/* Pending Approvals Section */}
+        {activeSection === "pending" && <PendingApprovals />}
 
         {/* Admin Section */}
         {activeSection === "admin" && <AdminPanel />}
