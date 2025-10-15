@@ -855,14 +855,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
 
-          // Log Google API search (Tier 3 - Paid)
+          // Check today's Google API usage for free tier (100 free searches per day)
+          const todayGoogleCount = await storage.getTodayGoogleSearchCount();
+          const isFree = todayGoogleCount < 100;
+          
+          // Log Google API search (Tier 3 - Free for first 100 per day, then $0.005)
           await storage.logAiSearch({
             make: normalizedMake,
             model: String(model),
             year: yearNum,
             source: 'google_api',
             confidence: parsedResults.confidence,
-            cost: 5 // 5 tenths of a cent = $0.005 per Google search
+            cost: isFree ? 0 : 5 // First 100 per day are free, then 5 tenths of a cent = $0.005
           });
 
           // Store Google result as pending vehicle for admin approval

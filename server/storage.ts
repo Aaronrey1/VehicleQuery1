@@ -46,6 +46,7 @@ export interface IStorage {
   // AI Search logging methods
   logAiSearch(log: InsertAiSearchLog): Promise<void>;
   getBillingStats(): Promise<BillingStats>;
+  getTodayGoogleSearchCount(): Promise<number>;
 
   // Pending vehicles methods (Google API results awaiting approval)
   createPendingVehicle(vehicle: InsertPendingVehicle): Promise<PendingVehicle>;
@@ -466,6 +467,23 @@ export class DatabaseStorage implements IStorage {
 
   async deletePendingVehicle(id: string): Promise<void> {
     await db.delete(pendingVehicles).where(eq(pendingVehicles.id, id));
+  }
+
+  async getTodayGoogleSearchCount(): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(
+        and(
+          eq(aiSearchLogs.source, 'google_api'),
+          sql`${aiSearchLogs.timestamp} >= ${today.toISOString()}`
+        )
+      );
+
+    return Number(result?.count || 0);
   }
 }
 
