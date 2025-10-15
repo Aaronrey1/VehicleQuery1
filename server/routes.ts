@@ -946,6 +946,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get billing stats for AI Search
+  app.get("/api/billing/stats", async (req, res) => {
+    try {
+      const stats = await storage.getBillingStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Billing stats error:", error);
+      res.status(500).json({ message: "Failed to get billing stats" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
