@@ -13,8 +13,9 @@ VehicleDB Pro is a full-stack vehicle database management system for searching, 
   - Prevents wasted predictions on invalid inputs
 - **All Predictions Now Require Admin Approval:** Changed prediction workflow to require approval for ALL AI predictions
   - Tier 1 (same make/model, ±5 years), Tier 2 (same make, ±10 years), and Google API predictions all go to pending_vehicles table
-  - Users see blue info message: "Prediction submitted for admin approval"
-  - NO prediction details shown to users until admin approves
+  - **Users see prediction details WITH warnings** - full transparency on what was predicted
+  - Blue info message at bottom: "Prediction submitted for admin approval"
+  - Predictions include: port type, device type, confidence scores, similar vehicles used
   - Exact matches still show immediately (no pending approval needed)
   - Admin must review and approve predictions in Pending tab before they're added to main database
   - Ensures data quality and prevents incorrect predictions from polluting the database
