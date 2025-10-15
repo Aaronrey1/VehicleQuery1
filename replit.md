@@ -6,6 +6,26 @@ VehicleDB Pro is a full-stack vehicle database management system for searching, 
 
 ## Recent Changes
 
+**Navigation Reorganization (Latest):**
+- Grouped locked tabs (Admin, Manage Data, Billing, Pending) under single "Admin" section with sub-navigation
+- Cleaner main navigation with Settings icon for Admin section
+- Sub-tabs appear in secondary navigation bar when Admin section is active
+- Maintains authentication checks - redirects to login if not authenticated
+- Improved UX by reducing navigation clutter and grouping related admin features
+
+**Free Tier Implementation for Google API:**
+- First 100 Google searches per day are completely free (cost = $0.00)
+- Backend tracks daily Google search count and sets cost to 0 for first 100 searches
+- After 100 searches, cost is $0.005 per search
+- Billing display correctly shows $0.00 for free searches
+- UI clearly indicates "100 FREE/DAY" in tier breakdown
+- getTodayGoogleSearchCount() method counts Google searches since midnight
+
+**Payment Integration:**
+- Added "Make Payment" button in billing tab (appears when totalCostCents > 0)
+- Opens payment link in new window (currently placeholder URL)
+- Integrates with existing Stripe infrastructure for future payment processing
+
 **Google API Results Admin Approval Workflow:**
 - New "Pending" tab (admin-only) displays Google API predictions awaiting approval before database insertion
 - Automatic capture: When AI Search calls Google API (Tier 3 - $0.005/search), results automatically saved to `pending_vehicles` table
