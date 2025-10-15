@@ -141,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Validate and normalize each query
           const validatedQuery = searchVehicleSchema.parse({
             make: normalizeMake(query.make),
-            model: query.model,
+            model: normalizeText(query.model),
             year: query.year
           });
 
@@ -258,15 +258,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'WESTERN STAR': 'WESTERN STAR',
     };
     
-    // Return normalized make if alias exists, otherwise return original (title cased)
-    if (aliases[makeUpper]) {
-      return aliases[makeUpper];
-    }
-    
-    // Title case the original if not found in aliases
-    return make.split(' ').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    ).join(' ');
+    // Return normalized make if alias exists, otherwise return uppercase
+    return aliases[makeUpper] || makeUpper;
+  };
+
+  // Normalize text input to uppercase for case-insensitive search
+  const normalizeText = (text: string | undefined): string | undefined => {
+    if (!text) return undefined;
+    return text.toUpperCase().trim();
   };
 
   // Search vehicles
@@ -276,10 +275,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const searchParams = {
         make: normalizeMake(make as string),
-        model: model as string,
+        model: normalizeText(model as string),
         year: year ? parseInt(year as string) : undefined,
-        deviceType: deviceType as string,
-        portType: portType as string,
+        deviceType: normalizeText(deviceType as string),
+        portType: normalizeText(portType as string),
         limit: parseInt(limit as string),
         offset: (parseInt(page as string) - 1) * parseInt(limit as string),
         sortBy: sortBy as string,
@@ -368,11 +367,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { make, model, year, deviceType, portType } = req.query;
       
       const searchParams = {
-        make: make as string,
-        model: model as string,
+        make: normalizeMake(make as string),
+        model: normalizeText(model as string),
         year: year ? parseInt(year as string) : undefined,
-        deviceType: deviceType as string,
-        portType: portType as string,
+        deviceType: normalizeText(deviceType as string),
+        portType: normalizeText(portType as string),
         limit: 100000,
         offset: 0,
         sortBy: "make",
