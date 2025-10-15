@@ -865,6 +865,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cost: 5 // 5 tenths of a cent = $0.005 per Google search
           });
 
+          // Store Google result as pending vehicle for admin approval
+          await storage.createPendingVehicle({
+            make: normalizedMake || '',
+            model: String(model),
+            year: yearNum,
+            deviceType: parsedResults.deviceType,
+            portType: parsedResults.portType,
+            confidence: parsedResults.confidence,
+            googleSearchResults: JSON.stringify(parsedResults.searchResults),
+            status: 'pending'
+          });
+
           return res.json({
             found: false,
             predictions: {
