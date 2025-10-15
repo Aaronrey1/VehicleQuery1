@@ -17,12 +17,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState("search");
+  const [adminSubTab, setAdminSubTab] = useState("manage");
   const [searchParams, setSearchParams] = useState<{ make?: string; model?: string; year?: number; deviceType?: string; portType?: string }>({});
   const { isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
 
   const handleProtectedSection = (section: string) => {
-    if (section === "admin" || section === "manage" || section === "pending") {
+    if (section === "admin") {
       if (!isAuthenticated) {
         setLocation("/login");
         return;
@@ -71,16 +72,6 @@ export default function Home() {
                 AI Search
               </button>
               <button
-                onClick={() => handleProtectedSection("manage")}
-                className={`transition-colors flex items-center gap-1 ${
-                  activeSection === "manage" ? "text-primary" : "text-muted-foreground hover:text-primary"
-                }`}
-                data-testid="nav-manage"
-              >
-                Manage Data
-                {!isAuthenticated && <Lock className="h-3 w-3" />}
-              </button>
-              <button
                 onClick={() => setActiveSection("geometris")}
                 className={`transition-colors ${
                   activeSection === "geometris" ? "text-primary" : "text-muted-foreground hover:text-primary"
@@ -99,33 +90,13 @@ export default function Home() {
                 Analytics
               </button>
               <button
-                onClick={() => setActiveSection("billing")}
-                className={`transition-colors flex items-center gap-1 ${
-                  activeSection === "billing" ? "text-primary" : "text-muted-foreground hover:text-primary"
-                }`}
-                data-testid="nav-billing"
-              >
-                <DollarSign className="h-3 w-3" />
-                Billing
-              </button>
-              <button
-                onClick={() => handleProtectedSection("pending")}
-                className={`transition-colors flex items-center gap-1 ${
-                  activeSection === "pending" ? "text-primary" : "text-muted-foreground hover:text-primary"
-                }`}
-                data-testid="nav-pending"
-              >
-                <ClipboardCheck className="h-3 w-3" />
-                Pending
-                {!isAuthenticated && <Lock className="h-3 w-3" />}
-              </button>
-              <button
                 onClick={() => handleProtectedSection("admin")}
                 className={`transition-colors flex items-center gap-1 ${
                   activeSection === "admin" ? "text-primary" : "text-muted-foreground hover:text-primary"
                 }`}
                 data-testid="nav-admin"
               >
+                <Settings className="h-3 w-3" />
                 Admin
                 {!isAuthenticated && <Lock className="h-3 w-3" />}
               </button>
@@ -158,6 +129,56 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Admin Sub-Navigation */}
+      {activeSection === "admin" && (
+        <div className="bg-muted/30 border-b border-border">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <nav className="flex items-center space-x-6 h-12">
+              <button
+                onClick={() => setAdminSubTab("manage")}
+                className={`transition-colors text-sm ${
+                  adminSubTab === "manage" ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="nav-manage"
+              >
+                <Upload className="h-3 w-3 inline mr-1" />
+                Manage Data
+              </button>
+              <button
+                onClick={() => setAdminSubTab("billing")}
+                className={`transition-colors text-sm ${
+                  adminSubTab === "billing" ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="nav-billing"
+              >
+                <DollarSign className="h-3 w-3 inline mr-1" />
+                Billing
+              </button>
+              <button
+                onClick={() => setAdminSubTab("pending")}
+                className={`transition-colors text-sm ${
+                  adminSubTab === "pending" ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="nav-pending"
+              >
+                <ClipboardCheck className="h-3 w-3 inline mr-1" />
+                Pending
+              </button>
+              <button
+                onClick={() => setAdminSubTab("admin")}
+                className={`transition-colors text-sm ${
+                  adminSubTab === "admin" ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="nav-admin-panel"
+              >
+                <Settings className="h-3 w-3 inline mr-1" />
+                Admin Panel
+              </button>
+            </nav>
+          </div>
+        </div>
+      )}
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search Section */}
         {activeSection === "search" && (
@@ -176,20 +197,18 @@ export default function Home() {
         {/* Geometris Section */}
         {activeSection === "geometris" && <Geometris />}
 
-        {/* Data Management Section */}
-        {activeSection === "manage" && <DataImport />}
-
         {/* Analytics Section */}
         {activeSection === "analytics" && <AnalyticsDashboard />}
 
-        {/* Billing Section */}
-        {activeSection === "billing" && <Billing />}
-
-        {/* Pending Approvals Section */}
-        {activeSection === "pending" && <PendingApprovals />}
-
-        {/* Admin Section */}
-        {activeSection === "admin" && <AdminPanel />}
+        {/* Admin Section with Sub-tabs */}
+        {activeSection === "admin" && (
+          <>
+            {adminSubTab === "manage" && <DataImport />}
+            {adminSubTab === "billing" && <Billing />}
+            {adminSubTab === "pending" && <PendingApprovals />}
+            {adminSubTab === "admin" && <AdminPanel />}
+          </>
+        )}
       </main>
 
       {/* Footer */}

@@ -107,7 +107,7 @@ export default function Billing() {
               {stats.googleSearches}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              ${(stats.googleSearches * 0.005).toFixed(3)} spent
+              ${totalCostDollars} spent
             </p>
           </CardContent>
         </Card>
@@ -173,12 +173,12 @@ export default function Billing() {
                 <span className="text-sm font-medium">Tier 3 (Google API)</span>
                 <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
                   <Globe className="h-3 w-3 mr-1" />
-                  PAID
+                  100 FREE/DAY
                 </Badge>
               </div>
               <div className="text-2xl font-bold" data-testid="text-tier3-count">{stats.googleSearches}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                $0.005 per search
+                Free (100/day), then $0.005 each
               </p>
             </div>
           </div>
