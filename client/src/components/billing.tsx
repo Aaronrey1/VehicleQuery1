@@ -37,7 +37,7 @@ export default function Billing() {
     );
   }
 
-  const totalCostDollars = (stats.totalCostCents / 100).toFixed(2);
+  const totalCostDollars = (stats.totalCostCents / 1000).toFixed(3);
   const freeSearchPercentage = stats.totalSearches > 0 
     ? Math.round((stats.databaseSearches / stats.totalSearches) * 100) 
     : 100;
@@ -94,7 +94,7 @@ export default function Billing() {
               {stats.googleSearches}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              ${(stats.googleSearches * 0.005).toFixed(2)} spent
+              ${(stats.googleSearches * 0.005).toFixed(3)} spent
             </p>
           </CardContent>
         </Card>
@@ -105,7 +105,7 @@ export default function Billing() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold" data-testid="text-avg-cost">
-              ${stats.totalSearches > 0 ? (stats.totalCostCents / 100 / stats.totalSearches).toFixed(3) : '0.000'}
+              ${stats.totalSearches > 0 ? (stats.totalCostCents / 1000 / stats.totalSearches).toFixed(4) : '0.000'}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Average cost
@@ -236,7 +236,7 @@ export default function Billing() {
                         {log.cost === 0 ? (
                           <span className="text-green-600 dark:text-green-400">FREE</span>
                         ) : (
-                          <span>${(log.cost / 100).toFixed(3)}</span>
+                          <span>${(log.cost / 1000).toFixed(3)}</span>
                         )}
                       </TableCell>
                     </TableRow>

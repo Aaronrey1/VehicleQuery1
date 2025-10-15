@@ -171,10 +171,10 @@ Billing Endpoints:
   - yearFrom and yearTo are nullable to support vehicles with unknown or unspecified year ranges
   - Supports year range searches (e.g., find harnesses where search year falls within yearFrom-yearTo range)
   - Indexes on make, model, yearFrom, yearTo for efficient filtering
-- `ai_search_logs` table with columns: id (UUID), timestamp, make, model, year, source (tier), confidence, cost (in cents)
+- `ai_search_logs` table with columns: id (UUID), timestamp, make, model, year, source (tier), confidence, cost (in tenths of a cent)
   - Tracks all AI Search predictions for billing and usage analytics
   - Source values: 'database_tier1', 'database_tier2', 'google_api'
-  - Cost: 0 for database predictions, 0.5 cents for Google API calls
+  - Cost: 0 for database predictions, 5 for Google API calls (5 tenths of a cent = $0.005)
   - Indexes on timestamp and source for efficient querying
 - `users` table for authentication (id, username, password)
 

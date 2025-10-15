@@ -863,7 +863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             year: yearNum,
             source: 'google_api',
             confidence: parsedResults.confidence,
-            cost: 0.5 // 0.5 cents per Google search
+            cost: 5 // 5 tenths of a cent = $0.005 per Google search
           });
 
           return res.json({

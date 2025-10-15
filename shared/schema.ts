@@ -111,7 +111,7 @@ export const aiSearchLogs = pgTable("ai_search_logs", {
   year: integer("year").notNull(),
   source: text("source").notNull(), // 'database_tier1', 'database_tier2', 'google_api'
   confidence: integer("confidence").notNull(),
-  cost: integer("cost").notNull().default(0), // in cents (0 for database, 0.5 cents for Google)
+  cost: integer("cost").notNull().default(0), // in tenths of a cent (0 for database, 5 for Google = $0.005)
 }, (table) => ({
   timestampIdx: index("ai_search_timestamp_idx").on(table.timestamp),
   sourceIdx: index("ai_search_source_idx").on(table.source),
@@ -129,7 +129,7 @@ export type BillingStats = {
   totalSearches: number;
   databaseSearches: number; // Free
   googleSearches: number; // Paid
-  totalCostCents: number;
+  totalCostCents: number; // in tenths of a cent (divide by 1000 for dollars)
   tier1Searches: number;
   tier2Searches: number;
   recentLogs: AiSearchLog[];
