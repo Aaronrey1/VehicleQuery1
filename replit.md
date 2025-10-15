@@ -6,6 +6,18 @@ VehicleDB Pro is a full-stack vehicle database management system that allows use
 
 ## Recent Changes
 
+Added AI Search Billing & Usage Tracking:
+- **New "Billing" tab** provides comprehensive cost tracking for AI Search usage
+- **Usage Analytics**: Real-time tracking of all AI predictions with breakdown by tier (Tier 1, Tier 2, Google API)
+- **Cost Monitoring**: Displays total costs, cost per search, and free vs. paid search percentages
+- **Search Log History**: Table showing last 100 AI searches with timestamps, vehicle details, source, confidence, and cost
+- **Tier Breakdown Cards**: Visual breakdown of searches by tier with clear FREE/PAID badges
+- **Cost Structure Display**: Alert explaining cost model ($0.005 per Google search, database predictions free)
+- Database schema: `ai_search_logs` table tracks make, model, year, source, confidence, and cost for each prediction
+- Backend endpoints: GET `/api/billing/stats` for billing statistics
+- Component: `client/src/components/billing.tsx`
+- Automatic logging: All AI predictions automatically logged to database for cost tracking
+
 Added AI Search feature with hybrid prediction system (Database + Google Custom Search):
 - **New "AI Search" tab** provides intelligent predictions for vehicles not in database
 - **Free text input** - Type ANY make/model, even those not in the database (e.g., Tesla Model 3, Rivian R1T, future vehicles)
@@ -72,7 +84,7 @@ Preferred communication style: Simple, everyday language.
 - Important: Due to `staleTime: Infinity`, mutations must use `refetchQueries` instead of `invalidateQueries` to force immediate cache updates (see Geometris component for reference implementation)
 
 **Key Pages & Components**
-- Home page with tabbed navigation (Search, Bulk Search, AI Search, Manage Data, Geometris, Analytics, Admin)
+- Home page with tabbed navigation (Search, Bulk Search, AI Search, Manage Data, Geometris, Analytics, Billing, Admin)
 - VehicleSearch component for filtering vehicles by make/model/year with cascading dropdowns and advanced filtering
 - SearchResults component with pagination, sorting, and export functionality (CSV)
 - BulkSearch component for searching multiple vehicles simultaneously
@@ -84,6 +96,7 @@ Preferred communication style: Simple, everyday language.
 - Geometris component for searching harness types by make/model/year with year range support
 - DataImport component for CSV file uploads with validation options
 - AnalyticsDashboard for database statistics and insights
+- Billing component for AI Search cost tracking and usage analytics
 - AdminPanel component for CRUD operations on individual vehicle records
 
 ### Backend Architecture
@@ -133,6 +146,11 @@ AI Prediction Endpoint:
     - Primary: Same make/model vehicles within ±5 years (high confidence)
     - Fallback: Same make vehicles within ±10 years (reduced confidence 60%)
   - Response includes deviceType, portType, confidence score, and similar vehicles used
+  - Automatically logs all predictions to ai_search_logs table for billing tracking
+
+Billing Endpoints:
+- GET `/api/billing/stats` - Retrieve AI Search billing statistics and usage analytics
+  - Returns total searches, free vs. paid breakdown, tier statistics, total cost, and recent search logs
 
 ### Data Storage
 
@@ -153,6 +171,11 @@ AI Prediction Endpoint:
   - yearFrom and yearTo are nullable to support vehicles with unknown or unspecified year ranges
   - Supports year range searches (e.g., find harnesses where search year falls within yearFrom-yearTo range)
   - Indexes on make, model, yearFrom, yearTo for efficient filtering
+- `ai_search_logs` table with columns: id (UUID), timestamp, make, model, year, source (tier), confidence, cost (in cents)
+  - Tracks all AI Search predictions for billing and usage analytics
+  - Source values: 'database_tier1', 'database_tier2', 'google_api'
+  - Cost: 0 for database predictions, 0.5 cents for Google API calls
+  - Indexes on timestamp and source for efficient querying
 - `users` table for authentication (id, username, password)
 
 **Data Validation**
