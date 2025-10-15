@@ -4,6 +4,34 @@
 
 VehicleDB Pro is a full-stack vehicle database management system for searching, managing, and analyzing vehicle compatibility data. It allows users to search vehicles, import data from CSVs, and view analytics. A key feature is the Geometris system for searching harness types by vehicle criteria. The application also includes an AI Search feature with a hybrid prediction system (database and Google Custom Search) and an admin approval workflow for AI predictions. The project aims to provide comprehensive vehicle data management with intelligent search capabilities.
 
+## Recent Changes
+
+**Google API Results Admin Approval Workflow:**
+- New "Pending" tab (admin-only) displays Google API predictions awaiting approval before database insertion
+- Automatic capture: When AI Search calls Google API (Tier 3 - $0.005/search), results automatically saved to `pending_vehicles` table
+- Review interface: Admin can view predicted port type, device type, confidence score, and raw Google search results
+- Three actions: Approve (add to main database), Reject (mark as rejected), or Delete (remove from pending)
+- Data transparency: Expandable rows show the original Google search snippets that influenced the prediction
+- Database schema: `pending_vehicles` table stores make, model, year, predictions, confidence, Google results JSON, and status (pending/approved/rejected)
+- Backend routes: GET `/api/pending-vehicles`, POST `/api/pending-vehicles/:id/approve`, POST `/api/pending-vehicles/:id/reject`, DELETE `/api/pending-vehicles/:id`
+- Component: `client/src/components/pending-approvals.tsx`
+- Workflow ensures human oversight before adding AI predictions to production database
+
+**Case-Insensitive Search Normalization:**
+- All search inputs (make, model, device type, port type) now normalized to uppercase
+- Works everywhere: Applied to regular Search, Bulk Search, AI Search, and CSV export
+- Matches database: Vehicles stored in uppercase (e.g., "CHEVROLET", "SILVERADO") now match lowercase/mixed-case inputs
+- Combined with aliases: Works seamlessly with manufacturer alias system (e.g., "chevy" → "CHEVROLET" → uppercase match)
+- Implementation: New `normalizeText()` utility in `server/routes.ts` applied to all search endpoints
+
+**Billing & Usage Tracking:**
+- New "Billing" tab provides comprehensive cost tracking for AI Search usage
+- Usage analytics: Real-time tracking of all AI predictions with breakdown by tier (Tier 1, Tier 2, Google API)
+- Cost monitoring: Displays total costs, cost per search, and free vs. paid search percentages
+- Search log history: Table showing last 100 AI searches with timestamps, vehicle details, source, confidence, and cost
+- Cost precision: Uses tenths of a cent (integer storage) to accurately track $0.005 Google API charges
+- Database: `ai_search_logs` table with automatic logging of all predictions
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

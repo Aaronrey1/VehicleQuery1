@@ -1,23 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, XCircle, Trash2, Clock, AlertCircle, ExternalLink } from "lucide-react";
+import { CheckCircle, XCircle, Trash2, Clock, AlertCircle, ExternalLink, Lock } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import { PendingVehicle } from "@shared/schema";
 
 export function PendingApprovals() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   // Fetch pending vehicles
-  const { data: pendingVehicles, isLoading } = useQuery<PendingVehicle[]>({
+  const { data: pendingVehicles, isLoading, isError, error } = useQuery<PendingVehicle[]>({
     queryKey: ["/api/pending-vehicles"],
   });
+
+  // Handle authentication errors
+  useEffect(() => {
+    if (isError) {
+      const errorMessage = error?.message || "";
+      if (errorMessage.includes("401") || errorMessage.includes("Unauthorized")) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to view pending approvals.",
+          variant: "destructive",
+        });
+        setLocation("/login");
+      }
+    }
+  }, [isError, error, setLocation, toast]);
 
   // Approve mutation
   const approveMutation = useMutation({
@@ -103,6 +120,31 @@ export function PendingApprovals() {
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
+    );
+  }
+
+  if (isError) {
+    const errorMessage = error?.message || "Unknown error";
+    const isAuthError = errorMessage.includes("401") || errorMessage.includes("Unauthorized");
+    
+    if (isAuthError) {
+      return (
+        <Alert variant="destructive">
+          <Lock className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Authentication Required:</strong> You must be logged in to view pending approvals. Redirecting to login...
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Error Loading Pending Vehicles:</strong> {errorMessage}. Please try refreshing the page.
+        </AlertDescription>
+      </Alert>
     );
   }
 
