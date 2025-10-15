@@ -856,6 +856,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
 
+          // Log Google API search (Tier 3 - Paid)
+          await storage.logAiSearch({
+            make: normalizedMake,
+            model: String(model),
+            year: yearNum,
+            source: 'google_api',
+            confidence: parsedResults.confidence,
+            cost: 0.5 // 0.5 cents per Google search
+          });
+
           return res.json({
             found: false,
             predictions: {
@@ -894,13 +904,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const mostCommonDevice = Array.from(deviceTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
         const deviceConfidence = (mostCommonDevice[1] / vehiclesWithPort.length) * 100;
 
+        const tier2PortConfidence = Math.round(portConfidence * 0.6);
+        const tier2DeviceConfidence = Math.round(deviceConfidence * 0.6);
+        const avgConfidence = Math.round((tier2PortConfidence + tier2DeviceConfidence) / 2);
+
+        // Log Tier 2 search (Database - Free)
+        await storage.logAiSearch({
+          make: normalizedMake,
+          model: String(model),
+          year: yearNum,
+          source: 'database_tier2',
+          confidence: avgConfidence,
+          cost: 0 // Database searches are free
+        });
+
         return res.json({
           found: false,
           predictions: {
             portType: mostCommonPort[0],
-            portConfidence: Math.round(portConfidence * 0.6), // Lower confidence for broader match
+            portConfidence: tier2PortConfidence,
             deviceType: mostCommonDevice[0],
-            deviceConfidence: Math.round(deviceConfidence * 0.6), // Lower confidence for broader match
+            deviceConfidence: tier2DeviceConfidence,
             basedOn: nearbyManufacturerVehicles.length,
             similarVehicles: nearbyManufacturerVehicles.slice(0, 10)
           }
@@ -929,13 +953,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const mostCommonDevice = Array.from(deviceTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
       const deviceConfidence = (mostCommonDevice[1] / vehiclesWithPort.length) * 100;
 
+      const tier1PortConfidence = Math.round(portConfidence);
+      const tier1DeviceConfidence = Math.round(deviceConfidence);
+      const avgConfidence = Math.round((tier1PortConfidence + tier1DeviceConfidence) / 2);
+
+      // Log Tier 1 search (Database - Free)
+      await storage.logAiSearch({
+        make: normalizedMake,
+        model: String(model),
+        year: yearNum,
+        source: 'database_tier1',
+        confidence: avgConfidence,
+        cost: 0 // Database searches are free
+      });
+
       res.json({
         found: false,
         predictions: {
           portType: mostCommonPort[0],
-          portConfidence: Math.round(portConfidence),
+          portConfidence: tier1PortConfidence,
           deviceType: mostCommonDevice[0],
-          deviceConfidence: Math.round(deviceConfidence),
+          deviceConfidence: tier1DeviceConfidence,
           basedOn: nearbyYearVehicles.length,
           similarVehicles: nearbyYearVehicles.slice(0, 10)
         }
