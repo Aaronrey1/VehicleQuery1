@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DollarSign, TrendingUp, Database, Globe, AlertCircle } from "lucide-react";
+import { DollarSign, TrendingUp, Database, Globe, AlertCircle, CreditCard } from "lucide-react";
 import type { BillingStats } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 
@@ -45,14 +46,26 @@ export default function Billing() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold flex items-center gap-2" data-testid="heading-billing">
-          <DollarSign className="h-6 w-6 text-primary" />
-          AI Search Billing & Usage
-        </h2>
-        <p className="text-muted-foreground mt-1">
-          Track your AI Search costs and usage patterns
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold flex items-center gap-2" data-testid="heading-billing">
+            <DollarSign className="h-6 w-6 text-primary" />
+            AI Search Billing & Usage
+          </h2>
+          <p className="text-muted-foreground mt-1">
+            Track your AI Search costs and usage patterns
+          </p>
+        </div>
+        {stats.totalCostCents > 0 && (
+          <Button 
+            onClick={() => window.open('https://buy.stripe.com/test_payment', '_blank')}
+            className="bg-primary hover:bg-primary/90"
+            data-testid="button-make-payment"
+          >
+            <CreditCard className="h-4 w-4 mr-2" />
+            Make Payment
+          </Button>
+        )}
       </div>
 
       {/* Cost Overview */}
