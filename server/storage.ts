@@ -1,4 +1,4 @@
-import { vehicles, users, harnesses, aiSearchLogs, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats } from "@shared/schema";
+import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type PendingVehicle, type InsertPendingVehicle } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql, ilike, desc, asc, gte, lte } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -46,6 +46,13 @@ export interface IStorage {
   // AI Search logging methods
   logAiSearch(log: InsertAiSearchLog): Promise<void>;
   getBillingStats(): Promise<BillingStats>;
+
+  // Pending vehicles methods (Google API results awaiting approval)
+  createPendingVehicle(vehicle: InsertPendingVehicle): Promise<PendingVehicle>;
+  getPendingVehicles(): Promise<PendingVehicle[]>;
+  approvePendingVehicle(id: string): Promise<void>;
+  rejectPendingVehicle(id: string): Promise<void>;
+  deletePendingVehicle(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -406,6 +413,59 @@ export class DatabaseStorage implements IStorage {
       totalCostCents: Number(costSum?.sum || 0),
       recentLogs,
     };
+  }
+
+  async createPendingVehicle(vehicle: InsertPendingVehicle): Promise<PendingVehicle> {
+    const [createdVehicle] = await db
+      .insert(pendingVehicles)
+      .values(vehicle)
+      .returning();
+    return createdVehicle;
+  }
+
+  async getPendingVehicles(): Promise<PendingVehicle[]> {
+    return await db
+      .select()
+      .from(pendingVehicles)
+      .where(eq(pendingVehicles.status, 'pending'))
+      .orderBy(desc(pendingVehicles.createdAt));
+  }
+
+  async approvePendingVehicle(id: string): Promise<void> {
+    const [pending] = await db
+      .select()
+      .from(pendingVehicles)
+      .where(eq(pendingVehicles.id, id));
+
+    if (!pending) {
+      throw new Error('Pending vehicle not found');
+    }
+
+    // Add to main vehicles table
+    await db.insert(vehicles).values({
+      make: pending.make,
+      model: pending.model,
+      year: pending.year,
+      deviceType: pending.deviceType,
+      portType: pending.portType,
+    });
+
+    // Update status to approved
+    await db
+      .update(pendingVehicles)
+      .set({ status: 'approved' })
+      .where(eq(pendingVehicles.id, id));
+  }
+
+  async rejectPendingVehicle(id: string): Promise<void> {
+    await db
+      .update(pendingVehicles)
+      .set({ status: 'rejected' })
+      .where(eq(pendingVehicles.id, id));
+  }
+
+  async deletePendingVehicle(id: string): Promise<void> {
+    await db.delete(pendingVehicles).where(eq(pendingVehicles.id, id));
   }
 }
 
