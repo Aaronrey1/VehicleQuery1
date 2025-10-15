@@ -790,6 +790,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Normalize the make to handle common aliases (Chevy → Chevrolet, VW → Volkswagen, etc.)
       const normalizedMake = normalizeMake(make as string);
 
+      // Make/Model validation: Check if inputs are reasonable
+      let makeModelWarning = null;
+      
+      // Check if make is too short or seems invalid
+      if (!normalizedMake || normalizedMake.length < 2) {
+        makeModelWarning = `⚠️ The make "${make}" seems invalid. Please enter a valid vehicle manufacturer.`;
+      } else {
+        // Check if make exists in database
+        const makeExists = await storage.searchVehicles({
+          make: normalizedMake,
+          limit: 1,
+          offset: 0,
+          sortBy: "year",
+          sortOrder: "asc"
+        });
+        
+        if (makeExists.vehicles.length === 0) {
+          makeModelWarning = `⚠️ No vehicles found for make "${make}". This manufacturer may not be in our database yet.`;
+        }
+      }
+      
+      // Check if model is too short
+      if (model && (model as string).length < 2) {
+        makeModelWarning = `⚠️ The model "${model}" seems invalid. Please enter a valid vehicle model.`;
+      }
+
       // Year validation: Check if this make/model exists in database and if year makes sense
       const makeModelExists = await storage.searchVehicles({
         make: normalizedMake,
@@ -832,7 +858,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({
           found: true,
           exactMatch: exactMatch.vehicles[0],
-          yearWarning
+          yearWarning,
+          makeModelWarning
         });
       }
 
@@ -911,17 +938,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           return res.json({
             found: false,
-            predictions: {
-              portType: parsedResults.portType,
-              portConfidence: parsedResults.confidence,
-              deviceType: parsedResults.deviceType,
-              deviceConfidence: parsedResults.confidence,
-              basedOn: 0,
-              source: 'google',
-              searchResults: parsedResults.searchResults,
-              similarVehicles: []
-            },
-            yearWarning
+            pendingApproval: true,
+            message: 'Prediction submitted for admin approval',
+            yearWarning,
+            makeModelWarning
           });
         }
 
@@ -962,17 +982,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cost: 0 // Database searches are free
         });
 
+        // Save Tier 2 prediction to pending for admin approval
+        await storage.createPendingVehicle({
+          make: normalizedMake || '',
+          model: String(model),
+          year: yearNum,
+          deviceType: mostCommonDevice[0],
+          portType: mostCommonPort[0],
+          confidence: avgConfidence,
+          googleSearchResults: JSON.stringify({
+            source: 'database_tier2',
+            similarVehicles: nearbyManufacturerVehicles.slice(0, 10)
+          }),
+          status: 'pending'
+        });
+
         return res.json({
           found: false,
-          predictions: {
-            portType: mostCommonPort[0],
-            portConfidence: tier2PortConfidence,
-            deviceType: mostCommonDevice[0],
-            deviceConfidence: tier2DeviceConfidence,
-            basedOn: nearbyManufacturerVehicles.length,
-            similarVehicles: nearbyManufacturerVehicles.slice(0, 10)
-          },
-          yearWarning
+          pendingApproval: true,
+          message: 'Prediction submitted for admin approval',
+          yearWarning,
+          makeModelWarning
         });
       }
 
@@ -1012,17 +1042,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cost: 0 // Database searches are free
       });
 
+      // Save Tier 1 prediction to pending for admin approval
+      await storage.createPendingVehicle({
+        make: normalizedMake || '',
+        model: String(model),
+        year: yearNum,
+        deviceType: mostCommonDevice[0],
+        portType: mostCommonPort[0],
+        confidence: avgConfidence,
+        googleSearchResults: JSON.stringify({
+          source: 'database_tier1',
+          similarVehicles: nearbyYearVehicles.slice(0, 10)
+        }),
+        status: 'pending'
+      });
+
       res.json({
         found: false,
-        predictions: {
-          portType: mostCommonPort[0],
-          portConfidence: tier1PortConfidence,
-          deviceType: mostCommonDevice[0],
-          deviceConfidence: tier1DeviceConfidence,
-          basedOn: nearbyYearVehicles.length,
-          similarVehicles: nearbyYearVehicles.slice(0, 10)
-        },
-        yearWarning
+        pendingApproval: true,
+        message: 'Prediction submitted for admin approval',
+        yearWarning,
+        makeModelWarning
       });
     } catch (error) {
       console.error("AI prediction error:", error);

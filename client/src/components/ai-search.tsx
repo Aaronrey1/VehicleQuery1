@@ -11,6 +11,8 @@ import { Sparkles, TrendingUp, Search, AlertCircle } from "lucide-react";
 interface PredictionResult {
   found: boolean;
   exactMatch?: any;
+  pendingApproval?: boolean;
+  message?: string;
   predictions?: {
     portType: string;
     portConfidence: number;
@@ -32,6 +34,7 @@ interface PredictionResult {
     }>;
   };
   yearWarning?: string | null;
+  makeModelWarning?: string | null;
 }
 
 export default function AISearch() {
@@ -150,6 +153,15 @@ export default function AISearch() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {prediction.makeModelWarning && (
+              <Alert variant="destructive" className="border-red-500 bg-red-50 dark:bg-red-950">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800 dark:text-red-200">
+                  {prediction.makeModelWarning}
+                </AlertDescription>
+              </Alert>
+            )}
+            
             {prediction.yearWarning && (
               <Alert variant="destructive" className="border-red-500 bg-red-50 dark:bg-red-950">
                 <AlertCircle className="h-4 w-4 text-red-600" />
@@ -175,6 +187,22 @@ export default function AISearch() {
                         <Badge variant="secondary" className="mt-1">{prediction.exactMatch.portType}</Badge>
                       </div>
                     </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            ) : prediction.pendingApproval ? (
+              <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950">
+                <Sparkles className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800 dark:text-blue-200">
+                  <div className="space-y-2">
+                    <p className="font-semibold">{prediction.message}</p>
+                    <p className="text-sm">
+                      An AI prediction has been generated and saved for admin review. 
+                      Once approved by an admin, it will be added to the database for future searches.
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                      💡 Check the "Pending" tab in the Admin section to review predictions
+                    </p>
                   </div>
                 </AlertDescription>
               </Alert>
