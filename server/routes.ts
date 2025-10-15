@@ -790,6 +790,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Normalize the make to handle common aliases (Chevy → Chevrolet, VW → Volkswagen, etc.)
       const normalizedMake = normalizeMake(make as string);
 
+      // Year validation: Check if this make/model exists in database and if year makes sense
+      const makeModelExists = await storage.searchVehicles({
+        make: normalizedMake,
+        model: model as string,
+        limit: 1000,
+        offset: 0,
+        sortBy: "year",
+        sortOrder: "asc"
+      });
+
+      let yearWarning = null;
+      if (makeModelExists.vehicles.length > 0) {
+        // Get year range for this make/model
+        const years = makeModelExists.vehicles.map(v => v.year);
+        const minYear = Math.min(...years);
+        const maxYear = Math.max(...years);
+        
+        // Check if requested year is way outside the known range
+        const yearDiff = yearNum < minYear ? minYear - yearNum : yearNum - maxYear;
+        
+        if (yearNum < minYear && yearDiff > 5) {
+          yearWarning = `⚠️ This vehicle model was first produced in ${minYear}, but you searched for ${yearNum}. This year is likely incorrect.`;
+        } else if (yearNum > maxYear && yearDiff > 5) {
+          yearWarning = `⚠️ This vehicle model was last produced in ${maxYear}, but you searched for ${yearNum}. This year might be incorrect.`;
+        }
+      }
+
       // First, check if exact vehicle exists
       const exactMatch = await storage.searchVehicles({
         make: normalizedMake,
@@ -804,7 +831,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (exactMatch.vehicles.length > 0) {
         return res.json({
           found: true,
-          exactMatch: exactMatch.vehicles[0]
+          exactMatch: exactMatch.vehicles[0],
+          yearWarning
         });
       }
 
@@ -861,7 +889,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Log Google API search (Tier 3 - Free for first 100 per day, then $0.005)
           await storage.logAiSearch({
-            make: normalizedMake,
+            make: normalizedMake || String(make),
             model: String(model),
             year: yearNum,
             source: 'google_api',
@@ -892,7 +920,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               source: 'google',
               searchResults: parsedResults.searchResults,
               similarVehicles: []
-            }
+            },
+            yearWarning
           });
         }
 
@@ -925,7 +954,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Log Tier 2 search (Database - Free)
         await storage.logAiSearch({
-          make: normalizedMake,
+          make: normalizedMake || String(make),
           model: String(model),
           year: yearNum,
           source: 'database_tier2',
@@ -942,7 +971,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             deviceConfidence: tier2DeviceConfidence,
             basedOn: nearbyManufacturerVehicles.length,
             similarVehicles: nearbyManufacturerVehicles.slice(0, 10)
-          }
+          },
+          yearWarning
         });
       }
 
@@ -974,7 +1004,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Log Tier 1 search (Database - Free)
       await storage.logAiSearch({
-        make: normalizedMake,
+        make: normalizedMake || String(make),
         model: String(model),
         year: yearNum,
         source: 'database_tier1',
@@ -991,7 +1021,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           deviceConfidence: tier1DeviceConfidence,
           basedOn: nearbyYearVehicles.length,
           similarVehicles: nearbyYearVehicles.slice(0, 10)
-        }
+        },
+        yearWarning
       });
     } catch (error) {
       console.error("AI prediction error:", error);

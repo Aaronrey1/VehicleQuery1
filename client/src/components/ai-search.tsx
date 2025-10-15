@@ -31,6 +31,7 @@ interface PredictionResult {
       portType: string;
     }>;
   };
+  yearWarning?: string | null;
 }
 
 export default function AISearch() {
@@ -149,6 +150,15 @@ export default function AISearch() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {prediction.yearWarning && (
+              <Alert variant="destructive" className="border-red-500 bg-red-50 dark:bg-red-950">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800 dark:text-red-200">
+                  {prediction.yearWarning}
+                </AlertDescription>
+              </Alert>
+            )}
+            
             {prediction.found && prediction.exactMatch ? (
               <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
                 <TrendingUp className="h-4 w-4 text-green-600" />
