@@ -134,3 +134,28 @@ export type BillingStats = {
   tier2Searches: number;
   recentLogs: AiSearchLog[];
 };
+
+// Pending vehicles from Google API awaiting admin approval
+export const pendingVehicles = pgTable("pending_vehicles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  make: text("make").notNull(),
+  model: text("model").notNull(),
+  year: integer("year").notNull(),
+  deviceType: text("device_type").notNull(),
+  portType: text("port_type").notNull(),
+  confidence: integer("confidence").notNull(),
+  googleSearchResults: text("google_search_results"), // JSON string of Google results
+  status: text("status").notNull().default("pending"), // 'pending', 'approved', 'rejected'
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  statusIdx: index("pending_status_idx").on(table.status),
+  createdAtIdx: index("pending_created_at_idx").on(table.createdAt),
+}));
+
+export const insertPendingVehicleSchema = createInsertSchema(pendingVehicles).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPendingVehicle = z.infer<typeof insertPendingVehicleSchema>;
+export type PendingVehicle = typeof pendingVehicles.$inferSelect;
