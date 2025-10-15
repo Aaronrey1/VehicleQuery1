@@ -1,4 +1,4 @@
-import { vehicles, users, harnesses, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness } from "@shared/schema";
+import { vehicles, users, harnesses, aiSearchLogs, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql, ilike, desc, asc, gte, lte } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -42,6 +42,10 @@ export interface IStorage {
   updateHarness(id: string, harness: Partial<InsertHarness>): Promise<Harness | undefined>;
   deleteHarness(id: string): Promise<void>;
   deleteAllHarnesses(): Promise<void>;
+
+  // AI Search logging methods
+  logAiSearch(log: InsertAiSearchLog): Promise<void>;
+  getBillingStats(): Promise<BillingStats>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -352,6 +356,56 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAllHarnesses(): Promise<void> {
     await db.delete(harnesses);
+  }
+
+  async logAiSearch(log: InsertAiSearchLog): Promise<void> {
+    await db.insert(aiSearchLogs).values(log);
+  }
+
+  async getBillingStats(): Promise<BillingStats> {
+    const [totalCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs);
+
+    const [databaseCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(sql`${aiSearchLogs.source} != 'google_api'`);
+
+    const [googleCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'google_api'));
+
+    const [tier1Count] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'database_tier1'));
+
+    const [tier2Count] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'database_tier2'));
+
+    const [costSum] = await db
+      .select({ sum: sql<number>`coalesce(sum(${aiSearchLogs.cost}), 0)` })
+      .from(aiSearchLogs);
+
+    const recentLogs = await db
+      .select()
+      .from(aiSearchLogs)
+      .orderBy(desc(aiSearchLogs.timestamp))
+      .limit(100);
+
+    return {
+      totalSearches: Number(totalCount?.count || 0),
+      databaseSearches: Number(databaseCount?.count || 0),
+      googleSearches: Number(googleCount?.count || 0),
+      tier1Searches: Number(tier1Count?.count || 0),
+      tier2Searches: Number(tier2Count?.count || 0),
+      totalCostCents: Number(costSum?.sum || 0),
+      recentLogs,
+    };
   }
 }
 
