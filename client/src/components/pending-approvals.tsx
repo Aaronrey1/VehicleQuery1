@@ -39,9 +39,7 @@ export function PendingApprovals() {
   // Approve mutation
   const approveMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/pending-vehicles/${id}/approve`, {
-        method: "POST",
-      });
+      return apiRequest("POST", `/api/pending-vehicles/${id}/approve`);
     },
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles"] });
@@ -62,9 +60,7 @@ export function PendingApprovals() {
   // Reject mutation
   const rejectMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/pending-vehicles/${id}/reject`, {
-        method: "POST",
-      });
+      return apiRequest("POST", `/api/pending-vehicles/${id}/reject`);
     },
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles"] });
@@ -85,9 +81,7 @@ export function PendingApprovals() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/pending-vehicles/${id}`, {
-        method: "DELETE",
-      });
+      return apiRequest("DELETE", `/api/pending-vehicles/${id}`);
     },
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles"] });
