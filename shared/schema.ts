@@ -101,3 +101,36 @@ export type HarnessSearchResults = {
   harnesses: Harness[];
   total: number;
 };
+
+// AI Search logs for billing tracking
+export const aiSearchLogs = pgTable("ai_search_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  make: text("make").notNull(),
+  model: text("model").notNull(),
+  year: integer("year").notNull(),
+  source: text("source").notNull(), // 'database_tier1', 'database_tier2', 'google_api'
+  confidence: integer("confidence").notNull(),
+  cost: integer("cost").notNull().default(0), // in cents (0 for database, 0.5 cents for Google)
+}, (table) => ({
+  timestampIdx: index("ai_search_timestamp_idx").on(table.timestamp),
+  sourceIdx: index("ai_search_source_idx").on(table.source),
+}));
+
+export const insertAiSearchLogSchema = createInsertSchema(aiSearchLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type InsertAiSearchLog = z.infer<typeof insertAiSearchLogSchema>;
+export type AiSearchLog = typeof aiSearchLogs.$inferSelect;
+
+export type BillingStats = {
+  totalSearches: number;
+  databaseSearches: number; // Free
+  googleSearches: number; // Paid
+  totalCostCents: number;
+  tier1Searches: number;
+  tier2Searches: number;
+  recentLogs: AiSearchLog[];
+};
