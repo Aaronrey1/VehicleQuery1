@@ -7,6 +7,7 @@ import multer from "multer";
 import csv from "csv-parser";
 import { Readable } from "stream";
 import axios from "axios";
+import { checkVecoCompatibility } from "./veco-service";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -1044,31 +1045,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // No exact match in database - try Pentaho JBusPortFinder (Tier 2)
-      console.log(`No exact match for ${make} ${model} ${yearNum}, trying Pentaho...`);
+      // No exact match in database - try VECO compatibility check
+      console.log(`No exact match for ${make} ${model} ${yearNum}, trying VECO...`);
       
-      const pentahoResults = await searchPentahoForVehicle(make as string, model as string, yearNum);
+      const vecoResults = await checkVecoCompatibility(normalizedMake || String(make), String(model), yearNum);
 
-      if (pentahoResults) {
-        // Log Pentaho search (Tier 2 - Free)
+      if (vecoResults.found && !vecoResults.error) {
+        // VECO found the vehicle - determine port type based on OBD-II compatibility
+        const portType = vecoResults.isOBDII ? 'OBD' : 'JBUS';
+        const deviceType = vecoResults.isOBDII ? 'OBD2 SCANNER' : 'JBUS ADAPTER';
+        const confidence = 85; // High confidence from VECO
+
+        // Log VECO search (Free)
         await storage.logAiSearch({
           make: normalizedMake || String(make),
           model: String(model),
           year: yearNum,
-          source: 'pentaho',
-          confidence: pentahoResults.confidence,
-          cost: 0 // Pentaho searches are free
+          source: 'veco',
+          confidence,
+          cost: 0 // VECO searches are free
         });
 
-        // Store Pentaho result as pending vehicle for admin approval
+        // Store VECO result as pending vehicle for admin approval
         await storage.createPendingVehicle({
           make: normalizedMake || '',
           model: String(model),
           year: yearNum,
-          deviceType: pentahoResults.deviceType,
-          portType: pentahoResults.portType,
-          confidence: pentahoResults.confidence,
-          googleSearchResults: JSON.stringify({ source: 'pentaho' }),
+          deviceType,
+          portType,
+          confidence,
+          googleSearchResults: JSON.stringify({ 
+            source: 'veco',
+            compatibleText: vecoResults.compatibleText,
+            isOBDII: vecoResults.isOBDII
+          }),
           status: 'pending'
         });
 
@@ -1077,24 +1087,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pendingApproval: true,
           message: 'Prediction submitted for admin approval',
           predictions: {
-            portType: pentahoResults.portType,
-            portConfidence: pentahoResults.confidence,
-            deviceType: pentahoResults.deviceType,
-            deviceConfidence: pentahoResults.confidence,
+            portType,
+            portConfidence: confidence,
+            deviceType,
+            deviceConfidence: confidence,
             basedOn: 1,
-            source: 'pentaho',
+            source: 'veco',
             similarVehicles: []
           },
           yearWarning,
           makeModelWarning,
           searchPath: [
             { source: 'Database (Exact Match)', checked: true, found: false },
-            { source: 'Pentaho Report', checked: true, found: true }
+            { source: 'VECO Compatibility', checked: true, found: true }
           ]
         });
       }
 
-      // No exact match in database or Pentaho - find similar vehicles for prediction
+      // No exact match in database or VECO - find similar vehicles for prediction
       // Search for same make+model with all years, then filter to ±5 year window
       const allSimilarVehicles = await storage.searchVehicles({
         make: normalizedMake,
@@ -1179,7 +1189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               makeModelWarning,
               searchPath: [
                 { source: 'Database (Exact Match)', checked: true, found: false },
-                { source: 'Pentaho Report', checked: true, found: false },
+                { source: 'VECO Compatibility', checked: true, found: false },
                 { source: 'Database (±5 years)', checked: true, found: false },
                 { source: 'Database (±10 years)', checked: true, found: false },
                 { source: 'Google Custom Search', checked: true, found: true }
