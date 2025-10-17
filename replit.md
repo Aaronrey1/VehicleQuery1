@@ -6,7 +6,19 @@ VehicleDB Pro is a full-stack vehicle database management system for searching, 
 
 ## Recent Changes
 
-**Title Case Display Formatting (Latest):**
+**Pentaho JBusPortFinder Integration - Tier 4 (Latest):**
+- **AI Search Tier 4:** Pentaho JBusPortFinder report added as fallback prediction source
+  - Tier 1: Database (±5 years, same make/model) - FREE
+  - Tier 2: Database (±10 years, same make) - FREE
+  - Tier 3: Google Custom Search - First 100/day FREE, then $0.005/search
+  - Tier 4: Pentaho JBusPortFinder - FREE (new!)
+- **Automatic Integration:** AI Search queries Pentaho when database and Google fail
+- **Smart Fallback:** Pentaho specifically good for JBUS port information
+- **Visual Indicator:** Teal-colored badge shows "From Pentaho Report" when used
+- **Admin Approval:** All Pentaho predictions require admin approval before database addition
+- **Zero Cost:** Pentaho queries are free (no billing impact)
+
+**Title Case Display Formatting:**
 - **Display Layer Enhancement:** All vehicle data now displays in Title Case for better readability
   - Storage: All data remains in UPPERCASE in database for consistency and case-insensitive searching
   - Display: New `formatForDisplay()` utility converts uppercase to title case in UI

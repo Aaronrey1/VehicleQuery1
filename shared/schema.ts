@@ -129,6 +129,7 @@ export type BillingStats = {
   totalSearches: number;
   databaseSearches: number; // Free
   googleSearches: number; // Paid
+  pentahoSearches: number; // Free
   totalCostCents: number; // in tenths of a cent (divide by 1000 for dollars)
   tier1Searches: number;
   tier2Searches: number;

@@ -139,7 +139,7 @@ export default function Billing() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-4">
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Tier 1 (Database)</span>
@@ -179,6 +179,20 @@ export default function Billing() {
               <div className="text-2xl font-bold" data-testid="text-tier3-count">{stats.googleSearches}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Free (100/day), then $0.005 each
+              </p>
+            </div>
+
+            <div className="border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Tier 4 (Pentaho)</span>
+                <Badge variant="secondary" className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300">
+                  <Database className="h-3 w-3 mr-1" />
+                  FREE
+                </Badge>
+              </div>
+              <div className="text-2xl font-bold" data-testid="text-tier4-count">{stats.pentahoSearches || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                JBus port lookup
               </p>
             </div>
           </div>
@@ -241,6 +255,11 @@ export default function Billing() {
                         {log.source === 'google_api' && (
                           <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
                             Google
+                          </Badge>
+                        )}
+                        {log.source === 'pentaho' && (
+                          <Badge variant="secondary" className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300">
+                            Pentaho
                           </Badge>
                         )}
                       </TableCell>

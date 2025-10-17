@@ -193,17 +193,36 @@ export default function AISearch() {
               </Alert>
             ) : prediction.predictions ? (
               <div className="space-y-4">
-                <Alert className={prediction.predictions.source === 'google' ? "border-purple-500 bg-purple-50 dark:bg-purple-950" : "border-blue-500 bg-blue-50 dark:bg-blue-950"}>
-                  <Sparkles className={prediction.predictions.source === 'google' ? "h-4 w-4 text-purple-600" : "h-4 w-4 text-blue-600"} />
-                  <AlertDescription className={prediction.predictions.source === 'google' ? "text-purple-800 dark:text-purple-200" : "text-blue-800 dark:text-blue-200"}>
+                <Alert className={
+                  prediction.predictions.source === 'google' ? "border-purple-500 bg-purple-50 dark:bg-purple-950" : 
+                  prediction.predictions.source === 'pentaho' ? "border-teal-500 bg-teal-50 dark:bg-teal-950" :
+                  "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                }>
+                  <Sparkles className={
+                    prediction.predictions.source === 'google' ? "h-4 w-4 text-purple-600" : 
+                    prediction.predictions.source === 'pentaho' ? "h-4 w-4 text-teal-600" :
+                    "h-4 w-4 text-blue-600"
+                  } />
+                  <AlertDescription className={
+                    prediction.predictions.source === 'google' ? "text-purple-800 dark:text-purple-200" : 
+                    prediction.predictions.source === 'pentaho' ? "text-teal-800 dark:text-teal-200" :
+                    "text-blue-800 dark:text-blue-200"
+                  }>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <p className="font-semibold">
-                          {prediction.predictions.source === 'google' ? 'Google AI Prediction' : 'Two-Step AI Prediction'}
+                          {prediction.predictions.source === 'google' ? 'Google AI Prediction' : 
+                           prediction.predictions.source === 'pentaho' ? 'Pentaho JBus Prediction' :
+                           'Two-Step AI Prediction'}
                         </p>
                         {prediction.predictions.source === 'google' && (
                           <Badge variant="outline" className="text-purple-600 border-purple-400">
                             From Google Search
+                          </Badge>
+                        )}
+                        {prediction.predictions.source === 'pentaho' && (
+                          <Badge variant="outline" className="text-teal-600 border-teal-400">
+                            From Pentaho Report
                           </Badge>
                         )}
                       </div>
@@ -247,6 +266,13 @@ export default function AISearch() {
                     <AlertCircle className="h-4 w-4 text-orange-600" />
                     <AlertDescription className="text-xs text-orange-800 dark:text-orange-200">
                       Note: This prediction is based on external search data and has lower confidence. Consider adding this vehicle to your database for accurate future predictions.
+                    </AlertDescription>
+                  </Alert>
+                ) : prediction.predictions.source === 'pentaho' ? (
+                  <Alert className="border-teal-500 bg-teal-50 dark:bg-teal-950">
+                    <AlertCircle className="h-4 w-4 text-teal-600" />
+                    <AlertDescription className="text-xs text-teal-800 dark:text-teal-200">
+                      Note: This prediction comes from the Pentaho JBusPortFinder report. The data will be added to your database once approved by an admin.
                     </AlertDescription>
                   </Alert>
                 ) : prediction.predictions.similarVehicles && prediction.predictions.similarVehicles.length > 0 ? (

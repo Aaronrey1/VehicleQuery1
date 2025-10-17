@@ -31,6 +31,68 @@ async function searchGoogleForVehicle(make: string, model: string, year: number)
   }
 }
 
+// Helper function to search Pentaho JBusPortFinder for vehicle information
+async function searchPentahoForVehicle(make: string, model: string, year: number) {
+  try {
+    // Try CSV format from Pentaho
+    const baseUrl = "http://pentaho8.azuga.com/pentaho/api/repos/%3Ahome%3Aazuga%3A996-JBusPortFinder.prpt";
+    const csvUrl = `${baseUrl}/generatedContent?userid=azuga&password=azuga&output-target=table/csv`;
+    
+    const response = await axios.get(csvUrl, {
+      headers: {
+        'Accept': 'text/csv, text/plain, */*'
+      }
+    });
+
+    const data = response.data;
+    
+    // Parse CSV to find matching vehicle
+    if (typeof data === 'string') {
+      const lines = data.split('\n').filter(line => line.trim());
+      
+      if (lines.length > 1) {
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        
+        const makeIdx = headers.findIndex(h => h.includes('make'));
+        const modelIdx = headers.findIndex(h => h.includes('model'));
+        const yearIdx = headers.findIndex(h => h.includes('year'));
+        const deviceIdx = headers.findIndex(h => h.includes('device'));
+        const portIdx = headers.findIndex(h => h.includes('port'));
+        
+        // Search for matching vehicle in CSV
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim());
+          
+          const csvMake = makeIdx >= 0 ? values[makeIdx] : '';
+          const csvModel = modelIdx >= 0 ? values[modelIdx] : '';
+          const csvYear = yearIdx >= 0 ? parseInt(values[yearIdx]) : 0;
+          
+          // Check if this row matches (case-insensitive)
+          if (csvMake.toLowerCase() === make.toLowerCase() && 
+              csvModel.toLowerCase() === model.toLowerCase() && 
+              csvYear === year) {
+            
+            const deviceType = deviceIdx >= 0 ? values[deviceIdx] : '';
+            const portType = portIdx >= 0 ? values[portIdx] : '';
+            
+            return {
+              portType: portType || 'JBUS',
+              deviceType: deviceType || 'DCM97021ZB',
+              confidence: 50, // Medium confidence from Pentaho
+              source: 'pentaho'
+            };
+          }
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Pentaho search error:", error);
+    return null;
+  }
+}
+
 // Parse Google results to extract vehicle specifications
 function parseGoogleResults(searchResults: any, make: string, model: string) {
   if (!searchResults || !searchResults.items || searchResults.items.length === 0) {
@@ -897,42 +959,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
 
         if (nearbyManufacturerVehicles.length === 0) {
-          // No database matches found - try Google Custom Search
+          // No database matches found - try Tier 3: Google Custom Search
           console.log(`No database matches for ${make} ${model} ${yearNum}, calling Google API...`);
           
           const googleResults = await searchGoogleForVehicle(make as string, model as string, yearNum);
           const parsedResults = parseGoogleResults(googleResults, make as string, model as string);
 
-          if (!parsedResults) {
+          if (parsedResults) {
+            // Check today's Google API usage for free tier (100 free searches per day)
+            const todayGoogleCount = await storage.getTodayGoogleSearchCount();
+            const isFree = todayGoogleCount < 100;
+            
+            // Log Google API search (Tier 3 - Free for first 100 per day, then $0.005)
+            await storage.logAiSearch({
+              make: normalizedMake || String(make),
+              model: String(model),
+              year: yearNum,
+              source: 'google_api',
+              confidence: parsedResults.confidence,
+              cost: isFree ? 0 : 5 // First 100 per day are free, then 5 tenths of a cent = $0.005
+            });
+
+            // Store Google result as pending vehicle for admin approval
+            await storage.createPendingVehicle({
+              make: normalizedMake || '',
+              model: String(model),
+              year: yearNum,
+              deviceType: parsedResults.deviceType,
+              portType: parsedResults.portType,
+              confidence: parsedResults.confidence,
+              googleSearchResults: JSON.stringify(parsedResults.searchResults),
+              status: 'pending'
+            });
+
             return res.json({
               found: false,
-              predictions: null
+              pendingApproval: true,
+              message: 'Prediction submitted for admin approval',
+              predictions: {
+                portType: parsedResults.portType,
+                portConfidence: parsedResults.confidence,
+                deviceType: parsedResults.deviceType,
+                deviceConfidence: parsedResults.confidence,
+                basedOn: 0,
+                source: 'google',
+                searchResults: parsedResults.searchResults,
+                similarVehicles: []
+              },
+              yearWarning,
+              makeModelWarning
             });
           }
 
-          // Check today's Google API usage for free tier (100 free searches per day)
-          const todayGoogleCount = await storage.getTodayGoogleSearchCount();
-          const isFree = todayGoogleCount < 100;
+          // Google failed - try Tier 4: Pentaho JBusPortFinder
+          console.log(`Google failed for ${make} ${model} ${yearNum}, trying Pentaho...`);
           
-          // Log Google API search (Tier 3 - Free for first 100 per day, then $0.005)
+          const pentahoResults = await searchPentahoForVehicle(make as string, model as string, yearNum);
+
+          if (!pentahoResults) {
+            return res.json({
+              found: false,
+              predictions: null,
+              yearWarning,
+              makeModelWarning
+            });
+          }
+
+          // Log Pentaho search (Tier 4 - Free)
           await storage.logAiSearch({
             make: normalizedMake || String(make),
             model: String(model),
             year: yearNum,
-            source: 'google_api',
-            confidence: parsedResults.confidence,
-            cost: isFree ? 0 : 5 // First 100 per day are free, then 5 tenths of a cent = $0.005
+            source: 'pentaho',
+            confidence: pentahoResults.confidence,
+            cost: 0 // Pentaho searches are free
           });
 
-          // Store Google result as pending vehicle for admin approval
+          // Store Pentaho result as pending vehicle for admin approval
           await storage.createPendingVehicle({
             make: normalizedMake || '',
             model: String(model),
             year: yearNum,
-            deviceType: parsedResults.deviceType,
-            portType: parsedResults.portType,
-            confidence: parsedResults.confidence,
-            googleSearchResults: JSON.stringify(parsedResults.searchResults),
+            deviceType: pentahoResults.deviceType,
+            portType: pentahoResults.portType,
+            confidence: pentahoResults.confidence,
+            googleSearchResults: JSON.stringify({ source: 'pentaho' }),
             status: 'pending'
           });
 
@@ -941,13 +1052,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pendingApproval: true,
             message: 'Prediction submitted for admin approval',
             predictions: {
-              portType: parsedResults.portType,
-              portConfidence: parsedResults.confidence,
-              deviceType: parsedResults.deviceType,
-              deviceConfidence: parsedResults.confidence,
-              basedOn: 0,
-              source: 'google',
-              searchResults: parsedResults.searchResults,
+              portType: pentahoResults.portType,
+              portConfidence: pentahoResults.confidence,
+              deviceType: pentahoResults.deviceType,
+              deviceConfidence: pentahoResults.confidence,
+              basedOn: 1,
+              source: 'pentaho',
               similarVehicles: []
             },
             yearWarning,
