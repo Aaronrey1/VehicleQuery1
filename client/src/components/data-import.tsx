@@ -95,6 +95,36 @@ export default function DataImport() {
     },
   });
 
+  // Pentaho import mutation
+  const pentahoImportMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/import/pentaho");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Pentaho Import Completed",
+        description: `Imported ${data.imported} vehicles, skipped ${data.skipped} duplicates. ${data.rawResponse ? 'Check console for raw response.' : ''}`,
+      });
+      console.log("Pentaho raw response:", data.rawResponse);
+      
+      // Invalidate all vehicle-related queries
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/makes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/models"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/years"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicles/search"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Pentaho Import Failed",
+        description: error.message || "Failed to import from Pentaho",
+        variant: "destructive",
+      });
+      console.error("Pentaho import error:", error);
+    },
+  });
+
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -286,6 +316,20 @@ export default function DataImport() {
               >
                 <RefreshCw className="mr-2 h-4 w-4 text-primary" />
                 Rebuild Search Index
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => {
+                  if (confirm("Import JBus port data from Pentaho report? This will add new vehicles to the database.")) {
+                    pentahoImportMutation.mutate();
+                  }
+                }}
+                disabled={pentahoImportMutation.isPending}
+                data-testid="button-pentaho-import"
+              >
+                <CloudUpload className="mr-2 h-4 w-4 text-primary" />
+                {pentahoImportMutation.isPending ? "Importing from Pentaho..." : "Import from Pentaho JBus"}
               </Button>
               <Button
                 variant="ghost"

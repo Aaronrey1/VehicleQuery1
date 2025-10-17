@@ -1156,6 +1156,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Import from Pentaho JBusPortFinder report (protected - admin only)
+  app.post("/api/import/pentaho", requireAuth, async (req, res) => {
+    try {
+      const pentahoUrl = "http://pentaho8.azuga.com/pentaho/api/repos/%3Ahome%3Aazuga%3A996-JBusPortFinder.prpt/viewer?userid=azuga&password=azuga";
+      
+      // Try to fetch the report data
+      const response = await axios.get(pentahoUrl, {
+        headers: {
+          'Accept': 'application/json, text/html, text/plain'
+        }
+      });
+
+      let importedCount = 0;
+      let skippedCount = 0;
+      
+      // Try to parse response - could be HTML, JSON, or CSV
+      const contentType = response.headers['content-type'];
+      
+      // If it's JSON
+      if (contentType?.includes('application/json')) {
+        const data = response.data;
+        // Parse and import JSON data (structure depends on Pentaho output)
+        // This is a placeholder - actual structure needs to be determined
+        if (Array.isArray(data)) {
+          for (const row of data) {
+            // Normalize to uppercase
+            const make = normalizeText(row.make || '');
+            const model = normalizeText(row.model || '');
+            const year = parseInt(row.year) || 0;
+            const deviceType = normalizeText(row.deviceType || '');
+            const portType = normalizeText(row.portType || '');
+            
+            // Skip if essential data is missing
+            if (!make || !model || !year || !deviceType || !portType) {
+              skippedCount++;
+              continue;
+            }
+            
+            const vehicle = {
+              make,
+              model,
+              year,
+              deviceType,
+              portType
+            };
+            
+            // Check if already exists
+            const existing = await storage.searchVehicles({
+              make,
+              model,
+              year
+            });
+            
+            if (existing.vehicles.length === 0) {
+              await storage.createVehicle(vehicle);
+              importedCount++;
+            } else {
+              skippedCount++;
+            }
+          }
+        }
+      }
+      
+      res.json({ 
+        message: `Pentaho import completed`,
+        imported: importedCount,
+        skipped: skippedCount,
+        rawResponse: response.data
+      });
+    } catch (error: any) {
+      console.error("Pentaho import error:", error);
+      res.status(500).json({ 
+        message: "Failed to import from Pentaho",
+        error: error.message,
+        details: error.response?.data || error.toString()
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
