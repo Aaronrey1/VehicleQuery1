@@ -36,3 +36,29 @@ export function formatYearDisplay(vehicle: { year?: number | null, yearFrom?: nu
   
   return 'N/A';
 }
+
+// Map port types to their most common device types based on database patterns
+export function suggestDeviceType(portType: string): string {
+  const normalizedPortType = portType.toUpperCase().trim();
+  
+  const portToDeviceMap: Record<string, string> = {
+    'OBD': 'DCM97021ZB',
+    'HARDWIRED': 'DCM97021ZB1',
+    'JBUS 9PIN TYPE 1 T & L': 'DCM97021ZB2',
+    'JBUS 9PIN TYPE 2 T & L': 'DCM97021ZB2',
+    'JBUS 6PIN': 'DCM97021ZB2',
+    'JBUS 16 PIN': 'DCM97021Z4',
+    'JBUS 16PIN': 'DCM97021ZB4',
+    'JBUS 9PIN TYPE 1 STANDARD': 'DCM97021ZB2',
+    'JBUS 9PIN TYPE 1 T': 'DCM9702',
+    'JBUS 9PIN TYPE 2': 'DCM97021ZB2',
+    '9PIN TYPE 1 STANDARD CABLE': 'DCM97021ZB2',
+    'OBD WITH EXTENSION CABLE': 'DCM97021ZB',
+    'OBD WITH FLAT CABLES': 'DCM97021ZB',
+    'OBD WITH FLAT EXTENSION CABLE': 'DCM97021ZB',
+    'OBD WITH OBD EXTENSION CABLE': 'DCM97021ZB',
+    'OBD/PORT PICTURE REQUIRED': 'DCM97021ZB',
+  };
+  
+  return portToDeviceMap[normalizedPortType] || '';
+}

@@ -15,7 +15,7 @@ import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertVehicleSchema, type Vehicle, type InsertVehicle } from "@shared/schema";
 import { z } from "zod";
-import { formatYearDisplay } from "@/lib/utils";
+import { formatYearDisplay, suggestDeviceType } from "@/lib/utils";
 
 const formSchema = insertVehicleSchema.extend({
   year: z.coerce.number().min(1900).max(2100),
@@ -291,7 +291,17 @@ export default function AdminPanel() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Port Type</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select 
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              // Auto-suggest device type based on port type
+                              const suggested = suggestDeviceType(value);
+                              if (suggested) {
+                                form.setValue('deviceType', suggested);
+                              }
+                            }} 
+                            value={field.value}
+                          >
                             <FormControl>
                               <SelectTrigger data-testid="select-port-type">
                                 <SelectValue placeholder="Select port type" />
