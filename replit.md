@@ -6,7 +6,21 @@ VehicleDB Pro is a full-stack vehicle database management system for searching, 
 
 ## Recent Changes
 
-**Smart Input Validation & Universal Pending Approval (Latest):**
+**Title Case Display Formatting (Latest):**
+- **Display Layer Enhancement:** All vehicle data now displays in Title Case for better readability
+  - Storage: All data remains in UPPERCASE in database for consistency and case-insensitive searching
+  - Display: New `formatForDisplay()` utility converts uppercase to title case in UI
+  - Examples: "FORD" → "Ford", "E350 SUPER DUTY" → "E350 Super Duty", "OBD" → "OBD"
+- **Comprehensive UI Coverage:** Applied across all components
+  - Search dropdowns: Make, model, device type, port type selectors show title case
+  - Search results: All table columns display in title case
+  - AI Search: Exact matches, predictions, and similar vehicles show title case
+  - Bulk Search: All dropdown options formatted
+- **Smart Capitalization:** Preserves special cases like "OBD", "CAN", "JBUS" in full uppercase
+- **Performance:** O(n) formatting on short strings has negligible impact
+- **Data Integrity:** Separation of storage (uppercase) and display (title case) maintains normalization benefits
+
+**Smart Input Validation & Universal Pending Approval:**
 - **Make/Model Validation:** AI Search now detects nonsensical inputs (e.g., "ABC") and warns users
   - Checks if make exists in database or is too short (<2 characters)
   - Shows red warning: "No vehicles found for make..." or "seems invalid"
