@@ -154,6 +154,16 @@ export default function AdminPanel() {
         });
         return;
       }
+    } else {
+      // For edits: if port type is being changed, device type must also be set
+      if (data.portType !== undefined && !data.deviceType) {
+        toast({
+          title: "Validation Error",
+          description: "Device Type is required when changing Port Type",
+          variant: "destructive",
+        });
+        return;
+      }
     }
     
     // Remove empty strings to prevent validation errors
@@ -298,6 +308,9 @@ export default function AdminPanel() {
                               const suggested = suggestDeviceType(value);
                               if (suggested) {
                                 form.setValue('deviceType', suggested);
+                              } else {
+                                // Clear device type if no suggestion available
+                                form.setValue('deviceType', undefined);
                               }
                             }} 
                             value={field.value}
