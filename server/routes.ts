@@ -64,121 +64,144 @@ async function checkIfHeavyVehicle(make: string, model: string): Promise<boolean
 // Helper function to search Pentaho JBusPortFinder for vehicle information
 async function searchPentahoForVehicle(make: string, model: string, year: number) {
   try {
-    // Try CSV format from Pentaho
     const baseUrl = "http://pentaho8.azuga.com/pentaho/api/repos/%3Ahome%3Aazuga%3A996-JBusPortFinder.prpt";
-    const csvUrl = `${baseUrl}/generatedContent?userid=azuga&password=azuga&output-target=table/csv`;
+    const htmlUrl = `${baseUrl}/generatedContent?userid=azuga&password=azuga&output-target=table/csv`;
     
-    const response = await axios.get(csvUrl, {
-      headers: {
-        'Accept': 'text/csv, text/plain, */*'
+    const response = await axios.get(htmlUrl);
+    const htmlData = response.data;
+    
+    if (typeof htmlData !== 'string') {
+      return null;
+    }
+    
+    // Strip HTML tags and extract text content
+    const textContent = htmlData
+      .replace(/<[^>]*>/g, '\n')
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line && line !== '&nbsp;');
+    
+    // Parse the report structure: Make -> Model -> Year Range -> Port Type
+    const entries = [];
+    let currentEntry: any = {};
+    
+    for (const line of textContent) {
+      if (line.startsWith('Make:')) {
+        // Save previous entry if exists
+        if (currentEntry.make) {
+          entries.push({...currentEntry});
+        }
+        currentEntry = { make: line.replace('Make:', '').trim() };
+      } else if (line.startsWith('Model:')) {
+        currentEntry.model = line.replace('Model:', '').trim();
+      } else if (line.startsWith('Year Range:')) {
+        currentEntry.yearRange = line.replace('Year Range:', '').trim();
+      } else if (line.startsWith('Port Type')) {
+        // Next meaningful line will be the port type value
+        currentEntry.expectingPortType = true;
+      } else if (currentEntry.expectingPortType && line.length > 1 && !line.includes(':')) {
+        currentEntry.portType = line.trim();
+        currentEntry.expectingPortType = false;
       }
-    });
-
-    const data = response.data;
+    }
     
-    // Parse CSV to find matching vehicle
-    if (typeof data === 'string') {
-      const lines = data.split('\n').filter(line => line.trim());
+    // Add last entry
+    if (currentEntry.make) {
+      entries.push(currentEntry);
+    }
+    
+    console.log(`Pentaho: Parsed ${entries.length} entries`);
+    
+    // Search for matching vehicle
+    let exactMatch = null;
+    let allModelsMatch = null;
+    let allHeavyModelMatch = null;
+    
+    for (const entry of entries) {
+      if (!entry.make || !entry.model) continue;
       
-      if (lines.length > 1) {
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const entryMake = entry.make.toLowerCase();
+      const entryModel = entry.model.toLowerCase();
+      const searchMake = make.toLowerCase();
+      const searchModel = model.toLowerCase();
+      
+      // Parse year range (e.g., "1996-2002" or "2015")
+      let yearFrom = 0, yearTo = 0;
+      if (entry.yearRange) {
+        const years = entry.yearRange.split('-').map((y: string) => parseInt(y.trim()));
+        yearFrom = years[0] || 0;
+        yearTo = years[1] || years[0] || 0;
+      }
+      
+      // Check for exact match (make + model + year in range)
+      if (entryMake === searchMake && 
+          entryModel === searchModel && 
+          year >= yearFrom && year <= yearTo) {
         
-        const makeIdx = headers.findIndex(h => h.includes('make'));
-        const modelIdx = headers.findIndex(h => h.includes('model'));
-        const yearIdx = headers.findIndex(h => h.includes('year'));
-        const deviceIdx = headers.findIndex(h => h.includes('device'));
-        const portIdx = headers.findIndex(h => h.includes('port'));
+        exactMatch = {
+          portType: entry.portType || 'JBUS',
+          deviceType: 'DCM97021ZB',
+          confidence: 60,
+          source: 'pentaho'
+        };
+        console.log(`Pentaho: Exact match found for ${make} ${model} ${year}`);
+        break;
+      }
+      
+      // Check for "All models"
+      if (entryMake === searchMake && 
+          (entryModel.includes('all model') || entryModel === 'all')) {
         
-        let exactMatch = null;
-        let allModelsMatch = null;
-        let allHeavyModelMatch = null;
-        
-        // Search for matches in CSV
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map(v => v.trim());
-          
-          const csvMake = makeIdx >= 0 ? values[makeIdx] : '';
-          const csvModel = modelIdx >= 0 ? values[modelIdx] : '';
-          const csvYear = yearIdx >= 0 ? parseInt(values[yearIdx]) : 0;
-          
-          // Check for exact match (same make, model, year)
-          if (csvMake.toLowerCase() === make.toLowerCase() && 
-              csvModel.toLowerCase() === model.toLowerCase() && 
-              csvYear === year) {
-            
-            const deviceType = deviceIdx >= 0 ? values[deviceIdx] : '';
-            const portType = portIdx >= 0 ? values[portIdx] : '';
-            
-            exactMatch = {
-              portType: portType || 'JBUS',
-              deviceType: deviceType || 'DCM97021ZB',
-              confidence: 60, // Higher confidence for exact match
-              source: 'pentaho'
-            };
-            break; // Exact match found, no need to continue
-          }
-          
-          // Check for "All models" or "ALL MODELS" (same make)
-          if (csvMake.toLowerCase() === make.toLowerCase() && 
-              (csvModel.toLowerCase().includes('all model') || csvModel.toLowerCase() === 'all')) {
-            
-            const deviceType = deviceIdx >= 0 ? values[deviceIdx] : '';
-            const portType = portIdx >= 0 ? values[portIdx] : '';
-            
-            if (!allModelsMatch) {
-              allModelsMatch = {
-                portType: portType || 'JBUS',
-                deviceType: deviceType || 'DCM97021ZB',
-                confidence: 50, // Medium confidence for "all models"
-                source: 'pentaho'
-              };
-            }
-          }
-          
-          // Check for "All heavy model" or similar (same make)
-          if (csvMake.toLowerCase() === make.toLowerCase() && 
-              csvModel.toLowerCase().includes('heavy')) {
-            
-            const deviceType = deviceIdx >= 0 ? values[deviceIdx] : '';
-            const portType = portIdx >= 0 ? values[portIdx] : '';
-            
-            if (!allHeavyModelMatch) {
-              allHeavyModelMatch = {
-                portType: portType || 'JBUS',
-                deviceType: deviceType || 'DCM97021ZB',
-                confidence: 55, // Medium-high confidence for heavy model match
-                source: 'pentaho'
-              };
-            }
-          }
-        }
-        
-        // Return exact match if found
-        if (exactMatch) {
-          return exactMatch;
-        }
-        
-        // Return "all models" match if found
-        if (allModelsMatch) {
+        if (!allModelsMatch) {
+          allModelsMatch = {
+            portType: entry.portType || 'JBUS',
+            deviceType: 'DCM97021ZB',
+            confidence: 50,
+            source: 'pentaho'
+          };
           console.log(`Pentaho: Found "All models" entry for ${make}`);
-          return allModelsMatch;
         }
+      }
+      
+      // Check for "All heavy model"
+      if (entryMake === searchMake && 
+          entryModel.includes('heavy')) {
         
-        // Check if this is a heavy vehicle for "all heavy model" match
-        if (allHeavyModelMatch) {
-          console.log(`Pentaho: Found "All heavy model" entry for ${make}, checking if ${model} is heavy...`);
-          const isHeavy = await checkIfHeavyVehicle(make, model);
-          
-          if (isHeavy) {
-            console.log(`Pentaho: ${make} ${model} is confirmed as heavy vehicle, using "All heavy model" data`);
-            return allHeavyModelMatch;
-          } else {
-            console.log(`Pentaho: ${make} ${model} is not a heavy vehicle, skipping "All heavy model" entry`);
-          }
+        if (!allHeavyModelMatch) {
+          allHeavyModelMatch = {
+            portType: entry.portType || 'JBUS',
+            deviceType: 'DCM97021ZB',
+            confidence: 55,
+            source: 'pentaho'
+          };
+          console.log(`Pentaho: Found "All heavy model" entry for ${make}`);
         }
       }
     }
     
+    // Return best match
+    if (exactMatch) {
+      return exactMatch;
+    }
+    
+    if (allModelsMatch) {
+      console.log(`Pentaho: Using "All models" match for ${make}`);
+      return allModelsMatch;
+    }
+    
+    if (allHeavyModelMatch) {
+      console.log(`Pentaho: Checking if ${make} ${model} is heavy duty...`);
+      const isHeavy = await checkIfHeavyVehicle(make, model);
+      
+      if (isHeavy) {
+        console.log(`Pentaho: ${make} ${model} confirmed as heavy vehicle`);
+        return allHeavyModelMatch;
+      } else {
+        console.log(`Pentaho: ${make} ${model} is not heavy duty, skipping`);
+      }
+    }
+    
+    console.log(`Pentaho: No match found for ${make} ${model} ${year}`);
     return null;
   } catch (error) {
     console.error("Pentaho search error:", error);
