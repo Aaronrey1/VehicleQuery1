@@ -1006,10 +1006,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let yearWarning = null;
       if (makeModelExists.vehicles.length > 0) {
-        // Get year range for this make/model
-        const years = makeModelExists.vehicles.map(v => v.year);
-        const minYear = Math.min(...years);
-        const maxYear = Math.max(...years);
+        // Get year range for this make/model (filter out null years)
+        const years = makeModelExists.vehicles
+          .map(v => v.year || v.yearFrom || v.yearTo)
+          .filter(y => y !== null && y !== undefined) as number[];
+        const minYear = years.length > 0 ? Math.min(...years) : yearNum;
+        const maxYear = years.length > 0 ? Math.max(...years) : yearNum;
         
         // Check if requested year is way outside the known range
         const yearDiff = yearNum < minYear ? minYear - yearNum : yearNum - maxYear;
@@ -1057,9 +1059,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Filter to vehicles within ±5 years of requested year
       const yearWindow = 5;
-      const nearbyYearVehicles = allSimilarVehicles.vehicles.filter(
-        v => Math.abs(v.year - yearNum) <= yearWindow
-      );
+      const nearbyYearVehicles = allSimilarVehicles.vehicles.filter(v => {
+        // Check if vehicle matches using either single year or year range
+        if (v.year !== null && v.year !== undefined) {
+          return Math.abs(v.year - yearNum) <= yearWindow;
+        } else if (v.yearFrom !== null && v.yearTo !== null) {
+          // Check if either the range overlaps with the window or the requested year is in range
+          return (yearNum >= v.yearFrom && yearNum <= v.yearTo) ||
+                 (Math.abs(v.yearFrom - yearNum) <= yearWindow) ||
+                 (Math.abs(v.yearTo - yearNum) <= yearWindow);
+        }
+        return false;
+      });
 
       if (nearbyYearVehicles.length === 0) {
         // No similar vehicles in year range - try broader manufacturer match
@@ -1073,9 +1084,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Filter manufacturer vehicles to ±10 year window for broader match
         const broaderYearWindow = 10;
-        const nearbyManufacturerVehicles = allManufacturerVehicles.vehicles.filter(
-          v => Math.abs(v.year - yearNum) <= broaderYearWindow
-        );
+        const nearbyManufacturerVehicles = allManufacturerVehicles.vehicles.filter(v => {
+          // Check if vehicle matches using either single year or year range
+          if (v.year !== null && v.year !== undefined) {
+            return Math.abs(v.year - yearNum) <= broaderYearWindow;
+          } else if (v.yearFrom !== null && v.yearTo !== null) {
+            // Check if either the range overlaps with the window or the requested year is in range
+            return (yearNum >= v.yearFrom && yearNum <= v.yearTo) ||
+                   (Math.abs(v.yearFrom - yearNum) <= broaderYearWindow) ||
+                   (Math.abs(v.yearTo - yearNum) <= broaderYearWindow);
+          }
+          return false;
+        });
 
         if (nearbyManufacturerVehicles.length === 0) {
           // No database matches found - try Tier 3: Google Custom Search

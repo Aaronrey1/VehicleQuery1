@@ -7,13 +7,17 @@ export const vehicles = pgTable("vehicles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   make: text("make").notNull(),
   model: text("model").notNull(),
-  year: integer("year").notNull(),
+  year: integer("year"), // Legacy field - kept for backward compatibility
+  yearFrom: integer("year_from"),
+  yearTo: integer("year_to"),
   deviceType: text("device_type").notNull(),
   portType: text("port_type").notNull(),
 }, (table) => ({
   makeIdx: index("make_idx").on(table.make),
   modelIdx: index("model_idx").on(table.model),
   yearIdx: index("year_idx").on(table.year),
+  yearFromIdx: index("year_from_idx").on(table.yearFrom),
+  yearToIdx: index("year_to_idx").on(table.yearTo),
   makeModelYearIdx: index("make_model_year_idx").on(table.make, table.model, table.year),
 }));
 
