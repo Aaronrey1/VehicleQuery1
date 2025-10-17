@@ -44,15 +44,6 @@ export default function Home() {
             </div>
             <nav className="hidden md:flex items-center space-x-6">
               <button
-                onClick={() => setActiveSection("bulk")}
-                className={`transition-colors ${
-                  activeSection === "bulk" ? "text-primary" : "text-muted-foreground hover:text-primary"
-                }`}
-                data-testid="nav-bulk"
-              >
-                Bulk Search
-              </button>
-              <button
                 onClick={() => setActiveSection("ai")}
                 className={`transition-colors flex items-center gap-1 ${
                   activeSection === "ai" ? "text-primary" : "text-muted-foreground hover:text-primary"
@@ -61,6 +52,15 @@ export default function Home() {
               >
                 <Sparkles className="h-3 w-3" />
                 AI Search
+              </button>
+              <button
+                onClick={() => setActiveSection("bulk")}
+                className={`transition-colors ${
+                  activeSection === "bulk" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                }`}
+                data-testid="nav-bulk"
+              >
+                Bulk Search
               </button>
               <button
                 onClick={() => setActiveSection("geometris")}
