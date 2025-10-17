@@ -257,11 +257,6 @@ export default function Billing() {
                             Google
                           </Badge>
                         )}
-                        {log.source === 'veco' && (
-                          <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
-                            VECO
-                          </Badge>
-                        )}
                       </TableCell>
                       <TableCell>{log.confidence}%</TableCell>
                       <TableCell className="font-mono">

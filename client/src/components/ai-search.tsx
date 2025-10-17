@@ -234,34 +234,25 @@ export default function AISearch() {
               <div className="space-y-4">
                 <Alert className={
                   prediction.predictions.source === 'google' ? "border-purple-500 bg-purple-50 dark:bg-purple-950" : 
-                  prediction.predictions.source === 'veco' ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950" :
                   "border-blue-500 bg-blue-50 dark:bg-blue-950"
                 }>
                   <Sparkles className={
                     prediction.predictions.source === 'google' ? "h-4 w-4 text-purple-600" : 
-                    prediction.predictions.source === 'veco' ? "h-4 w-4 text-indigo-600" :
                     "h-4 w-4 text-blue-600"
                   } />
                   <AlertDescription className={
                     prediction.predictions.source === 'google' ? "text-purple-800 dark:text-purple-200" : 
-                    prediction.predictions.source === 'veco' ? "text-indigo-800 dark:text-indigo-200" :
                     "text-blue-800 dark:text-blue-200"
                   }>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <p className="font-semibold">
                           {prediction.predictions.source === 'google' ? 'Google AI Prediction' : 
-                           prediction.predictions.source === 'veco' ? 'VECO Compatibility Prediction' :
                            'Two-Step AI Prediction'}
                         </p>
                         {prediction.predictions.source === 'google' && (
                           <Badge variant="outline" className="text-purple-600 border-purple-400">
                             From Google Search
-                          </Badge>
-                        )}
-                        {prediction.predictions.source === 'veco' && (
-                          <Badge variant="outline" className="text-indigo-600 border-indigo-400">
-                            From VECO Service
                           </Badge>
                         )}
                       </div>
