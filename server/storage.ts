@@ -79,14 +79,18 @@ export class DatabaseStorage implements IStorage {
     const buildConditions = (useAllModels: boolean = false) => {
       const conditions = [];
       if (make) {
-        conditions.push(ilike(vehicles.make, `%${make}%`));
+        // Strip special characters AND spaces from both database value and search pattern
+        const searchPattern = `%${make}%`;
+        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.make}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', '') LIKE ${searchPattern}`);
       }
       if (model) {
         // If useAllModels is true, search for "ALL MODELS" instead of the specific model
         if (useAllModels) {
-          conditions.push(ilike(vehicles.model, '%ALL MODELS%'));
+          conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.model}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', '') LIKE '%ALLMODELS%'`);
         } else {
-          conditions.push(ilike(vehicles.model, `%${model}%`));
+          // Strip special characters AND spaces from both database value and search pattern
+          const searchPattern = `%${model}%`;
+          conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.model}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', '') LIKE ${searchPattern}`);
         }
       }
       if (year) {
@@ -102,10 +106,14 @@ export class DatabaseStorage implements IStorage {
         );
       }
       if (deviceType) {
-        conditions.push(ilike(vehicles.deviceType, `%${deviceType}%`));
+        // Strip special characters AND spaces from both database value and search pattern
+        const searchPattern = `%${deviceType}%`;
+        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.deviceType}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', '') LIKE ${searchPattern}`);
       }
       if (portType) {
-        conditions.push(ilike(vehicles.portType, `%${portType}%`));
+        // Strip special characters AND spaces from both database value and search pattern
+        const searchPattern = `%${portType}%`;
+        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.portType}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', '') LIKE ${searchPattern}`);
       }
       return conditions;
     };

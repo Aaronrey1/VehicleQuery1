@@ -14,6 +14,8 @@ The frontend is built with React 18+ and TypeScript, using Vite for development 
 ### Backend Architecture
 The backend is an Express.js server developed with TypeScript and an ESM module system. It provides a RESTful API structure under `/api`, with route handlers in `server/routes.ts` and a storage layer abstraction via `IStorage`. Custom middleware is used for logging. All search inputs are normalized to uppercase and support manufacturer aliases.
 
+**Special Character Normalization:** All search operations (regular, bulk, AI) normalize text by removing special characters (dashes, commas, slashes, periods) and spaces from both user input and database values during comparison. This enables flexible matching: "F150" matches "F-150", "35004500" matches "3500 / 4500". Results always display original database formatting with special characters intact. Implementation uses `normalizeText()` in routes and SQL REPLACE chain in storage layer.
+
 **Key API Endpoints:**
 - **Vehicle Management:** CRUD operations, search (including bulk and `ALL MODELS` fallback), statistics, and CSV/JSON import, with auto device type suggestion based on port type.
 - **Harness Management (Geometris):** Search and authenticated CRUD/import operations for harnesses, supporting year range matching.

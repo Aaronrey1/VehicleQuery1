@@ -63,9 +63,12 @@ export default function BulkSearch() {
         : line.split(/\s+/);
 
       if (parts.length >= 3) {
+        // For space-separated: last part is year, first part is make, middle parts are model
+        // This handles multi-word makes like "ALFA ROMEO" or "LAND ROVER"
+        const year = parseInt(parts[parts.length - 1]);
         const make = parts[0];
-        const model = parts[1];
-        const year = parseInt(parts[2]);
+        // Join all middle parts as the model (handles multi-word models too)
+        const model = parts.slice(1, parts.length - 1).join(" ");
 
         if (make && model && !isNaN(year)) {
           queries.push({ make, model, year });

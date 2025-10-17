@@ -343,9 +343,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const query of queries) {
         try {
           // Validate and normalize each query
+          const normalizedMake = normalizeMake(query.make);
+          const normalizedModel = normalizeText(query.model);
+          
+          console.log(`[BULK SEARCH DEBUG] Original: ${query.make} ${query.model} ${query.year}`);
+          console.log(`[BULK SEARCH DEBUG] Normalized: ${normalizedMake} ${normalizedModel} ${query.year}`);
+          
           const validatedQuery = searchVehicleSchema.parse({
-            make: normalizeMake(query.make),
-            model: normalizeText(query.model),
+            make: normalizedMake,
+            model: normalizedModel,
             year: query.year
           });
 
@@ -358,6 +364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
 
           const { vehicles } = await storage.searchVehicles(searchParams);
+          console.log(`[BULK SEARCH DEBUG] Found ${vehicles.length} vehicles`);
           
           if (oneToOne && vehicles.length > 0) {
             // In 1-to-1 mode, only take the first result
@@ -467,9 +474,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Normalize text input to uppercase for case-insensitive search
+  // Also removes special characters like -, /, , . and spaces for flexible matching
   const normalizeText = (text: string | undefined): string | undefined => {
     if (!text) return undefined;
-    return text.toUpperCase().trim();
+    // Remove common special characters, spaces, and normalize to uppercase
+    return text
+      .toUpperCase()
+      .trim()
+      .replace(/[-,/\\.\\s]/g, ''); // Remove dashes, commas, slashes, periods, and spaces
   };
 
   // Search vehicles
