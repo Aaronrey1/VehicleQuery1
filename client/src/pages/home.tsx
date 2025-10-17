@@ -16,7 +16,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Home() {
-  const [activeSection, setActiveSection] = useState("bulk");
+  const [activeSection, setActiveSection] = useState("ai");
   const [adminSubTab, setAdminSubTab] = useState("manage");
   const [searchParams, setSearchParams] = useState<{ make?: string; model?: string; year?: number; deviceType?: string; portType?: string }>({});
   const { isAuthenticated, logout } = useAuth();
