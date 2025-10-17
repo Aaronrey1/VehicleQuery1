@@ -16,7 +16,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Home() {
-  const [activeSection, setActiveSection] = useState("search");
+  const [activeSection, setActiveSection] = useState("bulk");
   const [adminSubTab, setAdminSubTab] = useState("manage");
   const [searchParams, setSearchParams] = useState<{ make?: string; model?: string; year?: number; deviceType?: string; portType?: string }>({});
   const { isAuthenticated, logout } = useAuth();
@@ -43,15 +43,6 @@ export default function Home() {
               <h1 className="text-xl font-semibold text-foreground">VehicleDB Pro</h1>
             </div>
             <nav className="hidden md:flex items-center space-x-6">
-              <button
-                onClick={() => setActiveSection("search")}
-                className={`transition-colors ${
-                  activeSection === "search" ? "text-primary" : "text-muted-foreground hover:text-primary"
-                }`}
-                data-testid="nav-search"
-              >
-                Search
-              </button>
               <button
                 onClick={() => setActiveSection("bulk")}
                 className={`transition-colors ${
@@ -180,14 +171,6 @@ export default function Home() {
       )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search Section */}
-        {activeSection === "search" && (
-          <>
-            <VehicleSearch onSearch={setSearchParams} />
-            <SearchResults searchParams={searchParams} />
-          </>
-        )}
-
         {/* Bulk Search Section */}
         {activeSection === "bulk" && <BulkSearch />}
 
