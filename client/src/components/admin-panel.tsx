@@ -15,6 +15,7 @@ import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertVehicleSchema, type Vehicle, type InsertVehicle } from "@shared/schema";
 import { z } from "zod";
+import { formatYearDisplay } from "@/lib/utils";
 
 const formSchema = insertVehicleSchema.extend({
   year: z.coerce.number().min(1900).max(2100),
@@ -172,7 +173,7 @@ export default function AdminPanel() {
     form.reset({
       make: vehicle.make,
       model: vehicle.model,
-      year: vehicle.year,
+      year: vehicle.year ?? undefined,
       deviceType: vehicle.deviceType,
       portType: vehicle.portType,
     });
@@ -352,7 +353,7 @@ export default function AdminPanel() {
                     <TableRow key={vehicle.id} data-testid={`row-vehicle-${vehicle.id}`}>
                       <TableCell className="font-medium">{vehicle.make}</TableCell>
                       <TableCell>{vehicle.model}</TableCell>
-                      <TableCell>{vehicle.year}</TableCell>
+                      <TableCell>{formatYearDisplay(vehicle)}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{vehicle.deviceType}</Badge>
                       </TableCell>

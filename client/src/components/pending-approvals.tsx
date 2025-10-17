@@ -10,6 +10,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { PendingVehicle } from "@shared/schema";
+import { formatYearDisplay } from "@/lib/utils";
 
 export function PendingApprovals() {
   const { toast } = useToast();
@@ -193,7 +194,7 @@ export function PendingApprovals() {
                     <>
                       <TableRow key={vehicle.id} data-testid={`row-pending-${vehicle.id}`}>
                         <TableCell className="font-medium" data-testid={`text-vehicle-${vehicle.id}`}>
-                          {vehicle.year} {vehicle.make} {vehicle.model}
+                          {formatYearDisplay(vehicle)} {vehicle.make} {vehicle.model}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" data-testid={`badge-port-${vehicle.id}`}>{vehicle.portType}</Badge>

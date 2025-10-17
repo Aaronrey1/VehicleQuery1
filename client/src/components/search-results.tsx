@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowUpDown, Download, CheckCircle, AlertTriangle } from "lucide-react";
 import type { Vehicle, SearchResults } from "@shared/schema";
-import { formatForDisplay } from "@/lib/utils";
+import { formatForDisplay, formatYearDisplay } from "@/lib/utils";
 
 interface SearchResultsProps {
   searchParams: { make?: string; model?: string; year?: number; deviceType?: string; portType?: string };
@@ -176,7 +176,7 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
                           {formatForDisplay(vehicle.model)}
                         </TableCell>
                         <TableCell className="p-4 text-foreground" data-testid={`cell-year-${vehicle.id}`}>
-                          {vehicle.year}
+                          {formatYearDisplay(vehicle)}
                         </TableCell>
                         <TableCell className="p-4" data-testid={`cell-device-${vehicle.id}`}>
                           <Badge className={getDeviceTypeColor(vehicle.deviceType)}>

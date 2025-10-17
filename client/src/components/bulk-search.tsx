@@ -11,7 +11,7 @@ import { Search, Upload, Download, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Vehicle, SearchResults } from "@shared/schema";
-import { formatForDisplay } from "@/lib/utils";
+import { formatForDisplay, formatYearDisplay } from "@/lib/utils";
 
 export default function BulkSearch() {
   const [inputText, setInputText] = useState("");
@@ -108,7 +108,7 @@ export default function BulkSearch() {
 
     let csv = "make,model,year,device_type,port_type\n";
     results.forEach(vehicle => {
-      csv += `${vehicle.make},${vehicle.model},${vehicle.year},${vehicle.deviceType},${vehicle.portType}\n`;
+      csv += `${vehicle.make},${vehicle.model},${formatYearDisplay(vehicle)},${vehicle.deviceType},${vehicle.portType}\n`;
     });
 
     const blob = new Blob([csv], { type: "text/csv" });
@@ -232,7 +232,7 @@ export default function BulkSearch() {
                       <TableRow key={index} data-testid={`row-bulk-result-${index}`}>
                         <TableCell className="font-medium" data-testid={`cell-make-${index}`}>{formatForDisplay(vehicle.make)}</TableCell>
                         <TableCell data-testid={`cell-model-${index}`}>{formatForDisplay(vehicle.model)}</TableCell>
-                        <TableCell data-testid={`cell-year-${index}`}>{vehicle.year}</TableCell>
+                        <TableCell data-testid={`cell-year-${index}`}>{formatYearDisplay(vehicle)}</TableCell>
                         <TableCell>
                           <Badge className={getDeviceTypeColor(vehicle.deviceType)} data-testid={`cell-device-${index}`}>
                             {formatForDisplay(vehicle.deviceType)}

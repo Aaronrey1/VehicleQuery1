@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Sparkles, TrendingUp, Search, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
-import { formatForDisplay } from "@/lib/utils";
+import { formatForDisplay, formatYearDisplay } from "@/lib/utils";
 
 interface SearchPathStep {
   source: string;
@@ -323,7 +323,7 @@ export default function AISearch() {
                           >
                             <div className="flex-1">
                               <p className="font-medium">
-                                {vehicle.year} {formatForDisplay(vehicle.make)} {formatForDisplay(vehicle.model)}
+                                {formatYearDisplay(vehicle)} {formatForDisplay(vehicle.make)} {formatForDisplay(vehicle.model)}
                               </p>
                             </div>
                             <div className="flex gap-2">
