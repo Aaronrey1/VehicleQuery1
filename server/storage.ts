@@ -75,32 +75,42 @@ export class DatabaseStorage implements IStorage {
   async searchVehicles(params: SearchVehicle & { limit?: number; offset?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }): Promise<{ vehicles: Vehicle[], total: number }> {
     const { make, model, year, deviceType, portType, limit = 50, offset = 0, sortBy = 'make', sortOrder = 'asc' } = params;
     
-    const conditions = [];
-    if (make) {
-      conditions.push(ilike(vehicles.make, `%${make}%`));
-    }
-    if (model) {
-      conditions.push(ilike(vehicles.model, `%${model}%`));
-    }
-    if (year) {
-      // Match if: (1) single year field equals search year, OR (2) year falls within year range
-      conditions.push(
-        or(
-          eq(vehicles.year, year),
-          and(
-            gte(vehicles.yearTo, year),
-            lte(vehicles.yearFrom, year)
-          )
-        )!
-      );
-    }
-    if (deviceType) {
-      conditions.push(ilike(vehicles.deviceType, `%${deviceType}%`));
-    }
-    if (portType) {
-      conditions.push(ilike(vehicles.portType, `%${portType}%`));
-    }
+    // Helper function to build conditions
+    const buildConditions = (useAllModels: boolean = false) => {
+      const conditions = [];
+      if (make) {
+        conditions.push(ilike(vehicles.make, `%${make}%`));
+      }
+      if (model) {
+        // If useAllModels is true, search for "ALL MODELS" instead of the specific model
+        if (useAllModels) {
+          conditions.push(ilike(vehicles.model, '%ALL MODELS%'));
+        } else {
+          conditions.push(ilike(vehicles.model, `%${model}%`));
+        }
+      }
+      if (year) {
+        // Match if: (1) single year field equals search year, OR (2) year falls within year range
+        conditions.push(
+          or(
+            eq(vehicles.year, year),
+            and(
+              gte(vehicles.yearTo, year),
+              lte(vehicles.yearFrom, year)
+            )
+          )!
+        );
+      }
+      if (deviceType) {
+        conditions.push(ilike(vehicles.deviceType, `%${deviceType}%`));
+      }
+      if (portType) {
+        conditions.push(ilike(vehicles.portType, `%${portType}%`));
+      }
+      return conditions;
+    };
     
+    const conditions = buildConditions(false);
     const whereClause = conditions.length === 0 ? undefined : 
       conditions.length === 1 ? conditions[0] : and(...conditions);
     
@@ -127,9 +137,38 @@ export class DatabaseStorage implements IStorage {
       countQuery
     ]);
     
+    const total = Number(countResults[0]?.count || 0);
+    
+    // If no results and model was specified, try fallback to "ALL MODELS"
+    if (total === 0 && model) {
+      const fallbackConditions = buildConditions(true);
+      const fallbackWhereClause = fallbackConditions.length === 0 ? undefined : 
+        fallbackConditions.length === 1 ? fallbackConditions[0] : and(...fallbackConditions);
+      
+      if (fallbackWhereClause) {
+        const fallbackVehicleQuery = baseVehicleQuery
+          .where(fallbackWhereClause)
+          .orderBy(sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn))
+          .limit(limit)
+          .offset(offset);
+        
+        const fallbackCountQuery = baseCountQuery.where(fallbackWhereClause);
+        
+        const [fallbackVehicleResults, fallbackCountResults] = await Promise.all([
+          fallbackVehicleQuery,
+          fallbackCountQuery
+        ]);
+        
+        return {
+          vehicles: fallbackVehicleResults,
+          total: Number(fallbackCountResults[0]?.count || 0)
+        };
+      }
+    }
+    
     return {
       vehicles: vehicleResults,
-      total: Number(countResults[0]?.count || 0)
+      total
     };
   }
 
