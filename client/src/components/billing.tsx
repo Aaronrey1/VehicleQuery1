@@ -184,15 +184,15 @@ export default function Billing() {
 
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Tier 4 (Pentaho)</span>
-                <Badge variant="secondary" className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300">
+                <span className="text-sm font-medium">Tier 4 (VECO)</span>
+                <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
                   <Database className="h-3 w-3 mr-1" />
                   FREE
                 </Badge>
               </div>
-              <div className="text-2xl font-bold" data-testid="text-tier4-count">{stats.pentahoSearches || 0}</div>
+              <div className="text-2xl font-bold" data-testid="text-tier4-count">{stats.vecoSearches || 0}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                JBus port lookup
+                OBD-II compatibility check
               </p>
             </div>
           </div>
@@ -203,8 +203,8 @@ export default function Billing() {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Cost Structure:</strong> Database predictions (Tier 1 & 2) and Pentaho (Tier 4) are completely free. 
-          Google API searches cost $5 per 1,000 queries ($0.005 each) and are only used when database and Pentaho 
+          <strong>Cost Structure:</strong> Database predictions (Tier 1 & 2) and VECO (Tier 4) are completely free. 
+          Google API searches cost $5 per 1,000 queries ($0.005 each) and are only used when database and VECO 
           predictions fail. First 100 Google searches per day are free.
         </AlertDescription>
       </Alert>
@@ -257,9 +257,9 @@ export default function Billing() {
                             Google
                           </Badge>
                         )}
-                        {log.source === 'pentaho' && (
-                          <Badge variant="secondary" className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300">
-                            Pentaho
+                        {log.source === 'veco' && (
+                          <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
+                            VECO
                           </Badge>
                         )}
                       </TableCell>

@@ -395,10 +395,10 @@ export class DatabaseStorage implements IStorage {
       .from(aiSearchLogs)
       .where(eq(aiSearchLogs.source, 'database_tier2'));
 
-    const [pentahoCount] = await db
+    const [vecoCount] = await db
       .select({ count: sql<number>`count(*)` })
       .from(aiSearchLogs)
-      .where(eq(aiSearchLogs.source, 'pentaho'));
+      .where(eq(aiSearchLogs.source, 'veco'));
 
     const [costSum] = await db
       .select({ sum: sql<number>`coalesce(sum(${aiSearchLogs.cost}), 0)` })
@@ -414,7 +414,7 @@ export class DatabaseStorage implements IStorage {
       totalSearches: Number(totalCount?.count || 0),
       databaseSearches: Number(databaseCount?.count || 0),
       googleSearches: Number(googleCount?.count || 0),
-      pentahoSearches: Number(pentahoCount?.count || 0),
+      vecoSearches: Number(vecoCount?.count || 0),
       tier1Searches: Number(tier1Count?.count || 0),
       tier2Searches: Number(tier2Count?.count || 0),
       totalCostCents: Number(costSum?.sum || 0),
