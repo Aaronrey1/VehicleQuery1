@@ -921,7 +921,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           found: true,
           exactMatch: exactMatch.vehicles[0],
           yearWarning,
-          makeModelWarning
+          makeModelWarning,
+          searchPath: [
+            { source: 'Database (Exact Match)', checked: true, found: true }
+          ]
         });
       }
 
@@ -967,7 +970,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             similarVehicles: []
           },
           yearWarning,
-          makeModelWarning
+          makeModelWarning,
+          searchPath: [
+            { source: 'Database (Exact Match)', checked: true, found: false },
+            { source: 'Pentaho Report', checked: true, found: true }
+          ]
         });
       }
 
@@ -1053,7 +1060,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 similarVehicles: []
               },
               yearWarning,
-              makeModelWarning
+              makeModelWarning,
+              searchPath: [
+                { source: 'Database (Exact Match)', checked: true, found: false },
+                { source: 'Pentaho Report', checked: true, found: false },
+                { source: 'Database (±5 years)', checked: true, found: false },
+                { source: 'Database (±10 years)', checked: true, found: false },
+                { source: 'Google Custom Search', checked: true, found: true }
+              ]
             });
           }
 
@@ -1062,7 +1076,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             found: false,
             predictions: null,
             yearWarning,
-            makeModelWarning
+            makeModelWarning,
+            searchPath: [
+              { source: 'Database (Exact Match)', checked: true, found: false },
+              { source: 'Pentaho Report', checked: true, found: false },
+              { source: 'Database (±5 years)', checked: true, found: false },
+              { source: 'Database (±10 years)', checked: true, found: false },
+              { source: 'Google Custom Search', checked: true, found: false }
+            ]
           });
         }
 
@@ -1132,7 +1153,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             similarVehicles: nearbyManufacturerVehicles.slice(0, 10)
           },
           yearWarning,
-          makeModelWarning
+          makeModelWarning,
+          searchPath: [
+            { source: 'Database (Exact Match)', checked: true, found: false },
+            { source: 'Pentaho Report', checked: true, found: false },
+            { source: 'Database (±5 years)', checked: true, found: false },
+            { source: 'Database (±10 years)', checked: true, found: true }
+          ]
         });
       }
 
@@ -1201,7 +1228,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           similarVehicles: nearbyYearVehicles.slice(0, 10)
         },
         yearWarning,
-        makeModelWarning
+        makeModelWarning,
+        searchPath: [
+          { source: 'Database (Exact Match)', checked: true, found: false },
+          { source: 'Pentaho Report', checked: true, found: false },
+          { source: 'Database (±5 years)', checked: true, found: true }
+        ]
       });
     } catch (error) {
       console.error("AI prediction error:", error);

@@ -6,8 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Sparkles, TrendingUp, Search, AlertCircle } from "lucide-react";
+import { Sparkles, TrendingUp, Search, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
 import { formatForDisplay } from "@/lib/utils";
+
+interface SearchPathStep {
+  source: string;
+  checked: boolean;
+  found: boolean;
+}
 
 interface PredictionResult {
   found: boolean;
@@ -36,6 +42,7 @@ interface PredictionResult {
   };
   yearWarning?: string | null;
   makeModelWarning?: string | null;
+  searchPath?: SearchPathStep[];
 }
 
 export default function AISearch() {
@@ -170,6 +177,38 @@ export default function AISearch() {
                   {prediction.yearWarning}
                 </AlertDescription>
               </Alert>
+            )}
+
+            {/* Search Path Visualization */}
+            {prediction.searchPath && prediction.searchPath.length > 0 && (
+              <div className="border rounded-lg p-4 bg-muted/50">
+                <p className="text-sm font-semibold mb-3">Search Path</p>
+                <div className="space-y-2">
+                  {prediction.searchPath.map((step, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-background border">
+                        <span className="text-xs font-medium">{index + 1}</span>
+                      </div>
+                      <div className="flex-1 flex items-center gap-2">
+                        <span className="text-sm">{step.source}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {step.found ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <span className="text-xs font-medium text-green-600">Found</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-4 w-4 text-gray-400" />
+                            <span className="text-xs text-gray-500">Not found</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
             
             {prediction.found && prediction.exactMatch ? (
