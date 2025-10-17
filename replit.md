@@ -11,13 +11,26 @@ VehicleDB Pro is a full-stack vehicle database management system for searching, 
   - Example: Search "Ford F-150 1998" → First tries exact match → Falls back to "Ford ALL MODELS" if exists
   - Works across all search types (regular, bulk, AI Search)
   - Helps users get general make/year data when specific model isn't in database
-  - Indicates to users when result is from "ALL MODELS" fallback
+  - **UI Indication:** Clear visual indicators show when ALL MODELS fallback is used
+    - AI Search: Amber "ALL MODELS Fallback" badge displayed on results
+    - Explanatory text: "No exact model match found. Showing data for '{Make} ALL MODELS' as a general reference."
+    - Search path updates: "Database (ALL MODELS Fallback)" vs "Database (Exact Match)"
+  - Backend sets `isAllModelsFallback: true` flag when model="ALL MODELS" in match
 - **Admin Panel Year Range Input:** Can now add vehicles with year ranges directly in admin panel
   - Toggle switch lets you choose between single year or year range mode
   - Year range mode shows "From Year" and "To Year" fields side by side
   - Perfect for adding manufacturer data that applies to multiple years
   - Example: Ford ALL MODELS 1996-2002 with OBD port type
-- **Implementation:** Updated searchVehicles in server/storage.ts with fallback logic, added year range UI in admin-panel.tsx
+  - **Triple-Layer Validation:** Enforces mutually exclusive year inputs at three levels
+    - Form schema (formSchema.superRefine): Immediate inline validation feedback
+    - Submit handler (handleSubmit): Toast error messages before API call
+    - Backend schema (insertVehicleSchema.superRefine): Defense against direct API calls
+  - **Validation Rules:**
+    - Cannot have both single year AND year range (mutually exclusive)
+    - Cannot have partial range (must provide both yearFrom and yearTo)
+    - Cannot have inverted range (yearFrom must be ≤ yearTo)
+    - Must have either single year OR valid complete year range
+- **Implementation:** Updated searchVehicles in server/storage.ts with fallback logic, added year range UI in admin-panel.tsx, added isAllModelsFallback flag in ai-search.tsx
 
 **Auto Device Type Suggestion:**
 - **Smart Form Filling:** Admin panel now automatically suggests device type when port type is selected
