@@ -1,6 +1,6 @@
 import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type PendingVehicle, type InsertPendingVehicle } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, sql, ilike, desc, asc, gte, lte } from "drizzle-orm";
+import { eq, and, or, sql, ilike, desc, asc, gte, lte } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -83,7 +83,16 @@ export class DatabaseStorage implements IStorage {
       conditions.push(ilike(vehicles.model, `%${model}%`));
     }
     if (year) {
-      conditions.push(eq(vehicles.year, year));
+      // Match if: (1) single year field equals search year, OR (2) year falls within year range
+      conditions.push(
+        or(
+          eq(vehicles.year, year),
+          and(
+            gte(vehicles.yearTo, year),
+            lte(vehicles.yearFrom, year)
+          )
+        )!
+      );
     }
     if (deviceType) {
       conditions.push(ilike(vehicles.deviceType, `%${deviceType}%`));
@@ -175,11 +184,26 @@ export class DatabaseStorage implements IStorage {
 
   async getYearsByMakeAndModel(make: string, model: string): Promise<number[]> {
     const results = await db
-      .selectDistinct({ year: vehicles.year })
+      .select({ year: vehicles.year, yearFrom: vehicles.yearFrom, yearTo: vehicles.yearTo })
       .from(vehicles)
-      .where(and(eq(vehicles.make, make), eq(vehicles.model, model)))
-      .orderBy(desc(vehicles.year));
-    return results.map(r => r.year);
+      .where(and(eq(vehicles.make, make), eq(vehicles.model, model)));
+    
+    // Collect all unique years from both single year field and year ranges
+    const yearsSet = new Set<number>();
+    results.forEach(r => {
+      if (r.year !== null) {
+        yearsSet.add(r.year);
+      }
+      // If it's a year range, add all years in the range
+      if (r.yearFrom !== null && r.yearTo !== null) {
+        for (let y = r.yearFrom; y <= r.yearTo; y++) {
+          yearsSet.add(y);
+        }
+      }
+    });
+    
+    // Return sorted array in descending order
+    return Array.from(yearsSet).sort((a, b) => b - a);
   }
 
   async getVehicleStats(): Promise<{
