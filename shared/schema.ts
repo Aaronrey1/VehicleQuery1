@@ -23,6 +23,39 @@ export const vehicles = pgTable("vehicles", {
 
 export const insertVehicleSchema = createInsertSchema(vehicles).omit({
   id: true,
+}).superRefine((data, ctx) => {
+  const hasYear = data.year !== undefined && data.year !== null;
+  const hasYearFrom = data.yearFrom !== undefined && data.yearFrom !== null;
+  const hasYearTo = data.yearTo !== undefined && data.yearTo !== null;
+  const hasYearRange = hasYearFrom || hasYearTo;
+  
+  // Cannot have both single year AND year range
+  if (hasYear && hasYearRange) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Cannot provide both single year and year range. Choose one.",
+      path: ['year'],
+    });
+    return;
+  }
+  
+  // Must have either single year OR both yearFrom and yearTo
+  if (!hasYear && (!hasYearFrom || !hasYearTo)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Must provide either a single year or both from/to years",
+      path: ['year'],
+    });
+  }
+  
+  // If using year range, yearFrom must be <= yearTo
+  if (hasYearFrom && hasYearTo && data.yearFrom! > data.yearTo!) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "From Year must be less than or equal to To Year",
+      path: ['yearFrom'],
+    });
+  }
 });
 
 export const searchVehicleSchema = z.object({

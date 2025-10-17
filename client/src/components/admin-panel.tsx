@@ -19,13 +19,47 @@ import { formatYearDisplay, suggestDeviceType } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
-const formSchema = insertVehicleSchema.extend({
+const formSchema = z.object({
+  make: z.string().min(1, "Make is required"),
+  model: z.string().min(1, "Model is required"),
   year: z.coerce.number().min(1900).max(2100).optional(),
   yearFrom: z.coerce.number().min(1900).max(2100).optional(),
   yearTo: z.coerce.number().min(1900).max(2100).optional(),
-}).partial({
-  deviceType: true,
-  portType: true,
+  deviceType: z.string().optional(),
+  portType: z.string().optional(),
+}).superRefine((data, ctx) => {
+  const hasYear = data.year !== undefined && data.year !== null;
+  const hasYearFrom = data.yearFrom !== undefined && data.yearFrom !== null;
+  const hasYearTo = data.yearTo !== undefined && data.yearTo !== null;
+  const hasYearRange = hasYearFrom || hasYearTo;
+  
+  // Cannot have both single year AND year range
+  if (hasYear && hasYearRange) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Cannot provide both single year and year range. Choose one.",
+      path: ['year'],
+    });
+    return;
+  }
+  
+  // Must have either single year OR both yearFrom and yearTo
+  if (!hasYear && (!hasYearFrom || !hasYearTo)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Must provide either a single year or both from/to years",
+      path: ['year'],
+    });
+  }
+  
+  // If using year range, yearFrom must be <= yearTo
+  if (hasYearFrom && hasYearTo && data.yearFrom! > data.yearTo!) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "From Year must be less than or equal to To Year",
+      path: ['yearFrom'],
+    });
+  }
 });
 
 export default function AdminPanel() {
@@ -151,6 +185,40 @@ export default function AdminPanel() {
   });
 
   const handleSubmit = (data: z.infer<typeof formSchema>) => {
+    // Validate year fields
+    const hasYear = data.year !== undefined && data.year !== null;
+    const hasYearFrom = data.yearFrom !== undefined && data.yearFrom !== null;
+    const hasYearTo = data.yearTo !== undefined && data.yearTo !== null;
+    const hasYearRange = hasYearFrom || hasYearTo;
+    
+    // Cannot have both single year AND year range
+    if (hasYear && hasYearRange) {
+      toast({
+        title: "Validation Error",
+        description: "Cannot provide both single year and year range. Choose one.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!hasYear && (!hasYearFrom || !hasYearTo)) {
+      toast({
+        title: "Validation Error",
+        description: "Please provide either a single year or both from/to years",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (hasYearFrom && hasYearTo && data.yearFrom! > data.yearTo!) {
+      toast({
+        title: "Validation Error",
+        description: "From Year must be less than or equal to To Year",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Validate required fields on create
     if (!editingVehicle) {
       if (!data.deviceType || !data.portType) {
