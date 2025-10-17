@@ -16,9 +16,13 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertVehicleSchema, type Vehicle, type InsertVehicle } from "@shared/schema";
 import { z } from "zod";
 import { formatYearDisplay, suggestDeviceType } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const formSchema = insertVehicleSchema.extend({
-  year: z.coerce.number().min(1900).max(2100),
+  year: z.coerce.number().min(1900).max(2100).optional(),
+  yearFrom: z.coerce.number().min(1900).max(2100).optional(),
+  yearTo: z.coerce.number().min(1900).max(2100).optional(),
 }).partial({
   deviceType: true,
   portType: true,
@@ -29,6 +33,7 @@ export default function AdminPanel() {
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isYearRange, setIsYearRange] = useState(false);
   const { toast } = useToast();
 
   const limit = 20;
@@ -65,6 +70,8 @@ export default function AdminPanel() {
       make: "",
       model: "",
       year: new Date().getFullYear(),
+      yearFrom: undefined,
+      yearTo: undefined,
       deviceType: undefined,
       portType: undefined,
     },
@@ -180,10 +187,16 @@ export default function AdminPanel() {
 
   const handleEdit = (vehicle: Vehicle) => {
     setEditingVehicle(vehicle);
+    // Determine if this is a year range or single year
+    const hasYearRange = vehicle.yearFrom !== null && vehicle.yearTo !== null;
+    setIsYearRange(hasYearRange);
+    
     form.reset({
       make: vehicle.make,
       model: vehicle.model,
       year: vehicle.year ?? undefined,
+      yearFrom: vehicle.yearFrom ?? undefined,
+      yearTo: vehicle.yearTo ?? undefined,
       deviceType: vehicle.deviceType,
       portType: vehicle.portType,
     });
@@ -198,6 +211,7 @@ export default function AdminPanel() {
   const handleCloseDialog = () => {
     setIsCreateDialogOpen(false);
     setEditingVehicle(null);
+    setIsYearRange(false);
     form.reset();
   };
 
@@ -258,19 +272,71 @@ export default function AdminPanel() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="year"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Year</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="number" placeholder="2020" data-testid="input-year" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="year-range-toggle"
+                          checked={isYearRange}
+                          onCheckedChange={(checked) => {
+                            setIsYearRange(checked);
+                            // Clear opposite fields when toggling
+                            if (checked) {
+                              form.setValue('year', undefined);
+                            } else {
+                              form.setValue('yearFrom', undefined);
+                              form.setValue('yearTo', undefined);
+                            }
+                          }}
+                          data-testid="switch-year-range"
+                        />
+                        <Label htmlFor="year-range-toggle">Year Range</Label>
+                      </div>
+                      
+                      {!isYearRange ? (
+                        <FormField
+                          control={form.control}
+                          name="year"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Year</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="number" placeholder="2020" data-testid="input-year" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          <FormField
+                            control={form.control}
+                            name="yearFrom"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>From Year</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="number" placeholder="1996" data-testid="input-year-from" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="yearTo"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>To Year</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="number" placeholder="2002" data-testid="input-year-to" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                       )}
-                    />
+                    </div>
                     <FormField
                       control={form.control}
                       name="deviceType"

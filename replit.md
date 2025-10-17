@@ -6,7 +6,20 @@ VehicleDB Pro is a full-stack vehicle database management system for searching, 
 
 ## Recent Changes
 
-**Auto Device Type Suggestion (Latest):**
+**"ALL MODELS" Wildcard & Year Range Input (Latest):**
+- **ALL MODELS Wildcard:** Search now uses "ALL MODELS" as a fallback when exact model not found
+  - Example: Search "Ford F-150 1998" → First tries exact match → Falls back to "Ford ALL MODELS" if exists
+  - Works across all search types (regular, bulk, AI Search)
+  - Helps users get general make/year data when specific model isn't in database
+  - Indicates to users when result is from "ALL MODELS" fallback
+- **Admin Panel Year Range Input:** Can now add vehicles with year ranges directly in admin panel
+  - Toggle switch lets you choose between single year or year range mode
+  - Year range mode shows "From Year" and "To Year" fields side by side
+  - Perfect for adding manufacturer data that applies to multiple years
+  - Example: Ford ALL MODELS 1996-2002 with OBD port type
+- **Implementation:** Updated searchVehicles in server/storage.ts with fallback logic, added year range UI in admin-panel.tsx
+
+**Auto Device Type Suggestion:**
 - **Smart Form Filling:** Admin panel now automatically suggests device type when port type is selected
   - Based on 31,000+ vehicle database patterns showing most common port-to-device combinations
   - Example mappings: OBD → DCM97021ZB (23K records), HARDWIRED → DCM97021ZB1 (6K records), JBUS variants → DCM97021ZB2
