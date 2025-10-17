@@ -21,9 +21,13 @@ export const vehicles = pgTable("vehicles", {
   makeModelYearIdx: index("make_model_year_idx").on(table.make, table.model, table.year),
 }));
 
-export const insertVehicleSchema = createInsertSchema(vehicles).omit({
+// Base schema without validation (for partial updates)
+const baseInsertVehicleSchema = createInsertSchema(vehicles).omit({
   id: true,
-}).superRefine((data, ctx) => {
+});
+
+// Full insert schema with validation
+export const insertVehicleSchema = baseInsertVehicleSchema.superRefine((data, ctx) => {
   const hasYear = data.year !== undefined && data.year !== null;
   const hasYearFrom = data.yearFrom !== undefined && data.yearFrom !== null;
   const hasYearTo = data.yearTo !== undefined && data.yearTo !== null;
@@ -57,6 +61,9 @@ export const insertVehicleSchema = createInsertSchema(vehicles).omit({
     });
   }
 });
+
+// Update schema allows partial updates without strict validation
+export const updateVehicleSchema = baseInsertVehicleSchema.partial();
 
 export const searchVehicleSchema = z.object({
   make: z.string().optional(),

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertVehicleSchema, searchVehicleSchema, insertHarnessSchema, searchHarnessSchema } from "@shared/schema";
+import { insertVehicleSchema, updateVehicleSchema, searchVehicleSchema, insertHarnessSchema, searchHarnessSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import csv from "csv-parser";
@@ -644,7 +644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/vehicles/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const validatedVehicle = insertVehicleSchema.partial().parse(req.body);
+      const validatedVehicle = updateVehicleSchema.parse(req.body);
       const updatedVehicle = await storage.updateVehicle(id, validatedVehicle);
       
       if (!updatedVehicle) {
