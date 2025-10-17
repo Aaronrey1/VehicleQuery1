@@ -18,6 +18,7 @@ interface SearchPathStep {
 interface PredictionResult {
   found: boolean;
   exactMatch?: any;
+  isAllModelsFallback?: boolean;
   pendingApproval?: boolean;
   message?: string;
   predictions?: {
@@ -216,7 +217,19 @@ export default function AISearch() {
                 <TrendingUp className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800 dark:text-green-200">
                   <div className="space-y-2">
-                    <p className="font-semibold">Vehicle found in database!</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">Vehicle found in database!</p>
+                      {prediction.isAllModelsFallback && (
+                        <Badge variant="outline" className="text-amber-700 border-amber-500 bg-amber-100 dark:bg-amber-950">
+                          ALL MODELS Fallback
+                        </Badge>
+                      )}
+                    </div>
+                    {prediction.isAllModelsFallback && (
+                      <p className="text-sm text-amber-800 dark:text-amber-300">
+                        No exact model match found. Showing data for "{formatForDisplay(prediction.exactMatch.make)} ALL MODELS" as a general reference.
+                      </p>
+                    )}
                     <div className="grid grid-cols-2 gap-2 mt-2">
                       <div>
                         <p className="text-sm text-muted-foreground">Device Type</p>

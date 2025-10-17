@@ -1095,13 +1095,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (exactMatch.vehicles.length > 0) {
+        const matchedVehicle = exactMatch.vehicles[0];
+        const isAllModelsFallback = matchedVehicle.model === 'ALL MODELS';
+        
         return res.json({
           found: true,
-          exactMatch: exactMatch.vehicles[0],
+          exactMatch: matchedVehicle,
+          isAllModelsFallback,
           yearWarning,
           makeModelWarning,
           searchPath: [
-            { source: 'Database (Exact Match)', checked: true, found: true }
+            { source: isAllModelsFallback ? 'Database (ALL MODELS Fallback)' : 'Database (Exact Match)', checked: true, found: true }
           ]
         });
       }
