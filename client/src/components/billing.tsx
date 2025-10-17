@@ -203,9 +203,9 @@ export default function Billing() {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Cost Structure:</strong> Database predictions (Tier 1 & 2) are completely free. 
-          Google API searches cost $5 per 1,000 queries ($0.005 each) and are only used as a last resort 
-          when no database matches are found. First 100 Google searches per day are free.
+          <strong>Cost Structure:</strong> Database predictions (Tier 1 & 2) and Pentaho (Tier 4) are completely free. 
+          Google API searches cost $5 per 1,000 queries ($0.005 each) and are only used when database and Pentaho 
+          predictions fail. First 100 Google searches per day are free.
         </AlertDescription>
       </Alert>
 

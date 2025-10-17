@@ -925,7 +925,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // No exact match - find similar vehicles for prediction
+      // No exact match in database - try Pentaho JBusPortFinder (Tier 2)
+      console.log(`No exact match for ${make} ${model} ${yearNum}, trying Pentaho...`);
+      
+      const pentahoResults = await searchPentahoForVehicle(make as string, model as string, yearNum);
+
+      if (pentahoResults) {
+        // Log Pentaho search (Tier 2 - Free)
+        await storage.logAiSearch({
+          make: normalizedMake || String(make),
+          model: String(model),
+          year: yearNum,
+          source: 'pentaho',
+          confidence: pentahoResults.confidence,
+          cost: 0 // Pentaho searches are free
+        });
+
+        // Store Pentaho result as pending vehicle for admin approval
+        await storage.createPendingVehicle({
+          make: normalizedMake || '',
+          model: String(model),
+          year: yearNum,
+          deviceType: pentahoResults.deviceType,
+          portType: pentahoResults.portType,
+          confidence: pentahoResults.confidence,
+          googleSearchResults: JSON.stringify({ source: 'pentaho' }),
+          status: 'pending'
+        });
+
+        return res.json({
+          found: false,
+          pendingApproval: true,
+          message: 'Prediction submitted for admin approval',
+          predictions: {
+            portType: pentahoResults.portType,
+            portConfidence: pentahoResults.confidence,
+            deviceType: pentahoResults.deviceType,
+            deviceConfidence: pentahoResults.confidence,
+            basedOn: 1,
+            source: 'pentaho',
+            similarVehicles: []
+          },
+          yearWarning,
+          makeModelWarning
+        });
+      }
+
+      // No exact match in database or Pentaho - find similar vehicles for prediction
       // Search for same make+model with all years, then filter to ±5 year window
       const allSimilarVehicles = await storage.searchVehicles({
         make: normalizedMake,
@@ -1011,55 +1057,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
 
-          // Google failed - try Tier 4: Pentaho JBusPortFinder
-          console.log(`Google failed for ${make} ${model} ${yearNum}, trying Pentaho...`);
-          
-          const pentahoResults = await searchPentahoForVehicle(make as string, model as string, yearNum);
-
-          if (!pentahoResults) {
-            return res.json({
-              found: false,
-              predictions: null,
-              yearWarning,
-              makeModelWarning
-            });
-          }
-
-          // Log Pentaho search (Tier 4 - Free)
-          await storage.logAiSearch({
-            make: normalizedMake || String(make),
-            model: String(model),
-            year: yearNum,
-            source: 'pentaho',
-            confidence: pentahoResults.confidence,
-            cost: 0 // Pentaho searches are free
-          });
-
-          // Store Pentaho result as pending vehicle for admin approval
-          await storage.createPendingVehicle({
-            make: normalizedMake || '',
-            model: String(model),
-            year: yearNum,
-            deviceType: pentahoResults.deviceType,
-            portType: pentahoResults.portType,
-            confidence: pentahoResults.confidence,
-            googleSearchResults: JSON.stringify({ source: 'pentaho' }),
-            status: 'pending'
-          });
-
+          // Google failed - no more prediction sources available
           return res.json({
             found: false,
-            pendingApproval: true,
-            message: 'Prediction submitted for admin approval',
-            predictions: {
-              portType: pentahoResults.portType,
-              portConfidence: pentahoResults.confidence,
-              deviceType: pentahoResults.deviceType,
-              deviceConfidence: pentahoResults.confidence,
-              basedOn: 1,
-              source: 'pentaho',
-              similarVehicles: []
-            },
+            predictions: null,
             yearWarning,
             makeModelWarning
           });

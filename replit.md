@@ -6,13 +6,15 @@ VehicleDB Pro is a full-stack vehicle database management system for searching, 
 
 ## Recent Changes
 
-**Pentaho JBusPortFinder Integration - Tier 4 (Latest):**
-- **AI Search Tier 4:** Pentaho JBusPortFinder report added as fallback prediction source
-  - Tier 1: Database (±5 years, same make/model) - FREE
-  - Tier 2: Database (±10 years, same make) - FREE
-  - Tier 3: Google Custom Search - First 100/day FREE, then $0.005/search
-  - Tier 4: Pentaho JBusPortFinder - FREE (new!)
-- **Automatic Integration:** AI Search queries Pentaho when database and Google fail
+**Pentaho JBusPortFinder Integration (Latest):**
+- **AI Search Priority:** Pentaho JBusPortFinder report added as second-priority prediction source (checked immediately after exact database match)
+  - **Search Order:**
+    1. Exact match in database → FREE
+    2. Pentaho JBusPortFinder → FREE (new!)
+    3. Database pattern matching (±5 years, same make/model) → FREE
+    4. Database pattern matching (±10 years, same make) → FREE
+    5. Google Custom Search → First 100/day FREE, then $0.005/search
+  - **Note:** Billing UI uses different tier labels for tracking (Tier 1=DB ±5yr, Tier 2=DB ±10yr, Tier 3=Google, Tier 4=Pentaho)
 - **Smart Fallback:** Pentaho specifically good for JBUS port information
 - **Visual Indicator:** Teal-colored badge shows "From Pentaho Report" when used
 - **Admin Approval:** All Pentaho predictions require admin approval before database addition
