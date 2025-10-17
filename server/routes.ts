@@ -481,7 +481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return text
       .toUpperCase()
       .trim()
-      .replace(/[-,/\\.\\s]/g, ''); // Remove dashes, commas, slashes, periods, and spaces
+      .replace(/[-,/.\s]/g, ''); // Remove dashes, commas, slashes, periods, and spaces
   };
 
   // Search vehicles

@@ -65,24 +65,31 @@ const formSchema = z.object({
 export default function AdminPanel() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [filterMake, setFilterMake] = useState("");
+  const [filterModel, setFilterModel] = useState("");
+  const [filterYear, setFilterYear] = useState("");
+  const [filterDeviceType, setFilterDeviceType] = useState("");
+  const [filterPortType, setFilterPortType] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isYearRange, setIsYearRange] = useState(false);
   const { toast } = useToast();
 
   const limit = 20;
 
-  // Fetch vehicles with pagination
+  // Fetch vehicles with pagination and filters
   const { data: vehicleData, isLoading } = useQuery<{ vehicles: Vehicle[]; total: number }>({
-    queryKey: ["/api/vehicles/search", { page: currentPage, limit, searchTerm }],
+    queryKey: ["/api/vehicles/search", { page: currentPage, limit, filterMake, filterModel, filterYear, filterDeviceType, filterPortType }],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(currentPage),
         limit: String(limit),
       });
-      if (searchTerm) {
-        params.append("make", searchTerm);
-      }
+      if (filterMake) params.append("make", filterMake);
+      if (filterModel) params.append("model", filterModel);
+      if (filterYear) params.append("year", filterYear);
+      if (filterDeviceType) params.append("deviceType", filterDeviceType);
+      if (filterPortType) params.append("portType", filterPortType);
+      
       const response = await fetch(`/api/vehicles/search?${params.toString()}`);
       if (!response.ok) throw new Error("Failed to fetch vehicles");
       return response.json();
@@ -285,22 +292,21 @@ export default function AdminPanel() {
 
   const totalPages = Math.ceil((vehicleData?.total || 0) / limit);
 
+  const clearFilters = () => {
+    setFilterMake("");
+    setFilterModel("");
+    setFilterYear("");
+    setFilterDeviceType("");
+    setFilterPortType("");
+    setCurrentPage(1);
+  };
+
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <CardTitle className="text-2xl">Vehicle Management</CardTitle>
-          <div className="flex gap-2">
-            <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search by make..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-                data-testid="input-admin-search"
-              />
-            </div>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <CardTitle className="text-2xl">Vehicle Management</CardTitle>
             <Dialog open={isCreateDialogOpen || !!editingVehicle} onOpenChange={(open) => !open && handleCloseDialog()}>
               <DialogTrigger asChild>
                 <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-add-vehicle">
@@ -482,6 +488,138 @@ export default function AdminPanel() {
                 </Form>
               </DialogContent>
             </Dialog>
+          </div>
+          
+          {/* Filter Section */}
+          <div className="border rounded-lg p-4 bg-muted/30">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Filter by make..."
+                  value={filterMake}
+                  onChange={(e) => {
+                    setFilterMake(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="pl-10"
+                  data-testid="filter-make"
+                />
+              </div>
+              
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Filter by model..."
+                  value={filterModel}
+                  onChange={(e) => {
+                    setFilterModel(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="pl-10"
+                  data-testid="filter-model"
+                />
+              </div>
+              
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Filter by year..."
+                  value={filterYear}
+                  onChange={(e) => {
+                    setFilterYear(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="pl-10"
+                  data-testid="filter-year"
+                />
+              </div>
+              
+              <Select 
+                value={filterDeviceType || "all"} 
+                onValueChange={(value) => {
+                  setFilterDeviceType(value === "all" ? "" : value);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger data-testid="filter-device-type">
+                  <SelectValue placeholder="Device Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Device Types</SelectItem>
+                  {deviceTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select 
+                value={filterPortType || "all"} 
+                onValueChange={(value) => {
+                  setFilterPortType(value === "all" ? "" : value);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger data-testid="filter-port-type">
+                  <SelectValue placeholder="Port Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Port Types</SelectItem>
+                  {portTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Button 
+                variant="outline" 
+                onClick={clearFilters}
+                className="w-full"
+                data-testid="button-clear-filters"
+              >
+                Clear Filters
+              </Button>
+            </div>
+            
+            {(filterMake || filterModel || filterYear || filterDeviceType || filterPortType) && (
+              <div className="mt-3 flex flex-wrap gap-2 items-center">
+                <span className="text-sm text-muted-foreground">Active filters:</span>
+                {filterMake && (
+                  <Badge variant="secondary" className="gap-1">
+                    Make: {filterMake}
+                    <button onClick={() => { setFilterMake(""); setCurrentPage(1); }} className="ml-1">×</button>
+                  </Badge>
+                )}
+                {filterModel && (
+                  <Badge variant="secondary" className="gap-1">
+                    Model: {filterModel}
+                    <button onClick={() => { setFilterModel(""); setCurrentPage(1); }} className="ml-1">×</button>
+                  </Badge>
+                )}
+                {filterYear && (
+                  <Badge variant="secondary" className="gap-1">
+                    Year: {filterYear}
+                    <button onClick={() => { setFilterYear(""); setCurrentPage(1); }} className="ml-1">×</button>
+                  </Badge>
+                )}
+                {filterDeviceType && filterDeviceType !== "all" && (
+                  <Badge variant="secondary" className="gap-1">
+                    Device: {filterDeviceType}
+                    <button onClick={() => { setFilterDeviceType(""); setCurrentPage(1); }} className="ml-1">×</button>
+                  </Badge>
+                )}
+                {filterPortType && filterPortType !== "all" && (
+                  <Badge variant="secondary" className="gap-1">
+                    Port: {filterPortType}
+                    <button onClick={() => { setFilterPortType(""); setCurrentPage(1); }} className="ml-1">×</button>
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </CardHeader>
