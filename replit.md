@@ -15,8 +15,13 @@ VehicleDB Pro is a full-stack vehicle database management system for searching, 
     4. Database pattern matching (±10 years, same make) → FREE
     5. Google Custom Search → First 100/day FREE, then $0.005/search
   - **Note:** Billing UI uses different tier labels for tracking (Tier 1=DB ±5yr, Tier 2=DB ±10yr, Tier 3=Google, Tier 4=Pentaho)
+- **Smart Pentaho Matching:**
+  - Exact model match: Uses exact make/model/year from Pentaho (highest priority)
+  - "All models": If Pentaho lists "All models" for a make, applies to ALL models of that make
+  - "All heavy model": If Pentaho lists "All heavy model", checks with Google if the searched vehicle is heavy-duty (commercial truck, Class 4-8, etc.) and applies data only if confirmed
 - **Smart Fallback:** Pentaho specifically good for JBUS port information
 - **Visual Indicator:** Teal-colored badge shows "From Pentaho Report" when used
+- **Search Path Display:** Shows numbered list of all sources checked (exact DB → Pentaho → DB patterns → Google) with ✓/✗ indicators
 - **Admin Approval:** All Pentaho predictions require admin approval before database addition
 - **Zero Cost:** Pentaho queries are free (no billing impact)
 
