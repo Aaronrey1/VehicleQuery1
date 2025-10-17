@@ -102,11 +102,22 @@ export default function DataImport() {
       return response.json();
     },
     onSuccess: (data) => {
+      const successMessage = data.imported > 0 
+        ? `Imported ${data.imported} vehicles, skipped ${data.skipped}. Format: ${data.format}`
+        : `No new vehicles imported. Skipped ${data.skipped}. Check console for details.`;
+      
       toast({
-        title: "Pentaho Import Completed",
-        description: `Imported ${data.imported} vehicles, skipped ${data.skipped} duplicates. ${data.rawResponse ? 'Check console for raw response.' : ''}`,
+        title: data.imported > 0 ? "Pentaho Import Completed" : "Import Completed - No New Data",
+        description: successMessage,
+        variant: data.imported > 0 ? "default" : "destructive",
       });
-      console.log("Pentaho raw response:", data.rawResponse);
+      
+      console.log("Pentaho import result:", {
+        imported: data.imported,
+        skipped: data.skipped,
+        format: data.format,
+        preview: data.previewData
+      });
       
       // Invalidate all vehicle-related queries
       queryClient.invalidateQueries({ queryKey: ["/api/vehicles/makes"] });
@@ -118,7 +129,7 @@ export default function DataImport() {
     onError: (error: any) => {
       toast({
         title: "Pentaho Import Failed",
-        description: error.message || "Failed to import from Pentaho",
+        description: error.message || "Failed to import from Pentaho. Check console for details.",
         variant: "destructive",
       });
       console.error("Pentaho import error:", error);

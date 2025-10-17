@@ -1159,58 +1159,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import from Pentaho JBusPortFinder report (protected - admin only)
   app.post("/api/import/pentaho", requireAuth, async (req, res) => {
     try {
-      const pentahoUrl = "http://pentaho8.azuga.com/pentaho/api/repos/%3Ahome%3Aazuga%3A996-JBusPortFinder.prpt/viewer?userid=azuga&password=azuga";
+      // Try different output formats - Pentaho supports multiple export formats
+      const baseUrl = "http://pentaho8.azuga.com/pentaho/api/repos/%3Ahome%3Aazuga%3A996-JBusPortFinder.prpt";
       
-      // Try to fetch the report data
-      const response = await axios.get(pentahoUrl, {
-        headers: {
-          'Accept': 'application/json, text/html, text/plain'
-        }
-      });
+      // First try to get CSV output (append output-target=table/csv)
+      const csvUrl = `${baseUrl}/generatedContent?userid=azuga&password=azuga&output-target=table/csv`;
+      
+      let response;
+      let responseData;
+      
+      try {
+        response = await axios.get(csvUrl, {
+          headers: {
+            'Accept': 'text/csv, application/json, text/plain, */*'
+          }
+        });
+        responseData = response.data;
+      } catch (csvError) {
+        // If CSV fails, try the viewer endpoint
+        response = await axios.get(`${baseUrl}/viewer?userid=azuga&password=azuga`, {
+          headers: {
+            'Accept': 'text/html, application/json, */*'
+          }
+        });
+        responseData = response.data;
+      }
 
       let importedCount = 0;
       let skippedCount = 0;
+      let format = 'unknown';
       
-      // Try to parse response - could be HTML, JSON, or CSV
-      const contentType = response.headers['content-type'];
-      
-      // If it's JSON
-      if (contentType?.includes('application/json')) {
-        const data = response.data;
-        // Parse and import JSON data (structure depends on Pentaho output)
-        // This is a placeholder - actual structure needs to be determined
-        if (Array.isArray(data)) {
-          for (const row of data) {
-            // Normalize to uppercase
-            const make = normalizeText(row.make || '');
-            const model = normalizeText(row.model || '');
-            const year = parseInt(row.year) || 0;
-            const deviceType = normalizeText(row.deviceType || '');
-            const portType = normalizeText(row.portType || '');
+      // Check if it's CSV
+      if (typeof responseData === 'string' && (responseData.includes(',') || responseData.includes('\n'))) {
+        format = 'csv';
+        const lines = responseData.split('\n').filter(line => line.trim());
+        
+        if (lines.length > 1) {
+          const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+          
+          // Find column indices
+          const makeIdx = headers.findIndex(h => h.includes('make'));
+          const modelIdx = headers.findIndex(h => h.includes('model'));
+          const yearIdx = headers.findIndex(h => h.includes('year'));
+          const deviceIdx = headers.findIndex(h => h.includes('device'));
+          const portIdx = headers.findIndex(h => h.includes('port'));
+          
+          for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',').map(v => v.trim());
             
-            // Skip if essential data is missing
+            const make = makeIdx >= 0 ? normalizeText(values[makeIdx] || '') : '';
+            const model = modelIdx >= 0 ? normalizeText(values[modelIdx] || '') : '';
+            const year = yearIdx >= 0 ? parseInt(values[yearIdx]) || 0 : 0;
+            const deviceType = deviceIdx >= 0 ? normalizeText(values[deviceIdx] || '') : '';
+            const portType = portIdx >= 0 ? normalizeText(values[portIdx] || '') : '';
+            
             if (!make || !model || !year || !deviceType || !portType) {
               skippedCount++;
               continue;
             }
             
-            const vehicle = {
-              make,
-              model,
-              year,
-              deviceType,
-              portType
-            };
-            
-            // Check if already exists
-            const existing = await storage.searchVehicles({
-              make,
-              model,
-              year
-            });
+            const existing = await storage.searchVehicles({ make, model, year });
             
             if (existing.vehicles.length === 0) {
-              await storage.createVehicle(vehicle);
+              await storage.createVehicle({ make, model, year, deviceType, portType });
               importedCount++;
             } else {
               skippedCount++;
@@ -1220,17 +1231,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json({ 
-        message: `Pentaho import completed`,
+        message: `Pentaho import completed (${format} format)`,
         imported: importedCount,
         skipped: skippedCount,
-        rawResponse: response.data
+        format,
+        previewData: typeof responseData === 'string' ? responseData.substring(0, 500) : 'Binary or complex data'
       });
     } catch (error: any) {
       console.error("Pentaho import error:", error);
       res.status(500).json({ 
         message: "Failed to import from Pentaho",
         error: error.message,
-        details: error.response?.data || error.toString()
+        hint: "The Pentaho report may require different authentication or output format parameters"
       });
     }
   });
