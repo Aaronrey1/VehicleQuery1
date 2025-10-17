@@ -10,6 +10,32 @@ import axios from "axios";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Helper function to suggest device type based on port type
+function suggestDeviceType(portType: string): string {
+  const normalizedPortType = portType.toUpperCase().trim();
+  
+  const portToDeviceMap: Record<string, string> = {
+    'OBD': 'DCM97021ZB',
+    'HARDWIRED': 'DCM97021ZB1',
+    'JBUS 9PIN TYPE 1 T & L': 'DCM97021ZB2',
+    'JBUS 9PIN TYPE 2 T & L': 'DCM97021ZB2',
+    'JBUS 6PIN': 'DCM97021ZB2',
+    'JBUS 16 PIN': 'DCM97021Z4',
+    'JBUS 16PIN': 'DCM97021ZB4',
+    'JBUS 9PIN TYPE 1 STANDARD': 'DCM97021ZB2',
+    'JBUS 9PIN TYPE 1 T': 'DCM9702',
+    'JBUS 9PIN TYPE 2': 'DCM97021ZB2',
+    '9PIN TYPE 1 STANDARD CABLE': 'DCM97021ZB2',
+    'OBD WITH EXTENSION CABLE': 'DCM97021ZB',
+    'OBD WITH FLAT CABLES': 'DCM97021ZB',
+    'OBD WITH FLAT EXTENSION CABLE': 'DCM97021ZB',
+    'OBD WITH OBD EXTENSION CABLE': 'DCM97021ZB',
+    'OBD/PORT PICTURE REQUIRED': 'DCM97021ZB',
+  };
+  
+  return portToDeviceMap[normalizedPortType] || '';
+}
+
 // Helper function to search Google for vehicle information
 async function searchGoogleForVehicle(make: string, model: string, year: number) {
   const apiKey = process.env.GOOGLE_CUSTOM_SEARCH_API_KEY;
@@ -703,8 +729,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const make = row.make || row.Make;
           const model = row.model || row.Model;
           const yearStr = row.year || row.Year || row.year_ran || row['year ran'];
-          const deviceType = row.device_type || row.devicetype || row.deviceType || row['device type'] || row.device_;
+          let deviceType = row.device_type || row.devicetype || row.deviceType || row['device type'] || row.device_;
           const portType = row.port_type || row.porttype || row.portType || row['port type'] || row.port_typ;
+          
+          // Auto-suggest device type if missing but port type is present
+          if (!deviceType && portType) {
+            deviceType = suggestDeviceType(portType);
+          }
           
           // Parse year - can be single year (2005) or range (1996-2002)
           let yearFrom = null;
