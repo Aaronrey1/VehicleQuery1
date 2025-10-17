@@ -6,7 +6,19 @@ VehicleDB Pro is a full-stack vehicle database management system for searching, 
 
 ## Recent Changes
 
-**Pentaho JBusPortFinder Integration (Latest):**
+**Auto Device Type Suggestion (Latest):**
+- **Smart Form Filling:** Admin panel now automatically suggests device type when port type is selected
+  - Based on 31,000+ vehicle database patterns showing most common port-to-device combinations
+  - Example mappings: OBD → DCM97021ZB (23K records), HARDWIRED → DCM97021ZB1 (6K records), JBUS variants → DCM97021ZB2
+  - Instantly fills device type field when user selects port type, saving data entry time
+  - Still allows manual override if suggestion is incorrect
+- **CSV Import Enhancement:** CSV files with missing device type now auto-populate based on port type
+  - Reduces import errors when device type column is incomplete
+  - Applies same smart mapping as admin form
+  - Falls back to error if both device type and port type are missing
+- **Implementation:** `suggestDeviceType()` utility in both frontend (client/src/lib/utils.ts) and backend (server/routes.ts)
+
+**Pentaho JBusPortFinder Integration:**
 - **AI Search Priority:** Pentaho JBusPortFinder report added as second-priority prediction source (checked immediately after exact database match)
   - **Search Order:**
     1. Exact match in database → FREE
