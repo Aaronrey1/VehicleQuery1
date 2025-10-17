@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Sparkles, TrendingUp, Search, AlertCircle } from "lucide-react";
+import { formatForDisplay } from "@/lib/utils";
 
 interface PredictionResult {
   found: boolean;
@@ -180,11 +181,11 @@ export default function AISearch() {
                     <div className="grid grid-cols-2 gap-2 mt-2">
                       <div>
                         <p className="text-sm text-muted-foreground">Device Type</p>
-                        <Badge variant="secondary" className="mt-1">{prediction.exactMatch.deviceType}</Badge>
+                        <Badge variant="secondary" className="mt-1">{formatForDisplay(prediction.exactMatch.deviceType)}</Badge>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Port Type</p>
-                        <Badge variant="secondary" className="mt-1">{prediction.exactMatch.portType}</Badge>
+                        <Badge variant="secondary" className="mt-1">{formatForDisplay(prediction.exactMatch.portType)}</Badge>
                       </div>
                     </div>
                   </div>
@@ -216,18 +217,18 @@ export default function AISearch() {
                               <span className="text-xs">{prediction.predictions.portConfidence}%</span>
                             </div>
                           </div>
-                          <Badge className={getConfidenceColor(prediction.predictions.portConfidence)}>{prediction.predictions.portType}</Badge>
+                          <Badge className={getConfidenceColor(prediction.predictions.portConfidence)}>{formatForDisplay(prediction.predictions.portType)}</Badge>
                         </div>
 
                         <div className="border rounded-lg p-3 bg-background">
                           <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm font-medium">Step 2: Device Type (for {prediction.predictions.portType})</p>
+                            <p className="text-sm font-medium">Step 2: Device Type (for {formatForDisplay(prediction.predictions.portType)})</p>
                             <div className="flex items-center gap-2">
                               <div className={`h-2 w-2 rounded-full ${getConfidenceColor(prediction.predictions.deviceConfidence)}`} />
                               <span className="text-xs">{prediction.predictions.deviceConfidence}%</span>
                             </div>
                           </div>
-                          <Badge className={getConfidenceColor(prediction.predictions.deviceConfidence)}>{prediction.predictions.deviceType}</Badge>
+                          <Badge className={getConfidenceColor(prediction.predictions.deviceConfidence)}>{formatForDisplay(prediction.predictions.deviceType)}</Badge>
                         </div>
                       </div>
 
@@ -266,12 +267,12 @@ export default function AISearch() {
                           >
                             <div className="flex-1">
                               <p className="font-medium">
-                                {vehicle.year} {vehicle.make} {vehicle.model}
+                                {vehicle.year} {formatForDisplay(vehicle.make)} {formatForDisplay(vehicle.model)}
                               </p>
                             </div>
                             <div className="flex gap-2">
-                              <Badge variant="outline" className="text-xs">{vehicle.deviceType}</Badge>
-                              <Badge variant="outline" className="text-xs">{vehicle.portType}</Badge>
+                              <Badge variant="outline" className="text-xs">{formatForDisplay(vehicle.deviceType)}</Badge>
+                              <Badge variant="outline" className="text-xs">{formatForDisplay(vehicle.portType)}</Badge>
                             </div>
                           </div>
                         ))}

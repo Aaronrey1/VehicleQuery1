@@ -11,6 +11,7 @@ import { Search, Upload, Download, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Vehicle, SearchResults } from "@shared/schema";
+import { formatForDisplay } from "@/lib/utils";
 
 export default function BulkSearch() {
   const [inputText, setInputText] = useState("");
@@ -229,15 +230,15 @@ export default function BulkSearch() {
                   <TableBody>
                     {results.map((vehicle, index) => (
                       <TableRow key={index} data-testid={`row-bulk-result-${index}`}>
-                        <TableCell className="font-medium" data-testid={`cell-make-${index}`}>{vehicle.make}</TableCell>
-                        <TableCell data-testid={`cell-model-${index}`}>{vehicle.model}</TableCell>
+                        <TableCell className="font-medium" data-testid={`cell-make-${index}`}>{formatForDisplay(vehicle.make)}</TableCell>
+                        <TableCell data-testid={`cell-model-${index}`}>{formatForDisplay(vehicle.model)}</TableCell>
                         <TableCell data-testid={`cell-year-${index}`}>{vehicle.year}</TableCell>
                         <TableCell>
                           <Badge className={getDeviceTypeColor(vehicle.deviceType)} data-testid={`cell-device-${index}`}>
-                            {vehicle.deviceType}
+                            {formatForDisplay(vehicle.deviceType)}
                           </Badge>
                         </TableCell>
-                        <TableCell data-testid={`cell-port-${index}`}>{vehicle.portType}</TableCell>
+                        <TableCell data-testid={`cell-port-${index}`}>{formatForDisplay(vehicle.portType)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

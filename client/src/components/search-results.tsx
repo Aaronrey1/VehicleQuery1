@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowUpDown, Download, CheckCircle, AlertTriangle } from "lucide-react";
 import type { Vehicle, SearchResults } from "@shared/schema";
+import { formatForDisplay } from "@/lib/utils";
 
 interface SearchResultsProps {
   searchParams: { make?: string; model?: string; year?: number; deviceType?: string; portType?: string };
@@ -169,22 +170,22 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
                         data-testid={`row-vehicle-${vehicle.id}`}
                       >
                         <TableCell className="p-4 font-medium text-foreground" data-testid={`cell-make-${vehicle.id}`}>
-                          {vehicle.make}
+                          {formatForDisplay(vehicle.make)}
                         </TableCell>
                         <TableCell className="p-4 text-foreground" data-testid={`cell-model-${vehicle.id}`}>
-                          {vehicle.model}
+                          {formatForDisplay(vehicle.model)}
                         </TableCell>
                         <TableCell className="p-4 text-foreground" data-testid={`cell-year-${vehicle.id}`}>
                           {vehicle.year}
                         </TableCell>
                         <TableCell className="p-4" data-testid={`cell-device-${vehicle.id}`}>
                           <Badge className={getDeviceTypeColor(vehicle.deviceType)}>
-                            {vehicle.deviceType}
+                            {formatForDisplay(vehicle.deviceType)}
                           </Badge>
                         </TableCell>
                         <TableCell className="p-4" data-testid={`cell-port-${vehicle.id}`}>
                           <Badge variant="secondary">
-                            {vehicle.portType}
+                            {formatForDisplay(vehicle.portType)}
                           </Badge>
                         </TableCell>
                         <TableCell className="p-4" data-testid={`cell-compatibility-${vehicle.id}`}>

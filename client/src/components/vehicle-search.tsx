@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, ChevronDown, SlidersHorizontal } from "lucide-react";
 import type { VehicleStats } from "@shared/schema";
+import { formatForDisplay } from "@/lib/utils";
 
 interface VehicleSearchProps {
   onSearch: (params: { make?: string; model?: string; year?: number; deviceType?: string; portType?: string }) => void;
@@ -116,7 +117,7 @@ export default function VehicleSearch({ onSearch }: VehicleSearchProps) {
                   <SelectContent>
                     {makes.map((make: string) => (
                       <SelectItem key={make} value={make} data-testid={`option-make-${make.toLowerCase()}`}>
-                        {make}
+                        {formatForDisplay(make)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -133,7 +134,7 @@ export default function VehicleSearch({ onSearch }: VehicleSearchProps) {
                   <SelectContent>
                     {models.map((model: string) => (
                       <SelectItem key={model} value={model} data-testid={`option-model-${model.toLowerCase()}`}>
-                        {model}
+                        {formatForDisplay(model)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -185,7 +186,7 @@ export default function VehicleSearch({ onSearch }: VehicleSearchProps) {
                       <SelectContent>
                         {deviceTypes.map((deviceType: string) => (
                           <SelectItem key={deviceType} value={deviceType} data-testid={`option-device-type-${deviceType.toLowerCase().replace(/\s+/g, '-')}`}>
-                            {deviceType}
+                            {formatForDisplay(deviceType)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -202,7 +203,7 @@ export default function VehicleSearch({ onSearch }: VehicleSearchProps) {
                       <SelectContent>
                         {portTypes.map((portType: string) => (
                           <SelectItem key={portType} value={portType} data-testid={`option-port-type-${portType.toLowerCase().replace(/\s+/g, '-')}`}>
-                            {portType}
+                            {formatForDisplay(portType)}
                           </SelectItem>
                         ))}
                       </SelectContent>
