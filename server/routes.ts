@@ -702,25 +702,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Extract values (keys are already normalized to lowercase by csv parser)
           const make = row.make || row.Make;
           const model = row.model || row.Model;
-          const yearStr = row.year || row.Year;
-          const deviceType = row.device_type || row.devicetype || row.deviceType || row['device type'];
-          const portType = row.port_type || row.porttype || row.portType || row['port type'];
+          const yearStr = row.year || row.Year || row.year_ran || row['year ran'];
+          const deviceType = row.device_type || row.devicetype || row.deviceType || row['device type'] || row.device_;
+          const portType = row.port_type || row.porttype || row.portType || row['port type'] || row.port_typ;
           
-          // Parse year
-          const year = parseInt(yearStr);
+          // Parse year - can be single year (2005) or range (1996-2002)
+          let yearFrom = null;
+          let yearTo = null;
+          let year = null;
           
-          if (!make || !model || isNaN(year) || !deviceType || !portType) {
-            throw new Error(`Missing required fields. Found: make=${make}, model=${model}, year=${year}, deviceType=${deviceType}, portType=${portType}`);
+          if (yearStr && typeof yearStr === 'string' && yearStr.includes('-')) {
+            // Year range like "1996-2002"
+            const parts = yearStr.split('-').map(p => parseInt(p.trim()));
+            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+              yearFrom = parts[0];
+              yearTo = parts[1];
+            }
+          } else if (yearStr) {
+            // Single year
+            const parsedYear = parseInt(yearStr);
+            if (!isNaN(parsedYear)) {
+              year = parsedYear;
+              yearFrom = parsedYear;
+              yearTo = parsedYear;
+            }
+          }
+          
+          if (!make || !model || (!year && !yearFrom && !yearTo) || !deviceType || !portType) {
+            throw new Error(`Missing required fields. Found: make=${make}, model=${model}, year=${year || `${yearFrom}-${yearTo}`}, deviceType=${deviceType}, portType=${portType}`);
           }
           
           // Normalize data
-          const normalizedRow = {
+          const normalizedRow: any = {
             make: make,
             model: model,
-            year: year,
             deviceType: deviceType,
             portType: portType
           };
+          
+          // Add year fields based on what we parsed
+          if (year !== null) {
+            normalizedRow.year = year;
+          }
+          if (yearFrom !== null) {
+            normalizedRow.yearFrom = yearFrom;
+          }
+          if (yearTo !== null) {
+            normalizedRow.yearTo = yearTo;
+          }
 
           const validVehicle = insertVehicleSchema.parse(normalizedRow);
           validVehicles.push(validVehicle);
