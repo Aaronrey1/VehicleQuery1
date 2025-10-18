@@ -401,9 +401,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'CHEVY': 'CHEVROLET',
       'CHEV': 'CHEVROLET',
       'VW': 'VOLKSWAGEN',
-      'BENZ': 'MERCEDES-BENZ',
-      'MERCEDES': 'MERCEDES-BENZ',
-      'MB': 'MERCEDES-BENZ',
+      'BENZ': 'MERCEDESBENZ',
+      'MERCEDES': 'MERCEDESBENZ',
+      'MB': 'MERCEDESBENZ',
+      'MERCEDESBENZ': 'MERCEDESBENZ',
       'BMW': 'BMW',
       'MERC': 'MERCURY',
       'CADDY': 'CADILLAC',
@@ -438,19 +439,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'PORSCHE': 'PORSCHE',
       'JAGUAR': 'JAGUAR',
       'JAG': 'JAGUAR',
-      'LAND ROVER': 'LAND ROVER',
-      'ROVER': 'LAND ROVER',
+      'LANDROVER': 'LANDROVER',
+      'ROVER': 'LANDROVER',
       'MINI': 'MINI',
       'FIAT': 'FIAT',
-      'ALFA ROMEO': 'ALFA ROMEO',
-      'ALFA': 'ALFA ROMEO',
+      'ALFAROMEO': 'ALFAROMEO',
+      'ALFA': 'ALFAROMEO',
       'MASERATI': 'MASERATI',
       'FERRARI': 'FERRARI',
       'LAMBORGHINI': 'LAMBORGHINI',
       'LAMBO': 'LAMBORGHINI',
       'BENTLEY': 'BENTLEY',
-      'ROLLS ROYCE': 'ROLLS-ROYCE',
-      'ROLLS': 'ROLLS-ROYCE',
+      'ROLLSROYCE': 'ROLLSROYCE',
+      'ROLLS': 'ROLLSROYCE',
       'TESLA': 'TESLA',
       'RIVIAN': 'RIVIAN',
       'LUCID': 'LUCID',
@@ -466,11 +467,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'MACK': 'MACK',
       'FREIGHTLINER': 'FREIGHTLINER',
       'INTERNATIONAL': 'INTERNATIONAL',
-      'WESTERN STAR': 'WESTERN STAR',
+      'WESTERNSTAR': 'WESTERNSTAR',
     };
     
-    // Return normalized make if alias exists, otherwise return uppercase
-    return aliases[makeUpper] || makeUpper;
+    // Remove special characters and spaces from the make (consistent with normalizeText)
+    const normalized = makeUpper.replace(/[-,/.\s]/g, '');
+    
+    // Return alias if exists, otherwise return normalized make
+    return aliases[normalized] || normalized;
   };
 
   // Normalize text input to uppercase for case-insensitive search
