@@ -140,43 +140,48 @@ export class DatabaseStorage implements IStorage {
       ? baseCountQuery.where(whereClause)
       : baseCountQuery;
     
+    // IMPORTANT: If a model is specified, check if "ALL MODELS" exists first
+    // "ALL MODELS" entries supersede (override) specific model entries
+    if (model) {
+      const allModelsConditions = buildConditions(true); // true = search for ALL MODELS
+      const allModelsWhereClause = allModelsConditions.length === 0 ? undefined : 
+        allModelsConditions.length === 1 ? allModelsConditions[0] : and(...allModelsConditions);
+      
+      if (allModelsWhereClause) {
+        const allModelsQuery = baseVehicleQuery
+          .where(allModelsWhereClause)
+          .orderBy(sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn))
+          .limit(limit)
+          .offset(offset);
+        
+        const allModelsCountQuery = baseCountQuery.where(allModelsWhereClause);
+        
+        const [allModelsResults, allModelsCountResults] = await Promise.all([
+          allModelsQuery,
+          allModelsCountQuery
+        ]);
+        
+        const allModelsTotal = Number(allModelsCountResults[0]?.count || 0);
+        
+        // If ALL MODELS exists, return it (supersedes specific model)
+        if (allModelsTotal > 0) {
+          return {
+            vehicles: allModelsResults,
+            total: allModelsTotal
+          };
+        }
+      }
+    }
+    
+    // No ALL MODELS found (or no model specified), return specific model results
     const [vehicleResults, countResults] = await Promise.all([
       vehicleQuery,
       countQuery
     ]);
     
-    const total = Number(countResults[0]?.count || 0);
-    
-    // If no results and model was specified, try fallback to "ALL MODELS"
-    if (total === 0 && model) {
-      const fallbackConditions = buildConditions(true);
-      const fallbackWhereClause = fallbackConditions.length === 0 ? undefined : 
-        fallbackConditions.length === 1 ? fallbackConditions[0] : and(...fallbackConditions);
-      
-      if (fallbackWhereClause) {
-        const fallbackVehicleQuery = baseVehicleQuery
-          .where(fallbackWhereClause)
-          .orderBy(sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn))
-          .limit(limit)
-          .offset(offset);
-        
-        const fallbackCountQuery = baseCountQuery.where(fallbackWhereClause);
-        
-        const [fallbackVehicleResults, fallbackCountResults] = await Promise.all([
-          fallbackVehicleQuery,
-          fallbackCountQuery
-        ]);
-        
-        return {
-          vehicles: fallbackVehicleResults,
-          total: Number(fallbackCountResults[0]?.count || 0)
-        };
-      }
-    }
-    
     return {
       vehicles: vehicleResults,
-      total
+      total: Number(countResults[0]?.count || 0)
     };
   }
 
