@@ -81,16 +81,16 @@ export class DatabaseStorage implements IStorage {
       if (make) {
         // Strip special characters AND spaces from both database value and search pattern
         const searchPattern = `%${make}%`;
-        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.make}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', '') LIKE ${searchPattern}`);
+        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.make}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') LIKE ${searchPattern}`);
       }
       if (model) {
         // If useAllModels is true, search for "ALL MODELS" instead of the specific model
         if (useAllModels) {
-          conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.model}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', '') LIKE '%ALLMODELS%'`);
+          conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.model}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') LIKE '%ALLMODELS%'`);
         } else {
           // Strip special characters AND spaces from both database value and search pattern
           const searchPattern = `%${model}%`;
-          conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.model}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', '') LIKE ${searchPattern}`);
+          conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.model}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') LIKE ${searchPattern}`);
         }
       }
       if (year) {
@@ -108,12 +108,12 @@ export class DatabaseStorage implements IStorage {
       if (deviceType) {
         // Strip special characters AND spaces from both database value and search pattern
         const searchPattern = `%${deviceType}%`;
-        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.deviceType}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', '') LIKE ${searchPattern}`);
+        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.deviceType}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') LIKE ${searchPattern}`);
       }
       if (portType) {
         // Strip special characters AND spaces from both database value and search pattern
         const searchPattern = `%${portType}%`;
-        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.portType}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', '') LIKE ${searchPattern}`);
+        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.portType}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') LIKE ${searchPattern}`);
       }
       return conditions;
     };

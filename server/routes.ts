@@ -471,21 +471,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
     
     // Remove special characters and spaces from the make (consistent with normalizeText)
-    const normalized = makeUpper.replace(/[-,/.\s]/g, '');
+    const normalized = makeUpper.replace(/[-,/.\s()[\]&+*]/g, '');
     
     // Return alias if exists, otherwise return normalized make
     return aliases[normalized] || normalized;
   };
 
   // Normalize text input to uppercase for case-insensitive search
-  // Also removes special characters like -, /, , . and spaces for flexible matching
+  // Also removes special characters like -, /, , . (), [], &, +, * and spaces for flexible matching
   const normalizeText = (text: string | undefined): string | undefined => {
     if (!text) return undefined;
     // Remove common special characters, spaces, and normalize to uppercase
     return text
       .toUpperCase()
       .trim()
-      .replace(/[-,/.\s]/g, ''); // Remove dashes, commas, slashes, periods, and spaces
+      .replace(/[-,/.\s()[\]&+*]/g, ''); // Remove dashes, commas, slashes, periods, spaces, parentheses, brackets, ampersands, plus, asterisk
   };
 
   // Search vehicles
@@ -1070,10 +1070,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         makeModelWarning = `⚠️ The model "${model}" seems invalid. Please enter a valid vehicle model.`;
       }
 
+      // Normalize model for searching
+      const normalizedModel = normalizeText(model as string);
+
       // Year validation: Check if this make/model exists in database and if year makes sense
       const makeModelExists = await storage.searchVehicles({
         make: normalizedMake,
-        model: model as string,
+        model: normalizedModel,
         limit: 1000,
         offset: 0,
         sortBy: "year",
@@ -1102,7 +1105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // First, check if exact vehicle exists
       const exactMatch = await storage.searchVehicles({
         make: normalizedMake,
-        model: model as string,
+        model: normalizedModel,
         year: yearNum,
         limit: 1,
         offset: 0,
@@ -1130,7 +1133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Search for same make+model with all years, then filter to ±5 year window
       const allSimilarVehicles = await storage.searchVehicles({
         make: normalizedMake,
-        model: model as string,
+        model: normalizedModel,
         limit: 1000, // Get more to ensure we have enough in the year range
         offset: 0,
         sortBy: "year",
