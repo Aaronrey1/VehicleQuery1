@@ -75,119 +75,111 @@ export class DatabaseStorage implements IStorage {
   async searchVehicles(params: SearchVehicle & { limit?: number; offset?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }): Promise<{ vehicles: Vehicle[], total: number }> {
     const { make, model, year, deviceType, portType, limit = 50, offset = 0, sortBy = 'make', sortOrder = 'asc' } = params;
     
-    console.log('[STORAGE DEBUG] searchVehicles params:', JSON.stringify({ make, model, year, deviceType, portType }, null, 2));
-    
-    // Helper function to build conditions  
-    const buildConditions = (useAllModels: boolean = false) => {
+    // Build WHERE conditions dynamically
+    const buildWhereClause = (searchModel?: string) => {
       const conditions = [];
+      
       if (make) {
-        console.log('[STORAGE DEBUG] Make value:', make);
-        // Simple test: just use ilike
-        conditions.push(ilike(vehicles.make, `%${make}%`));
+        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(make), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') ILIKE ${`%${make}%`}`);
       }
-      if (model) {
-        if (useAllModels) {
-          console.log('[STORAGE DEBUG] Searching for ALL MODELS wildcard');
-          conditions.push(ilike(vehicles.model, '%ALLMODELS%'));
+      
+      if (searchModel) {
+        if (searchModel === 'ALLMODELS') {
+          conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(model), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') ILIKE '%ALLMODELS%'`);
         } else {
-          console.log('[STORAGE DEBUG] Model value:', model);
-          // Simple test: just use ilike
-          conditions.push(ilike(vehicles.model, `%${model}%`));
+          conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(model), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') ILIKE ${`%${searchModel}%`}`);
         }
       }
+      
       if (year) {
-        // Match if: (1) single year field equals search year, OR (2) year falls within year range
-        conditions.push(
-          or(
-            eq(vehicles.year, year),
-            and(
-              gte(vehicles.yearTo, year),
-              lte(vehicles.yearFrom, year)
-            )
-          )!
-        );
+        conditions.push(sql`(year = ${year} OR (year_to >= ${year} AND year_from <= ${year}))`);
       }
+      
       if (deviceType) {
-        // Strip special characters AND spaces from both database value and search pattern
-        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.deviceType}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') LIKE ${'%' + deviceType + '%'}`);
+        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(device_type), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') ILIKE ${`%${deviceType}%`}`);
       }
+      
       if (portType) {
-        // Strip special characters AND spaces from both database value and search pattern
-        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.portType}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') LIKE ${'%' + portType + '%'}`);
+        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(port_type), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') ILIKE ${`%${portType}%`}`);
       }
+      
       return conditions;
     };
     
-    const conditions = buildConditions(false);
-    const whereClause = conditions.length === 0 ? undefined : 
-      conditions.length === 1 ? conditions[0] : and(...conditions);
-    
     // Determine sort column
-    const orderByColumn = sortBy === 'model' ? vehicles.model :
-      sortBy === 'year' ? vehicles.year :
-      sortBy === 'deviceType' ? vehicles.deviceType :
-      sortBy === 'portType' ? vehicles.portType :
-      vehicles.make;
+    const sortColumn = sortBy === 'model' ? sql.raw('model') :
+      sortBy === 'year' ? sql.raw('year') :
+      sortBy === 'deviceType' ? sql.raw('device_type') :
+      sortBy === 'portType' ? sql.raw('port_type') :
+      sql.raw('make');
     
-    // Build queries with conditional where clause
-    const baseVehicleQuery = db.select().from(vehicles);
-    const vehicleQuery = whereClause 
-      ? baseVehicleQuery.where(whereClause).orderBy(sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn)).limit(limit).offset(offset)
-      : baseVehicleQuery.orderBy(sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn)).limit(limit).offset(offset);
+    const orderDirection = sortOrder === 'asc' ? sql.raw('ASC') : sql.raw('DESC');
     
-    const baseCountQuery = db.select({ count: sql<number>`count(*)` }).from(vehicles);
-    const countQuery = whereClause 
-      ? baseCountQuery.where(whereClause)
-      : baseCountQuery;
-    
-    // IMPORTANT: If a model is specified, check if "ALL MODELS" exists first
-    // "ALL MODELS" entries supersede (override) specific model entries
+    // IMPORTANT: If model is specified, check for "ALL MODELS" wildcard first
     if (model) {
-      const allModelsConditions = buildConditions(true); // true = search for ALL MODELS
-      const allModelsWhereClause = allModelsConditions.length === 0 ? undefined : 
-        allModelsConditions.length === 1 ? allModelsConditions[0] : and(...allModelsConditions);
+      const wildcardConditions = buildWhereClause('ALLMODELS');
       
-      if (allModelsWhereClause) {
-        const allModelsQuery = baseVehicleQuery
-          .where(allModelsWhereClause)
-          .orderBy(sortOrder === 'asc' ? asc(orderByColumn) : desc(orderByColumn))
-          .limit(limit)
-          .offset(offset);
+      if (wildcardConditions.length > 0) {
+        // Combine conditions using AND
+        let wildcardWhere = wildcardConditions[0];
+        for (let i = 1; i < wildcardConditions.length; i++) {
+          wildcardWhere = sql`${wildcardWhere} AND ${wildcardConditions[i]}`;
+        }
         
-        const allModelsCountQuery = baseCountQuery.where(allModelsWhereClause);
+        const wildcardCountQuery = sql`SELECT COUNT(*) as count FROM ${vehicles} WHERE ${wildcardWhere}`;
         
-        const [allModelsResults, allModelsCountResults] = await Promise.all([
-          allModelsQuery,
-          allModelsCountQuery
-        ]);
+        const wildcardCountResult = await db.execute(wildcardCountQuery);
+        const wildcardTotal = Number(wildcardCountResult.rows[0]?.count || 0);
         
-        const allModelsTotal = Number(allModelsCountResults[0]?.count || 0);
-        console.log('[STORAGE DEBUG] ALL MODELS wildcard check - found:', allModelsTotal);
-        
-        // If ALL MODELS exists, return it (supersedes specific model)
-        if (allModelsTotal > 0) {
-          console.log('[STORAGE DEBUG] Returning ALL MODELS wildcard results');
+        if (wildcardTotal > 0) {
+          const wildcardQuery = sql`SELECT * FROM ${vehicles} WHERE ${wildcardWhere} ORDER BY ${sortColumn} ${orderDirection} LIMIT ${limit} OFFSET ${offset}`;
+          const wildcardResults = await db.execute(wildcardQuery);
+          
           return {
-            vehicles: allModelsResults,
-            total: allModelsTotal
+            vehicles: wildcardResults.rows as Vehicle[],
+            total: wildcardTotal
           };
         }
       }
     }
     
-    // No ALL MODELS found (or no model specified), return specific model results
-    console.log('[STORAGE DEBUG] Executing specific model query (no wildcard found)');
-    const [vehicleResults, countResults] = await Promise.all([
-      vehicleQuery,
-      countQuery
-    ]);
+    // No wildcard found, execute specific model search
+    const conditions = buildWhereClause(model);
     
-    console.log('[STORAGE DEBUG] Specific model results:', vehicleResults.length);
-    
-    return {
-      vehicles: vehicleResults,
-      total: Number(countResults[0]?.count || 0)
-    };
+    if (conditions.length > 0) {
+      // Combine conditions using AND
+      let whereClause = conditions[0];
+      for (let i = 1; i < conditions.length; i++) {
+        whereClause = sql`${whereClause} AND ${conditions[i]}`;
+      }
+      
+      const countQuery = sql`SELECT COUNT(*) as count FROM ${vehicles} WHERE ${whereClause}`;
+      const dataQuery = sql`SELECT * FROM ${vehicles} WHERE ${whereClause} ORDER BY ${sortColumn} ${orderDirection} LIMIT ${limit} OFFSET ${offset}`;
+      
+      const [countResult, dataResult] = await Promise.all([
+        db.execute(countQuery),
+        db.execute(dataQuery)
+      ]);
+      
+      return {
+        vehicles: dataResult.rows as Vehicle[],
+        total: Number(countResult.rows[0]?.count || 0)
+      };
+    } else {
+      // No conditions, return all vehicles
+      const countQuery = sql`SELECT COUNT(*) as count FROM ${vehicles}`;
+      const dataQuery = sql`SELECT * FROM ${vehicles} ORDER BY ${sortColumn} ${orderDirection} LIMIT ${limit} OFFSET ${offset}`;
+      
+      const [countResult, dataResult] = await Promise.all([
+        db.execute(countQuery),
+        db.execute(dataQuery)
+      ]);
+      
+      return {
+        vehicles: dataResult.rows as Vehicle[],
+        total: Number(countResult.rows[0]?.count || 0)
+      };
+    }
   }
 
   async getVehicleById(id: string): Promise<Vehicle | undefined> {

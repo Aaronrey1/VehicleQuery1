@@ -16,6 +16,8 @@ The backend is an Express.js server developed with TypeScript and an ESM module 
 
 **Special Character Normalization:** All search operations (regular, bulk, AI) normalize text by removing special characters (dashes, commas, slashes, periods) and spaces from both user input and database values during comparison. This enables flexible matching: "F150" matches "F-150", "35004500" matches "3500 / 4500". Results always display original database formatting with special characters intact. Implementation uses `normalizeText()` in routes and SQL REPLACE chain in storage layer.
 
+**Search Implementation:** Database search operations use Drizzle's `sql` template for raw SQL execution with automatic parameterization. This approach was chosen after discovering that Drizzle's query builder (`.ilike()`) and ORM methods failed to match LIKE patterns on the model column, particularly for vehicles with special characters (e.g., "F-150", "F150"). The raw SQL implementation using the `sql` template provides reliable LIKE matching while maintaining SQL injection protection through automatic parameter binding. Conditions are combined using template composition: `sql\`${condition1} AND ${condition2}\`` for proper parameterization.
+
 **Key API Endpoints:**
 - **Vehicle Management:** CRUD operations, search (including bulk and `ALL MODELS` fallback), statistics, and CSV/JSON import, with auto device type suggestion based on port type.
 - **Harness Management (Geometris):** Search and authenticated CRUD/import operations for harnesses, supporting year range matching.
