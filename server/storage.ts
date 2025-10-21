@@ -75,22 +75,24 @@ export class DatabaseStorage implements IStorage {
   async searchVehicles(params: SearchVehicle & { limit?: number; offset?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }): Promise<{ vehicles: Vehicle[], total: number }> {
     const { make, model, year, deviceType, portType, limit = 50, offset = 0, sortBy = 'make', sortOrder = 'asc' } = params;
     
-    // Helper function to build conditions
+    console.log('[STORAGE DEBUG] searchVehicles params:', JSON.stringify({ make, model, year, deviceType, portType }, null, 2));
+    
+    // Helper function to build conditions  
     const buildConditions = (useAllModels: boolean = false) => {
       const conditions = [];
       if (make) {
-        // Strip special characters AND spaces from both database value and search pattern
-        const searchPattern = `%${make}%`;
-        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.make}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') LIKE ${searchPattern}`);
+        console.log('[STORAGE DEBUG] Make value:', make);
+        // Simple test: just use ilike
+        conditions.push(ilike(vehicles.make, `%${make}%`));
       }
       if (model) {
-        // If useAllModels is true, search for "ALL MODELS" instead of the specific model
         if (useAllModels) {
-          conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.model}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') LIKE '%ALLMODELS%'`);
+          console.log('[STORAGE DEBUG] Searching for ALL MODELS wildcard');
+          conditions.push(ilike(vehicles.model, '%ALLMODELS%'));
         } else {
-          // Strip special characters AND spaces from both database value and search pattern
-          const searchPattern = `%${model}%`;
-          conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.model}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') LIKE ${searchPattern}`);
+          console.log('[STORAGE DEBUG] Model value:', model);
+          // Simple test: just use ilike
+          conditions.push(ilike(vehicles.model, `%${model}%`));
         }
       }
       if (year) {
@@ -107,13 +109,11 @@ export class DatabaseStorage implements IStorage {
       }
       if (deviceType) {
         // Strip special characters AND spaces from both database value and search pattern
-        const searchPattern = `%${deviceType}%`;
-        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.deviceType}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') LIKE ${searchPattern}`);
+        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.deviceType}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') LIKE ${'%' + deviceType + '%'}`);
       }
       if (portType) {
         // Strip special characters AND spaces from both database value and search pattern
-        const searchPattern = `%${portType}%`;
-        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.portType}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') LIKE ${searchPattern}`);
+        conditions.push(sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${vehicles.portType}), '-', ''), ',', ''), '/', ''), '.', ''), ' ', ''), '(', ''), ')', ''), '[', ''), ']', ''), '&', ''), '+', ''), '*', '') LIKE ${'%' + portType + '%'}`);
       }
       return conditions;
     };
@@ -162,9 +162,11 @@ export class DatabaseStorage implements IStorage {
         ]);
         
         const allModelsTotal = Number(allModelsCountResults[0]?.count || 0);
+        console.log('[STORAGE DEBUG] ALL MODELS wildcard check - found:', allModelsTotal);
         
         // If ALL MODELS exists, return it (supersedes specific model)
         if (allModelsTotal > 0) {
+          console.log('[STORAGE DEBUG] Returning ALL MODELS wildcard results');
           return {
             vehicles: allModelsResults,
             total: allModelsTotal
@@ -174,10 +176,13 @@ export class DatabaseStorage implements IStorage {
     }
     
     // No ALL MODELS found (or no model specified), return specific model results
+    console.log('[STORAGE DEBUG] Executing specific model query (no wildcard found)');
     const [vehicleResults, countResults] = await Promise.all([
       vehicleQuery,
       countQuery
     ]);
+    
+    console.log('[STORAGE DEBUG] Specific model results:', vehicleResults.length);
     
     return {
       vehicles: vehicleResults,
