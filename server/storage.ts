@@ -56,6 +56,20 @@ export interface IStorage {
   deletePendingVehicle(id: string): Promise<void>;
 }
 
+// Helper function to map snake_case database columns to camelCase TypeScript properties
+function mapVehicleFromDb(dbRow: any): Vehicle {
+  return {
+    id: dbRow.id,
+    make: dbRow.make,
+    model: dbRow.model,
+    year: dbRow.year,
+    yearFrom: dbRow.year_from,
+    yearTo: dbRow.year_to,
+    deviceType: dbRow.device_type,
+    portType: dbRow.port_type,
+  };
+}
+
 export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -136,7 +150,7 @@ export class DatabaseStorage implements IStorage {
           const wildcardResults = await db.execute(wildcardQuery);
           
           return {
-            vehicles: wildcardResults.rows as Vehicle[],
+            vehicles: wildcardResults.rows.map(mapVehicleFromDb),
             total: wildcardTotal
           };
         }
@@ -162,7 +176,7 @@ export class DatabaseStorage implements IStorage {
       ]);
       
       return {
-        vehicles: dataResult.rows as Vehicle[],
+        vehicles: dataResult.rows.map(mapVehicleFromDb),
         total: Number(countResult.rows[0]?.count || 0)
       };
     } else {
@@ -176,7 +190,7 @@ export class DatabaseStorage implements IStorage {
       ]);
       
       return {
-        vehicles: dataResult.rows as Vehicle[],
+        vehicles: dataResult.rows.map(mapVehicleFromDb),
         total: Number(countResult.rows[0]?.count || 0)
       };
     }
