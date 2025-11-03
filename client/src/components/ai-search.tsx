@@ -94,8 +94,8 @@ export default function AISearch() {
             <AlertDescription className="text-sm">
               <strong>How Prediction Confidence Works:</strong>
               <ul className="mt-2 space-y-1 text-xs">
-                <li>• <strong>80-100% (High):</strong> Based on very similar vehicles (same make/model, ±5 years) - highly reliable</li>
-                <li>• <strong>60-79% (Medium):</strong> Based on manufacturer patterns (same make, ±10 years) - generally accurate</li>
+                <li>• <strong>80-100% (High):</strong> Based on very similar vehicles (same make & model, ±5 years) - highly reliable</li>
+                <li>• <strong>60-79% (Medium):</strong> Based on manufacturer patterns (same make & model, ±10 years) - generally accurate</li>
                 <li>• <strong>20-59% (Low):</strong> Based on external search data - use with caution, consider adding to database</li>
               </ul>
             </AlertDescription>
