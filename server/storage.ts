@@ -1,6 +1,6 @@
 import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, sql, ilike, desc, asc, gte, lte } from "drizzle-orm";
+import { eq, and, or, sql, ilike, desc, asc, gte, lte, ne } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -614,9 +614,13 @@ export class DatabaseStorage implements IStorage {
       conditions.push(lte(searchLogs.timestamp, endOfDay));
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    // Exclude 'regular' type from all analytics (only count AI, Bulk, VIN, Geometris)
+    const excludeRegular = ne(searchLogs.searchType, 'regular');
+    const whereClause = conditions.length > 0 
+      ? and(...conditions, excludeRegular)
+      : excludeRegular;
 
-    // Get total searches
+    // Get total searches (excluding 'regular')
     const [totalResult] = await db
       .select({ count: sql<number>`count(*)` })
       .from(searchLogs)
@@ -624,7 +628,7 @@ export class DatabaseStorage implements IStorage {
 
     const totalSearches = Number(totalResult?.count || 0);
 
-    // Get searches by type
+    // Get searches by type (excluding 'regular')
     const typeResults = await db
       .select({
         searchType: searchLogs.searchType,

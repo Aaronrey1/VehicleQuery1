@@ -428,17 +428,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const result = await storage.searchVehicles(searchParams);
       
-      // Log the search
-      await storage.logSearch({
-        searchType: 'regular',
-        make: make as string || null,
-        model: model as string || null,
-        year: year ? parseInt(year as string) : null,
-        country: getClientCountry(req),
-        ipAddress: getClientIp(req),
-        resultsCount: result.total,
-        queryDetails: JSON.stringify({ deviceType, portType }),
-      });
+      // Don't log regular database searches in analytics
+      // Only log special search types: AI, Bulk, VIN, Geometris
       
       res.json(result);
     } catch (error) {
