@@ -2,6 +2,7 @@ import VehicleSearch from "@/components/vehicle-search";
 import SearchResults from "@/components/search-results";
 import DataImport from "@/components/data-import";
 import AnalyticsDashboard from "@/components/analytics-dashboard";
+import SearchAnalytics from "@/components/search-analytics";
 import BulkSearch from "@/components/bulk-search";
 import AdminPanel from "@/components/admin-panel";
 import Geometris from "@/components/geometris";
@@ -195,7 +196,12 @@ export default function Home() {
         {activeSection === "vin" && <VinDecoder />}
 
         {/* Analytics Section */}
-        {activeSection === "analytics" && <AnalyticsDashboard />}
+        {activeSection === "analytics" && (
+          <div className="space-y-6">
+            <SearchAnalytics />
+            <AnalyticsDashboard />
+          </div>
+        )}
 
         {/* Admin Section with Sub-tabs */}
         {activeSection === "admin" && (
