@@ -1373,6 +1373,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get comprehensive search analytics
+  app.get("/api/analytics/search", async (req, res) => {
+    try {
+      const { fromDate, toDate } = req.query;
+      
+      const from = fromDate ? new Date(fromDate as string) : undefined;
+      const to = toDate ? new Date(toDate as string) : undefined;
+      
+      const analytics = await storage.getSearchAnalytics(from, to);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Search analytics error:", error);
+      res.status(500).json({ message: "Failed to get search analytics" });
+    }
+  });
+
+  // Export search analytics as CSV
+  app.get("/api/analytics/export/csv", async (req, res) => {
+    try {
+      const { fromDate, toDate } = req.query;
+      
+      const from = fromDate ? new Date(fromDate as string) : undefined;
+      const to = toDate ? new Date(toDate as string) : undefined;
+      
+      const analytics = await storage.getSearchAnalytics(from, to);
+      
+      // Build CSV
+      const headers = ['Timestamp', 'Search Type', 'Make', 'Model', 'Year', 'Country', 'IP Address', 'Results Count'];
+      const rows = analytics.recentLogs.map(log => [
+        log.timestamp.toISOString(),
+        log.searchType,
+        log.make || '',
+        log.model || '',
+        log.year?.toString() || '',
+        log.country || '',
+        log.ipAddress || '',
+        log.resultsCount.toString()
+      ]);
+      
+      const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=search-analytics.csv');
+      res.send(csv);
+    } catch (error) {
+      console.error("Export CSV error:", error);
+      res.status(500).json({ message: "Failed to export analytics" });
+    }
+  });
+
+  // Export search analytics as JSON
+  app.get("/api/analytics/export/json", async (req, res) => {
+    try {
+      const { fromDate, toDate } = req.query;
+      
+      const from = fromDate ? new Date(fromDate as string) : undefined;
+      const to = toDate ? new Date(toDate as string) : undefined;
+      
+      const analytics = await storage.getSearchAnalytics(from, to);
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', 'attachment; filename=search-analytics.json');
+      res.json(analytics);
+    } catch (error) {
+      console.error("Export JSON error:", error);
+      res.status(500).json({ message: "Failed to export analytics" });
+    }
+  });
+
   // Get pending vehicles (protected - admin only)
   app.get("/api/pending-vehicles", requireAuth, async (req, res) => {
     try {
