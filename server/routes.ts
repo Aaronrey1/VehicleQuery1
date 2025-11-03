@@ -7,6 +7,7 @@ import multer from "multer";
 import csv from "csv-parser";
 import { Readable } from "stream";
 import axios from "axios";
+import { predictVehicleSpecs, checkIfHeavyVehicle as geminiCheckHeavyVehicle } from "./gemini";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -217,7 +218,7 @@ async function searchPentahoForVehicle(make: string, model: string, year: number
     
     if (allHeavyModelMatch) {
       console.log(`Pentaho: Checking if ${make} ${model} is heavy duty...`);
-      const isHeavy = await checkIfHeavyVehicle(make, model);
+      const isHeavy = await geminiCheckHeavyVehicle(make, model);
       
       if (isHeavy) {
         console.log(`Pentaho: ${make} ${model} confirmed as heavy vehicle`);
@@ -1181,36 +1182,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         if (nearbyManufacturerVehicles.length === 0) {
-          // No database matches found - try Tier 3: Google Custom Search
-          console.log(`No database matches for ${make} ${model} ${yearNum}, calling Google API...`);
+          // No database matches found - try Tier 3: Gemini AI
+          console.log(`No database matches for ${make} ${model} ${yearNum}, calling Gemini AI...`);
           
-          const googleResults = await searchGoogleForVehicle(make as string, model as string, yearNum);
-          const parsedResults = parseGoogleResults(googleResults, make as string, model as string);
+          const geminiPrediction = await predictVehicleSpecs(make as string, model as string, yearNum);
 
-          if (parsedResults) {
-            // Check today's Google API usage for free tier (100 free searches per day)
-            const todayGoogleCount = await storage.getTodayGoogleSearchCount();
-            const isFree = todayGoogleCount < 100;
-            
-            // Log Google API search (Tier 3 - Free for first 100 per day, then $0.005)
+          if (geminiPrediction) {
+            // Log Gemini AI search (Tier 3 - Estimated $0.001-0.01 per request)
+            // Using 10 as cost = $0.01 (1 cent) as conservative estimate
             await storage.logAiSearch({
               make: normalizedMake || String(make),
               model: String(model),
               year: yearNum,
-              source: 'google_api',
-              confidence: parsedResults.confidence,
-              cost: isFree ? 0 : 5 // First 100 per day are free, then 5 tenths of a cent = $0.005
+              source: 'gemini_api',
+              confidence: geminiPrediction.confidence,
+              cost: 10 // 10 tenths of a cent = $0.01 (conservative estimate)
             });
 
-            // Store Google result as pending vehicle for admin approval
+            // Store Gemini result as pending vehicle for admin approval
             await storage.createPendingVehicle({
               make: normalizedMake || '',
               model: String(model),
               year: yearNum,
-              deviceType: parsedResults.deviceType,
-              portType: parsedResults.portType,
-              confidence: parsedResults.confidence,
-              googleSearchResults: JSON.stringify(parsedResults.searchResults),
+              deviceType: geminiPrediction.deviceType,
+              portType: geminiPrediction.portType,
+              confidence: geminiPrediction.confidence,
+              googleSearchResults: JSON.stringify({ reasoning: geminiPrediction.reasoning }),
               status: 'pending'
             });
 
@@ -1219,13 +1216,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               pendingApproval: true,
               message: 'Prediction submitted for admin approval',
               predictions: {
-                portType: parsedResults.portType,
-                portConfidence: parsedResults.confidence,
-                deviceType: parsedResults.deviceType,
-                deviceConfidence: parsedResults.confidence,
+                portType: geminiPrediction.portType,
+                portConfidence: geminiPrediction.confidence,
+                deviceType: geminiPrediction.deviceType,
+                deviceConfidence: geminiPrediction.confidence,
                 basedOn: 0,
-                source: 'google',
-                searchResults: parsedResults.searchResults,
+                source: 'gemini',
+                searchResults: geminiPrediction.reasoning,
                 similarVehicles: []
               },
               yearWarning,
@@ -1234,12 +1231,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 { source: 'Database (Exact Match)', checked: true, found: false },
                 { source: 'Database (±5 years)', checked: true, found: false },
                 { source: 'Database (±10 years)', checked: true, found: false },
-                { source: 'Google Custom Search', checked: true, found: true }
+                { source: 'Gemini AI', checked: true, found: true }
               ]
             });
           }
 
-          // Google failed - no more prediction sources available
+          // Gemini failed - no more prediction sources available
           return res.json({
             found: false,
             predictions: null,
@@ -1249,7 +1246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               { source: 'Database (Exact Match)', checked: true, found: false },
               { source: 'Database (±5 years)', checked: true, found: false },
               { source: 'Database (±10 years)', checked: true, found: false },
-              { source: 'Google Custom Search', checked: true, found: false }
+              { source: 'Gemini AI', checked: true, found: false }
             ]
           });
         }
