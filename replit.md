@@ -21,8 +21,8 @@ The backend is an Express.js server developed with TypeScript and an ESM module 
 **Key API Endpoints:**
 - **Vehicle Management:** CRUD operations, search (including bulk and `ALL MODELS` fallback), statistics, and CSV/JSON import, with auto device type suggestion based on port type.
 - **Harness Management (Geometris):** Search and authenticated CRUD/import operations for harnesses, supporting year range matching.
-- **AI Prediction:** `/api/ai/predict` implements a 3-tier hybrid prediction system (exact database match, Pentaho JBusPortFinder, database pattern matching within ±5 years, then ±10 years, and Google Custom Search as a last resort). All AI predictions require admin approval and are logged for billing.
-- **Billing:** `/api/billing/stats` for AI Search usage and cost analytics, including a free tier for the first 100 Google searches per day.
+- **AI Prediction:** `/api/ai/predict` implements a 3-tier hybrid prediction system (exact database match, Pentaho JBusPortFinder, database pattern matching within ±5 years, then ±10 years, and Gemini AI as a last resort). Gemini AI provides highly accurate predictions by leveraging automotive knowledge to predict port types and device types. All AI predictions require admin approval and are logged for billing.
+- **Billing:** `/api/billing/stats` for AI Search usage and cost analytics. Gemini AI predictions cost approximately $0.01 per request.
 - **Pending Approvals:** Endpoints for managing predictions awaiting admin review, including approval, rejection, or deletion.
 
 ### Data Storage
@@ -32,7 +32,7 @@ PostgreSQL is used as the database, accessed via the Neon serverless driver. Dri
 - `vehicles`: Stores vehicle data with id, make, model, year, deviceType, portType. Supports year ranges.
 - `harnesses`: Stores harness data, supporting yearFrom and yearTo for ranges.
 - `ai_search_logs`: Records AI Search predictions, source (tier), confidence, and cost for billing.
-- `pending_vehicles`: Stores AI predictions (including Google API and Pentaho) awaiting admin approval, along with prediction details and status.
+- `pending_vehicles`: Stores AI predictions (including Gemini AI and Pentaho) awaiting admin approval, along with prediction details and status.
 - `users`: For authentication purposes.
 
 ## External Dependencies
