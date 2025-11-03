@@ -7,8 +7,9 @@ import AdminPanel from "@/components/admin-panel";
 import Geometris from "@/components/geometris";
 import AISearch from "@/components/ai-search";
 import Billing from "@/components/billing";
+import VinDecoder from "@/components/vin-decoder";
 import { PendingApprovals } from "@/components/pending-approvals";
-import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck } from "lucide-react";
+import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck, Hash } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
@@ -70,6 +71,16 @@ export default function Home() {
                 data-testid="nav-geometris"
               >
                 Geometris
+              </button>
+              <button
+                onClick={() => setActiveSection("vin")}
+                className={`transition-colors flex items-center gap-1 ${
+                  activeSection === "vin" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                }`}
+                data-testid="nav-vin"
+              >
+                <Hash className="h-3 w-3" />
+                VIN Decoder
               </button>
               <button
                 onClick={() => setActiveSection("analytics")}
@@ -179,6 +190,9 @@ export default function Home() {
 
         {/* Geometris Section */}
         {activeSection === "geometris" && <Geometris />}
+
+        {/* VIN Decoder Section */}
+        {activeSection === "vin" && <VinDecoder />}
 
         {/* Analytics Section */}
         {activeSection === "analytics" && <AnalyticsDashboard />}

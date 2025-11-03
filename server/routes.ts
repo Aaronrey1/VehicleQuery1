@@ -1460,6 +1460,263 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // VIN Decoder endpoint
+  app.post("/api/vin/decode", async (req, res) => {
+    try {
+      const { vins } = req.body;
+      
+      if (!Array.isArray(vins) || vins.length === 0) {
+        return res.status(400).json({ message: "Please provide an array of VINs" });
+      }
+
+      if (vins.length > 50) {
+        return res.status(400).json({ message: "Maximum 50 VINs per request" });
+      }
+
+      const results = [];
+
+      for (const vin of vins) {
+        const cleanVin = vin.trim().toUpperCase();
+        
+        // Validate VIN format (17 characters, alphanumeric except I, O, Q)
+        if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(cleanVin)) {
+          results.push({
+            vin: cleanVin,
+            success: false,
+            error: "Invalid VIN format"
+          });
+          continue;
+        }
+
+        try {
+          // Call NHTSA API to decode VIN
+          const nhtsaResponse = await axios.get(
+            `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${cleanVin}?format=json`,
+            { timeout: 10000 }
+          );
+
+          const decodedData = nhtsaResponse.data?.Results;
+          
+          if (!decodedData || !Array.isArray(decodedData)) {
+            results.push({
+              vin: cleanVin,
+              success: false,
+              error: "Failed to decode VIN"
+            });
+            continue;
+          }
+
+          // Extract make, model, year from NHTSA response
+          const makeData = decodedData.find((item: any) => item.Variable === "Make");
+          const modelData = decodedData.find((item: any) => item.Variable === "Model");
+          const yearData = decodedData.find((item: any) => item.Variable === "Model Year");
+
+          const make = makeData?.Value?.trim();
+          const model = modelData?.Value?.trim();
+          const yearStr = yearData?.Value?.trim();
+          const year = yearStr ? parseInt(yearStr) : null;
+
+          if (!make || !model || !year) {
+            results.push({
+              vin: cleanVin,
+              success: false,
+              error: "Incomplete vehicle data from NHTSA"
+            });
+            continue;
+          }
+
+          // Now run AI prediction for this vehicle
+          const normalizedMake = normalizeText(make);
+          const normalizedModel = normalizeText(model);
+
+          // First try exact match
+          const exactMatch = await storage.searchVehicles({
+            make: normalizedMake,
+            model: normalizedModel,
+            year: year,
+            limit: 1,
+            offset: 0,
+            sortBy: "year",
+            sortOrder: "asc"
+          });
+
+          if (exactMatch.vehicles.length > 0) {
+            const vehicle = exactMatch.vehicles[0];
+            results.push({
+              vin: cleanVin,
+              success: true,
+              make,
+              model,
+              year,
+              portType: vehicle.portType,
+              deviceType: vehicle.deviceType,
+              confidence: 100,
+              source: "Database (Exact Match)"
+            });
+            continue;
+          }
+
+          // Try ±5 year match
+          const similarVehicles = await storage.searchVehicles({
+            make: normalizedMake,
+            model: normalizedModel,
+            limit: 1000,
+            offset: 0,
+            sortBy: "year",
+            sortOrder: "desc"
+          });
+
+          const nearbyVehicles = similarVehicles.vehicles.filter(v => {
+            if (v.year !== null && v.year !== undefined) {
+              return Math.abs(v.year - year) <= 5;
+            } else if (v.yearFrom !== null && v.yearTo !== null) {
+              return (year >= v.yearFrom && year <= v.yearTo) ||
+                     (Math.abs(v.yearFrom - year) <= 5) ||
+                     (Math.abs(v.yearTo - year) <= 5);
+            }
+            return false;
+          });
+
+          if (nearbyVehicles.length > 0) {
+            // Use two-step prediction
+            const portTypeCounts = new Map<string, number>();
+            nearbyVehicles.forEach(v => {
+              portTypeCounts.set(v.portType, (portTypeCounts.get(v.portType) || 0) + 1);
+            });
+
+            const mostCommonPort = Array.from(portTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+            const portConfidence = (mostCommonPort[1] / nearbyVehicles.length) * 100;
+
+            const vehiclesWithPort = nearbyVehicles.filter(v => v.portType === mostCommonPort[0]);
+            const deviceTypeCounts = new Map<string, number>();
+            vehiclesWithPort.forEach(v => {
+              deviceTypeCounts.set(v.deviceType, (deviceTypeCounts.get(v.deviceType) || 0) + 1);
+            });
+
+            const mostCommonDevice = Array.from(deviceTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+            const deviceConfidence = (mostCommonDevice[1] / vehiclesWithPort.length) * 100;
+            const avgConfidence = Math.round((portConfidence * 0.6 + deviceConfidence * 0.6) / 2);
+
+            results.push({
+              vin: cleanVin,
+              success: true,
+              make,
+              model,
+              year,
+              portType: mostCommonPort[0],
+              deviceType: mostCommonDevice[0],
+              confidence: avgConfidence,
+              source: `Database (±5 years, ${nearbyVehicles.length} similar vehicles)`
+            });
+            continue;
+          }
+
+          // Try ±10 year match
+          const broaderVehicles = similarVehicles.vehicles.filter(v => {
+            if (v.year !== null && v.year !== undefined) {
+              return Math.abs(v.year - year) <= 10;
+            } else if (v.yearFrom !== null && v.yearTo !== null) {
+              return (year >= v.yearFrom && year <= v.yearTo) ||
+                     (Math.abs(v.yearFrom - year) <= 10) ||
+                     (Math.abs(v.yearTo - year) <= 10);
+            }
+            return false;
+          });
+
+          if (broaderVehicles.length > 0) {
+            const portTypeCounts = new Map<string, number>();
+            broaderVehicles.forEach(v => {
+              portTypeCounts.set(v.portType, (portTypeCounts.get(v.portType) || 0) + 1);
+            });
+
+            const mostCommonPort = Array.from(portTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+            const portConfidence = (mostCommonPort[1] / broaderVehicles.length) * 100;
+
+            const vehiclesWithPort = broaderVehicles.filter(v => v.portType === mostCommonPort[0]);
+            const deviceTypeCounts = new Map<string, number>();
+            vehiclesWithPort.forEach(v => {
+              deviceTypeCounts.set(v.deviceType, (deviceTypeCounts.get(v.deviceType) || 0) + 1);
+            });
+
+            const mostCommonDevice = Array.from(deviceTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+            const deviceConfidence = (mostCommonDevice[1] / vehiclesWithPort.length) * 100;
+            const avgConfidence = Math.round((portConfidence * 0.6 + deviceConfidence * 0.6) / 2);
+
+            results.push({
+              vin: cleanVin,
+              success: true,
+              make,
+              model,
+              year,
+              portType: mostCommonPort[0],
+              deviceType: mostCommonDevice[0],
+              confidence: avgConfidence,
+              source: `Database (±10 years, ${broaderVehicles.length} similar vehicles)`
+            });
+            continue;
+          }
+
+          // No database match - use Gemini AI
+          try {
+            const geminiPrediction = await predictVehicleSpecs(make, model, year);
+            
+            if (geminiPrediction) {
+              results.push({
+                vin: cleanVin,
+                success: true,
+                make,
+                model,
+                year,
+                portType: geminiPrediction.portType,
+                deviceType: geminiPrediction.deviceType,
+                confidence: geminiPrediction.confidence,
+                source: "Gemini AI"
+              });
+            } else {
+              results.push({
+                vin: cleanVin,
+                success: true,
+                make,
+                model,
+                year,
+                portType: "Unknown",
+                deviceType: "Unknown",
+                confidence: 0,
+                source: "No prediction available"
+              });
+            }
+          } catch (geminiError) {
+            console.error("Gemini prediction error for VIN:", cleanVin, geminiError);
+            results.push({
+              vin: cleanVin,
+              success: true,
+              make,
+              model,
+              year,
+              portType: "Unknown",
+              deviceType: "Unknown",
+              confidence: 0,
+              source: "Prediction failed"
+            });
+          }
+
+        } catch (error: any) {
+          console.error(`VIN decode error for ${cleanVin}:`, error.message);
+          results.push({
+            vin: cleanVin,
+            success: false,
+            error: error.message || "Failed to decode VIN"
+          });
+        }
+      }
+
+      res.json({ results });
+    } catch (error: any) {
+      console.error("VIN decode endpoint error:", error);
+      res.status(500).json({ message: "Internal server error", error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
