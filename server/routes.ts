@@ -1442,6 +1442,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get approval analytics (protected - admin only)
+  app.get("/api/analytics/approvals", requireAuth, async (req, res) => {
+    try {
+      const { status } = req.query;
+      const filterStatus = status === 'pending' || status === 'approved' || status === 'rejected' 
+        ? status 
+        : undefined;
+      
+      const allPending = await storage.getAllPendingVehicles(filterStatus);
+      
+      // Calculate stats
+      const totalSent = allPending.length;
+      const totalApproved = allPending.filter(p => p.status === 'approved').length;
+      const totalPending = allPending.filter(p => p.status === 'pending').length;
+      const totalRejected = allPending.filter(p => p.status === 'rejected').length;
+      
+      res.json({
+        totalSent,
+        totalApproved,
+        totalPending,
+        totalRejected,
+        records: allPending
+      });
+    } catch (error) {
+      console.error("Approval analytics error:", error);
+      res.status(500).json({ message: "Failed to get approval analytics" });
+    }
+  });
+
   // Get pending vehicles (protected - admin only)
   app.get("/api/pending-vehicles", requireAuth, async (req, res) => {
     try {

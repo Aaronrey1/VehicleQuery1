@@ -1,18 +1,28 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Download, X } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CalendarIcon, Download, X, CheckCircle, Clock, XCircle } from "lucide-react";
 import { format } from "date-fns";
-import type { SearchAnalytics } from "@shared/schema";
+import type { SearchAnalytics, PendingVehicle } from "@shared/schema";
+
+interface ApprovalAnalytics {
+  totalSent: number;
+  totalApproved: number;
+  totalPending: number;
+  totalRejected: number;
+  records: PendingVehicle[];
+}
 
 export default function SearchAnalyticsComponent() {
   const [fromDate, setFromDate] = useState<Date | undefined>();
   const [toDate, setToDate] = useState<Date | undefined>();
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
 
   // Build query key with date range
   const buildQueryKey = () => {
@@ -25,6 +35,17 @@ export default function SearchAnalyticsComponent() {
 
   const { data: analytics, isLoading } = useQuery<SearchAnalytics>({
     queryKey: [buildQueryKey()],
+  });
+
+  const approvalQueryKey = () => {
+    const params = new URLSearchParams();
+    if (statusFilter !== 'all') params.set('status', statusFilter);
+    const queryString = params.toString();
+    return queryString ? `/api/analytics/approvals?${queryString}` : '/api/analytics/approvals';
+  };
+
+  const { data: approvalData, isLoading: isLoadingApprovals } = useQuery<ApprovalAnalytics>({
+    queryKey: [approvalQueryKey()],
   });
 
   const handleExportCSV = () => {
@@ -59,13 +80,33 @@ export default function SearchAnalyticsComponent() {
     return colors[type] || 'bg-gray-500';
   };
 
+  const getStatusBadgeColor = (status: string) => {
+    if (status === 'approved') return 'bg-green-500';
+    if (status === 'pending') return 'bg-yellow-500';
+    if (status === 'rejected') return 'bg-red-500';
+    return 'bg-gray-500';
+  };
+
   return (
     <section className="space-y-6">
-      {/* Header with Date Range and Export */}
+      <Tabs defaultValue="search" className="w-full">
+        <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+          <TabsTrigger value="search" data-testid="tab-search-analytics">Search Analytics</TabsTrigger>
+          <TabsTrigger value="approvals" data-testid="tab-approval-analytics">Approval Analytics</TabsTrigger>
+        </TabsList>
+
+        {/* Search Analytics Tab */}
+        <TabsContent value="search" className="mt-6">
       <Card>
         <CardHeader className="p-6">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <CardTitle>Search Analytics</CardTitle>
+            <div>
+              <CardTitle>Search Analytics</CardTitle>
+              <CardDescription className="mt-2">
+                Track all searches across the platform including AI, VIN decoder, Geometris, and regular searches. 
+                Filter by date range and export data for analysis.
+              </CardDescription>
+            </div>
             
             <div className="flex flex-col md:flex-row items-start md:items-center gap-3 w-full md:w-auto">
               {/* Date Range Selectors */}
@@ -244,6 +285,160 @@ export default function SearchAnalyticsComponent() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        {/* Approval Analytics Tab */}
+        <TabsContent value="approvals" className="mt-6">
+          <Card>
+            <CardHeader className="p-6">
+              <div>
+                <CardTitle>Approval Analytics</CardTitle>
+                <CardDescription className="mt-2">
+                  Track AI predictions sent for approval including status (pending, approved, rejected), 
+                  complete vehicle data, and prediction details.
+                </CardDescription>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-6">
+              {isLoadingApprovals ? (
+                <div className="text-center py-8 text-muted-foreground">Loading approval analytics...</div>
+              ) : approvalData ? (
+                <>
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div className="text-center p-4 bg-muted/30 rounded-lg">
+                      <div className="text-3xl font-bold text-primary mb-2" data-testid="approvals-total-sent">
+                        {approvalData.totalSent.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total Sent for Approval</div>
+                    </div>
+                    <div className="text-center p-4 bg-green-500/10 rounded-lg">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <CheckCircle className="h-6 w-6 text-green-600" />
+                        <div className="text-2xl font-bold text-green-600" data-testid="approvals-total-approved">
+                          {approvalData.totalApproved.toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="text-sm text-muted-foreground">Approved</div>
+                    </div>
+                    <div className="text-center p-4 bg-yellow-500/10 rounded-lg">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <Clock className="h-6 w-6 text-yellow-600" />
+                        <div className="text-2xl font-bold text-yellow-600" data-testid="approvals-total-pending">
+                          {approvalData.totalPending.toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="text-sm text-muted-foreground">Pending</div>
+                    </div>
+                    <div className="text-center p-4 bg-red-500/10 rounded-lg">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <XCircle className="h-6 w-6 text-red-600" />
+                        <div className="text-2xl font-bold text-red-600" data-testid="approvals-total-rejected">
+                          {approvalData.totalRejected.toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="text-sm text-muted-foreground">Rejected</div>
+                    </div>
+                  </div>
+
+                  {/* Filter Buttons */}
+                  <div className="flex items-center gap-2 mb-6">
+                    <span className="text-sm text-muted-foreground">Filter by status:</span>
+                    <Button
+                      variant={statusFilter === 'all' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setStatusFilter('all')}
+                      data-testid="filter-all"
+                    >
+                      All
+                    </Button>
+                    <Button
+                      variant={statusFilter === 'pending' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setStatusFilter('pending')}
+                      data-testid="filter-pending"
+                    >
+                      Pending
+                    </Button>
+                    <Button
+                      variant={statusFilter === 'approved' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setStatusFilter('approved')}
+                      data-testid="filter-approved"
+                    >
+                      Approved
+                    </Button>
+                    <Button
+                      variant={statusFilter === 'rejected' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setStatusFilter('rejected')}
+                      data-testid="filter-rejected"
+                    >
+                      Rejected
+                    </Button>
+                  </div>
+
+                  {/* Approval Records Table */}
+                  <div className="border-t border-border pt-6">
+                    <h4 className="font-semibold text-foreground mb-4">
+                      Approval Records ({approvalData.records.length} total)
+                    </h4>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Make</TableHead>
+                            <TableHead>Model</TableHead>
+                            <TableHead>Year</TableHead>
+                            <TableHead>Port Type</TableHead>
+                            <TableHead>Device Type</TableHead>
+                            <TableHead>Confidence</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {approvalData.records.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={8} className="text-center text-muted-foreground">
+                                No approval records found
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            approvalData.records.map((record, idx) => (
+                              <TableRow key={record.id} data-testid={`approval-record-${idx}`}>
+                                <TableCell className="text-sm">
+                                  {format(new Date(record.createdAt), 'PPp')}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={getStatusBadgeColor(record.status)}>
+                                    {record.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="font-medium">{record.make}</TableCell>
+                                <TableCell className="font-medium">{record.model}</TableCell>
+                                <TableCell>{record.year}</TableCell>
+                                <TableCell className="text-sm">{record.portType || '-'}</TableCell>
+                                <TableCell className="text-sm">{record.deviceType || '-'}</TableCell>
+                                <TableCell className="text-sm">
+                                  {record.confidence ? `${record.confidence}%` : '-'}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">No approval data available</div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </section>
   );
 }

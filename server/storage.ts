@@ -51,6 +51,7 @@ export interface IStorage {
   // Pending vehicles methods (Google API results awaiting approval)
   createPendingVehicle(vehicle: InsertPendingVehicle): Promise<PendingVehicle>;
   getPendingVehicles(): Promise<PendingVehicle[]>;
+  getAllPendingVehicles(status?: 'pending' | 'approved' | 'rejected'): Promise<PendingVehicle[]>;
   approvePendingVehicle(id: string): Promise<void>;
   rejectPendingVehicle(id: string): Promise<void>;
   deletePendingVehicle(id: string): Promise<void>;
@@ -526,6 +527,20 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(pendingVehicles)
       .where(eq(pendingVehicles.status, 'pending'))
+      .orderBy(desc(pendingVehicles.createdAt));
+  }
+
+  async getAllPendingVehicles(status?: 'pending' | 'approved' | 'rejected'): Promise<PendingVehicle[]> {
+    if (status) {
+      return await db
+        .select()
+        .from(pendingVehicles)
+        .where(eq(pendingVehicles.status, status))
+        .orderBy(desc(pendingVehicles.createdAt));
+    }
+    return await db
+      .select()
+      .from(pendingVehicles)
       .orderBy(desc(pendingVehicles.createdAt));
   }
 
