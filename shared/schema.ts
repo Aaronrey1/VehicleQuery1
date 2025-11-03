@@ -204,3 +204,45 @@ export const insertPendingVehicleSchema = createInsertSchema(pendingVehicles).om
 
 export type InsertPendingVehicle = z.infer<typeof insertPendingVehicleSchema>;
 export type PendingVehicle = typeof pendingVehicles.$inferSelect;
+
+// Comprehensive search logs for all search types
+export const searchLogs = pgTable("search_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  searchType: text("search_type").notNull(), // 'regular', 'bulk', 'ai', 'vin', 'geometris'
+  make: text("make"),
+  model: text("model"),
+  year: integer("year"),
+  country: text("country"), // Country code (e.g., 'US', 'CA', 'GB')
+  ipAddress: text("ip_address"),
+  resultsCount: integer("results_count").notNull().default(0),
+  queryDetails: text("query_details"), // JSON string with additional search parameters
+}, (table) => ({
+  timestampIdx: index("search_logs_timestamp_idx").on(table.timestamp),
+  searchTypeIdx: index("search_logs_type_idx").on(table.searchType),
+  countryIdx: index("search_logs_country_idx").on(table.country),
+}));
+
+export const insertSearchLogSchema = createInsertSchema(searchLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type InsertSearchLog = z.infer<typeof insertSearchLogSchema>;
+export type SearchLog = typeof searchLogs.$inferSelect;
+
+export type SearchAnalytics = {
+  totalSearches: number;
+  searchesByType: {
+    regular: number;
+    bulk: number;
+    ai: number;
+    vin: number;
+    geometris: number;
+  };
+  searchesByCountry: Array<{
+    country: string;
+    count: number;
+  }>;
+  recentLogs: SearchLog[];
+};
