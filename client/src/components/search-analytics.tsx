@@ -103,7 +103,7 @@ export default function SearchAnalyticsComponent() {
             <div>
               <CardTitle>Search Analytics</CardTitle>
               <CardDescription className="mt-2">
-                Track all searches across the platform including AI, VIN decoder, Geometris, and regular searches. 
+                Track all searches across the platform including AI Search, VIN Decoder, Bulk Search, and Geometris. 
                 Filter by date range and export data for analysis.
               </CardDescription>
             </div>
@@ -173,7 +173,7 @@ export default function SearchAnalyticsComponent() {
           ) : analytics ? (
             <>
               {/* Summary Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                 <div className="text-center">
                   <div className="text-3xl font-bold text-primary mb-2" data-testid="analytics-total-searches">
                     {analytics.totalSearches.toLocaleString()}
@@ -181,28 +181,22 @@ export default function SearchAnalyticsComponent() {
                   <div className="text-sm text-muted-foreground">Total Searches</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600 mb-2" data-testid="analytics-regular-searches">
-                    {analytics.searchesByType.regular.toLocaleString()}
+                  <div className="text-2xl font-bold text-green-600 mb-2" data-testid="analytics-ai-searches">
+                    {analytics.searchesByType.ai.toLocaleString()}
                   </div>
-                  <div className="text-sm text-muted-foreground">Regular</div>
+                  <div className="text-sm text-muted-foreground">AI Search</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-600 mb-2" data-testid="analytics-bulk-searches">
                     {analytics.searchesByType.bulk.toLocaleString()}
                   </div>
-                  <div className="text-sm text-muted-foreground">Bulk</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600 mb-2" data-testid="analytics-ai-searches">
-                    {analytics.searchesByType.ai.toLocaleString()}
-                  </div>
-                  <div className="text-sm text-muted-foreground">AI</div>
+                  <div className="text-sm text-muted-foreground">Bulk Search</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-orange-600 mb-2" data-testid="analytics-vin-searches">
                     {analytics.searchesByType.vin.toLocaleString()}
                   </div>
-                  <div className="text-sm text-muted-foreground">VIN</div>
+                  <div className="text-sm text-muted-foreground">VIN Decoder</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-pink-600 mb-2" data-testid="analytics-geometris-searches">
