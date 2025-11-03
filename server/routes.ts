@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertVehicleSchema, updateVehicleSchema, searchVehicleSchema, insertHarnessSchema, searchHarnessSchema } from "@shared/schema";
@@ -8,6 +8,7 @@ import csv from "csv-parser";
 import { Readable } from "stream";
 import axios from "axios";
 import { predictVehicleSpecs, checkIfHeavyVehicle as geminiCheckHeavyVehicle } from "./gemini";
+import { getClientIp, getClientCountry } from "./geolocation";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -287,6 +288,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Log the bulk search
+      await storage.logSearch({
+        searchType: 'bulk',
+        make: null,
+        model: null,
+        year: null,
+        country: getClientCountry(req),
+        ipAddress: getClientIp(req),
+        resultsCount: allVehicles.length,
+        queryDetails: JSON.stringify({ queryCount: queries.length, oneToOne }),
+      });
+
       // Return consistent response shape
       res.json({
         vehicles: allVehicles,
@@ -414,6 +427,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const result = await storage.searchVehicles(searchParams);
+      
+      // Log the search
+      await storage.logSearch({
+        searchType: 'regular',
+        make: make as string || null,
+        model: model as string || null,
+        year: year ? parseInt(year as string) : null,
+        country: getClientCountry(req),
+        ipAddress: getClientIp(req),
+        resultsCount: result.total,
+        queryDetails: JSON.stringify({ deviceType, portType }),
+      });
+      
       res.json(result);
     } catch (error) {
       console.error("Search error:", error);
@@ -758,6 +784,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const result = await storage.searchHarnesses(searchParams);
+      
+      // Log the Geometris search
+      await storage.logSearch({
+        searchType: 'geometris',
+        make: make as string || null,
+        model: model as string || null,
+        year: year ? parseInt(year as string) : null,
+        country: getClientCountry(req),
+        ipAddress: getClientIp(req),
+        resultsCount: result.total,
+        queryDetails: null,
+      });
+      
       res.json(result);
     } catch (error) {
       console.error("Harness search error:", error);
@@ -948,6 +987,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const yearNum = parseInt(year as string);
+      
+      // Log the AI search
+      await storage.logSearch({
+        searchType: 'ai',
+        make: make as string,
+        model: model as string,
+        year: yearNum,
+        country: getClientCountry(req),
+        ipAddress: getClientIp(req),
+        resultsCount: 0, // Will be 0 or 1 depending on exact match
+        queryDetails: null,
+      });
       
       // Normalize the make to handle common aliases (Chevy → Chevrolet, VW → Volkswagen, etc.)
       const normalizedMake = normalizeMake(make as string);
@@ -1472,6 +1523,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (vins.length > 50) {
         return res.status(400).json({ message: "Maximum 50 VINs per request" });
       }
+
+      // Log the VIN decode search
+      await storage.logSearch({
+        searchType: 'vin',
+        make: null,
+        model: null,
+        year: null,
+        country: getClientCountry(req),
+        ipAddress: getClientIp(req),
+        resultsCount: 0, // Will be updated after processing
+        queryDetails: JSON.stringify({ vinCount: vins.length }),
+      });
 
       const results = [];
 

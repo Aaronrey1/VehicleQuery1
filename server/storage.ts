@@ -1,4 +1,4 @@
-import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type PendingVehicle, type InsertPendingVehicle } from "@shared/schema";
+import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, sql, ilike, desc, asc, gte, lte } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -54,6 +54,10 @@ export interface IStorage {
   approvePendingVehicle(id: string): Promise<void>;
   rejectPendingVehicle(id: string): Promise<void>;
   deletePendingVehicle(id: string): Promise<void>;
+
+  // Search logging methods
+  logSearch(log: InsertSearchLog): Promise<void>;
+  getSearchAnalytics(fromDate?: Date, toDate?: Date): Promise<SearchAnalytics>;
 }
 
 // Helper function to map snake_case database columns to camelCase TypeScript properties
@@ -577,6 +581,90 @@ export class DatabaseStorage implements IStorage {
       );
 
     return Number(result?.count || 0);
+  }
+
+  async logSearch(log: InsertSearchLog): Promise<void> {
+    await db.insert(searchLogs).values(log);
+  }
+
+  async getSearchAnalytics(fromDate?: Date, toDate?: Date): Promise<SearchAnalytics> {
+    // Build date filter conditions
+    const conditions = [];
+    if (fromDate) {
+      conditions.push(gte(searchLogs.timestamp, fromDate));
+    }
+    if (toDate) {
+      const endOfDay = new Date(toDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      conditions.push(lte(searchLogs.timestamp, endOfDay));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Get total searches
+    const [totalResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(searchLogs)
+      .where(whereClause);
+
+    const totalSearches = Number(totalResult?.count || 0);
+
+    // Get searches by type
+    const typeResults = await db
+      .select({
+        searchType: searchLogs.searchType,
+        count: sql<number>`count(*)`,
+      })
+      .from(searchLogs)
+      .where(whereClause)
+      .groupBy(searchLogs.searchType);
+
+    const searchesByType = {
+      regular: 0,
+      bulk: 0,
+      ai: 0,
+      vin: 0,
+      geometris: 0,
+    };
+
+    typeResults.forEach((row) => {
+      const type = row.searchType as keyof typeof searchesByType;
+      if (type in searchesByType) {
+        searchesByType[type] = Number(row.count);
+      }
+    });
+
+    // Get searches by country
+    const countryResults = await db
+      .select({
+        country: searchLogs.country,
+        count: sql<number>`count(*)`,
+      })
+      .from(searchLogs)
+      .where(whereClause)
+      .groupBy(searchLogs.country)
+      .orderBy(desc(sql<number>`count(*)`))
+      .limit(20);
+
+    const searchesByCountry = countryResults.map((row) => ({
+      country: row.country || 'Unknown',
+      count: Number(row.count),
+    }));
+
+    // Get recent logs
+    const recentLogs = await db
+      .select()
+      .from(searchLogs)
+      .where(whereClause)
+      .orderBy(desc(searchLogs.timestamp))
+      .limit(100);
+
+    return {
+      totalSearches,
+      searchesByType,
+      searchesByCountry,
+      recentLogs,
+    };
   }
 }
 
