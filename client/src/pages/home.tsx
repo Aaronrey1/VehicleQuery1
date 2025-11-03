@@ -10,7 +10,7 @@ import AISearch from "@/components/ai-search";
 import Billing from "@/components/billing";
 import VinDecoder from "@/components/vin-decoder";
 import { PendingApprovals } from "@/components/pending-approvals";
-import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck, Hash } from "lucide-react";
+import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck, Hash, LineChart } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
@@ -168,6 +168,16 @@ export default function Home() {
                 Pending
               </button>
               <button
+                onClick={() => setAdminSubTab("analytics")}
+                className={`transition-colors text-sm ${
+                  adminSubTab === "analytics" ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="nav-analytics"
+              >
+                <LineChart className="h-3 w-3 inline mr-1" />
+                Analytics
+              </button>
+              <button
                 onClick={() => setAdminSubTab("admin")}
                 className={`transition-colors text-sm ${
                   adminSubTab === "admin" ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
@@ -196,12 +206,7 @@ export default function Home() {
         {activeSection === "vin" && <VinDecoder />}
 
         {/* Analytics Section */}
-        {activeSection === "analytics" && (
-          <div className="space-y-6">
-            <SearchAnalytics />
-            <AnalyticsDashboard />
-          </div>
-        )}
+        {activeSection === "analytics" && <AnalyticsDashboard />}
 
         {/* Admin Section with Sub-tabs */}
         {activeSection === "admin" && (
@@ -209,6 +214,7 @@ export default function Home() {
             {adminSubTab === "manage" && <DataImport />}
             {adminSubTab === "billing" && <Billing />}
             {adminSubTab === "pending" && <PendingApprovals />}
+            {adminSubTab === "analytics" && <SearchAnalytics />}
             {adminSubTab === "admin" && <AdminPanel />}
           </>
         )}
