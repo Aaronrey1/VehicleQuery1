@@ -22,8 +22,8 @@ The backend is an Express.js server developed with TypeScript and an ESM module 
 - **Vehicle Management:** CRUD operations, search (including bulk and `ALL MODELS` fallback), statistics, and CSV/JSON import, with auto device type suggestion based on port type.
 - **Harness Management (Geometris):** Search and authenticated CRUD/import operations for harnesses, supporting year range matching.
 - **AI Prediction:** `/api/ai/predict` implements a 3-tier hybrid prediction system (exact database match, Pentaho JBusPortFinder, database pattern matching within ±5 years, then ±10 years, and Gemini AI as a last resort). Gemini AI provides highly accurate predictions by leveraging automotive knowledge to predict port types and device types. All AI predictions require admin approval and are logged for billing.
-- **VIN Decoding:** `/api/vin/decode` decodes VINs using the free NHTSA API (vpic.nhtsa.dot.gov), extracting make, model, and year, then automatically runs AI predictions using the same 3-tier system. Supports single and bulk VIN decoding (up to 50 VINs per request). VINs are validated for format (17 alphanumeric characters excluding I, O, Q).
-- **Search Analytics:** `/api/analytics/search` with optional date range filtering returns aggregated search data by type and country. `/api/analytics/export/csv` and `/api/analytics/export/json` provide export functionality. All search operations (regular, bulk, AI, VIN, Geometris) are automatically logged with IP-based geolocation using geoip-lite.
+- **VIN Decoding:** `/api/vin/decode` decodes VINs using the free NHTSA API (vpic.nhtsa.dot.gov), extracting make, model, and year, then automatically runs AI predictions using the same 3-tier system. Supports single and bulk VIN decoding (up to 50 VINs per request). VINs are validated for format (17 alphanumeric characters excluding I, O, Q). All VIN predictions (except exact database matches) require admin approval and are logged for billing. Confidence calculation matches AI Search: Tier 1 (±5 years) averages raw percentages, Tier 2 (±10 years) scales each by 0.6 before averaging.
+- **Search Analytics:** `/api/analytics/search` with optional date range filtering returns aggregated search data by type and country. `/api/analytics/export/csv` and `/api/analytics/export/json` provide export functionality. Only special search types are tracked: AI Search, Bulk Search, VIN Decoder, and Geometris (regular database browse/filter is not logged). All tracked searches are automatically logged with IP-based geolocation using geoip-lite.
 - **Billing:** `/api/billing/stats` for AI Search usage and cost analytics. Gemini AI predictions cost approximately $0.01 per request.
 - **Pending Approvals:** Endpoints for managing predictions awaiting admin review, including approval, rejection, or deletion.
 
@@ -34,7 +34,7 @@ PostgreSQL is used as the database, accessed via the Neon serverless driver. Dri
 - `vehicles`: Stores vehicle data with id, make, model, year, deviceType, portType. Supports year ranges.
 - `harnesses`: Stores harness data, supporting yearFrom and yearTo for ranges.
 - `ai_search_logs`: Records AI Search predictions, source (tier), confidence, and cost for billing.
-- `search_logs`: Tracks all search operations (regular, bulk, AI, VIN, Geometris) with timestamp, country (via IP geolocation), make/model/year, results count, and query details. Used for comprehensive search analytics and usage tracking.
+- `search_logs`: Tracks special search operations (AI, Bulk, VIN, Geometris) with timestamp, country (via IP geolocation), make/model/year, results count, and query details. Regular database searches are not logged. Used for comprehensive search analytics and usage tracking.
 - `pending_vehicles`: Stores AI predictions (including Gemini AI and Pentaho) awaiting admin approval, along with prediction details and status.
 - `users`: For authentication purposes.
 
