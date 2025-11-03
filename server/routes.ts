@@ -1739,7 +1739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           if (nearbyVehicles.length > 0) {
-            // Use two-step prediction
+            // Use two-step prediction (Tier 1)
             const portTypeCounts = new Map<string, number>();
             nearbyVehicles.forEach(v => {
               portTypeCounts.set(v.portType, (portTypeCounts.get(v.portType) || 0) + 1);
@@ -1756,7 +1756,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             const mostCommonDevice = Array.from(deviceTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
             const deviceConfidence = (mostCommonDevice[1] / vehiclesWithPort.length) * 100;
-            const avgConfidence = Math.round((portConfidence * 0.6 + deviceConfidence * 0.6) / 2);
+            
+            // Tier 1: Full confidence (±5 years) - matches AI Search
+            const tier1PortConfidence = Math.round(portConfidence);
+            const tier1DeviceConfidence = Math.round(deviceConfidence);
+            const avgConfidence = Math.round((tier1PortConfidence + tier1DeviceConfidence) / 2);
+
+            // Log Tier 1 search (Database - Free)
+            await storage.logAiSearch({
+              make: normalizedMake || make,
+              model: model,
+              year: year,
+              source: 'database_tier1',
+              confidence: avgConfidence,
+              cost: 0 // Database searches are free
+            });
+
+            // Save Tier 1 prediction to pending for admin approval
+            await storage.createPendingVehicle({
+              make: normalizedMake || make,
+              model: model,
+              year: year,
+              deviceType: mostCommonDevice[0],
+              portType: mostCommonPort[0],
+              confidence: avgConfidence,
+              googleSearchResults: JSON.stringify({
+                source: 'vin_database_tier1',
+                vin: cleanVin,
+                similarVehicles: nearbyVehicles.slice(0, 10)
+              }),
+              status: 'pending'
+            });
 
             results.push({
               vin: cleanVin,
@@ -1767,7 +1797,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               portType: mostCommonPort[0],
               deviceType: mostCommonDevice[0],
               confidence: avgConfidence,
-              source: `Database (±5 years, ${nearbyVehicles.length} similar vehicles)`
+              source: `Database (±5 years, ${nearbyVehicles.length} similar vehicles) - Pending Approval`
             });
             continue;
           }
@@ -1801,7 +1831,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             const mostCommonDevice = Array.from(deviceTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
             const deviceConfidence = (mostCommonDevice[1] / vehiclesWithPort.length) * 100;
-            const avgConfidence = Math.round((portConfidence * 0.6 + deviceConfidence * 0.6) / 2);
+            
+            // Tier 2: Reduced confidence (±10 years) - matches AI Search
+            const tier2PortConfidence = Math.round(portConfidence * 0.6);
+            const tier2DeviceConfidence = Math.round(deviceConfidence * 0.6);
+            const avgConfidence = Math.round((tier2PortConfidence + tier2DeviceConfidence) / 2);
+
+            // Log Tier 2 search (Database - Free)
+            await storage.logAiSearch({
+              make: normalizedMake || make,
+              model: model,
+              year: year,
+              source: 'database_tier2',
+              confidence: avgConfidence,
+              cost: 0 // Database searches are free
+            });
+
+            // Save Tier 2 prediction to pending for admin approval
+            await storage.createPendingVehicle({
+              make: normalizedMake || make,
+              model: model,
+              year: year,
+              deviceType: mostCommonDevice[0],
+              portType: mostCommonPort[0],
+              confidence: avgConfidence,
+              googleSearchResults: JSON.stringify({
+                source: 'vin_database_tier2',
+                vin: cleanVin,
+                similarVehicles: broaderVehicles.slice(0, 10)
+              }),
+              status: 'pending'
+            });
 
             results.push({
               vin: cleanVin,
@@ -1812,7 +1872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               portType: mostCommonPort[0],
               deviceType: mostCommonDevice[0],
               confidence: avgConfidence,
-              source: `Database (±10 years, ${broaderVehicles.length} similar vehicles)`
+              source: `Database (±10 years, ${broaderVehicles.length} similar vehicles) - Pending Approval`
             });
             continue;
           }
@@ -1822,6 +1882,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const geminiPrediction = await predictVehicleSpecs(make, model, year);
             
             if (geminiPrediction) {
+              // Log Gemini AI search (Tier 3 - Estimated $0.01 per request)
+              await storage.logAiSearch({
+                make: normalizedMake || make,
+                model: model,
+                year: year,
+                source: 'gemini_api',
+                confidence: geminiPrediction.confidence,
+                cost: 10 // 10 tenths of a cent = $0.01 (conservative estimate)
+              });
+
+              // Save Gemini result to pending for admin approval
+              await storage.createPendingVehicle({
+                make: normalizedMake || make,
+                model: model,
+                year: year,
+                deviceType: geminiPrediction.deviceType,
+                portType: geminiPrediction.portType,
+                confidence: geminiPrediction.confidence,
+                googleSearchResults: JSON.stringify({ 
+                  source: 'vin_gemini',
+                  vin: cleanVin,
+                  reasoning: geminiPrediction.reasoning 
+                }),
+                status: 'pending'
+              });
+
               results.push({
                 vin: cleanVin,
                 success: true,
@@ -1831,7 +1917,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 portType: geminiPrediction.portType,
                 deviceType: geminiPrediction.deviceType,
                 confidence: geminiPrediction.confidence,
-                source: "Gemini AI"
+                source: "Gemini AI - Pending Approval"
               });
             } else {
               results.push({

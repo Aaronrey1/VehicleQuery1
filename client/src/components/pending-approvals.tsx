@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -191,8 +191,8 @@ export function PendingApprovals() {
                 </TableHeader>
                 <TableBody>
                   {pendingVehicles.map((vehicle) => (
-                    <>
-                      <TableRow key={vehicle.id} data-testid={`row-pending-${vehicle.id}`}>
+                    <Fragment key={vehicle.id}>
+                      <TableRow data-testid={`row-pending-${vehicle.id}`}>
                         <TableCell className="font-medium" data-testid={`text-vehicle-${vehicle.id}`}>
                           {formatYearDisplay(vehicle)} {vehicle.make} {vehicle.model}
                         </TableCell>
@@ -275,7 +275,7 @@ export function PendingApprovals() {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </Fragment>
                   ))}
                 </TableBody>
               </Table>
