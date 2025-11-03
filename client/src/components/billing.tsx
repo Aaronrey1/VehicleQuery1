@@ -1,17 +1,36 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DollarSign, TrendingUp, Database, Globe, AlertCircle, CreditCard } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { DollarSign, TrendingUp, Database, Sparkles, AlertCircle, CreditCard, CalendarIcon } from "lucide-react";
 import type { BillingStats } from "@shared/schema";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export default function Billing() {
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
   const { data: stats, isLoading } = useQuery<BillingStats>({
     queryKey: ['/api/billing/stats'],
   });
+
+  // Filter logs based on date range
+  const filteredLogs = stats?.recentLogs.filter((log) => {
+    const logDate = new Date(log.timestamp);
+    if (dateFrom && logDate < dateFrom) return false;
+    if (dateTo) {
+      const endOfDay = new Date(dateTo);
+      endOfDay.setHours(23, 59, 59, 999);
+      if (logDate > endOfDay) return false;
+    }
+    return true;
+  }) || [];
 
   if (isLoading) {
     return (
@@ -100,7 +119,7 @@ export default function Billing() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Google API Calls</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Gemini AI Calls</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400" data-testid="text-google-searches">
@@ -170,15 +189,15 @@ export default function Billing() {
 
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Tier 3 (Google API)</span>
+                <span className="text-sm font-medium">Tier 3 (Gemini AI)</span>
                 <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
-                  <Globe className="h-3 w-3 mr-1" />
-                  100 FREE/DAY
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  PAID
                 </Badge>
               </div>
               <div className="text-2xl font-bold" data-testid="text-tier3-count">{stats.googleSearches}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                Free (100/day), then $0.005 each
+                $0.01 per prediction
               </p>
             </div>
 
@@ -203,23 +222,58 @@ export default function Billing() {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Cost Structure:</strong> Database predictions (Tier 1 & 2) and VECO (Tier 4) are completely free. 
-          Google API searches cost $5 per 1,000 queries ($0.005 each) and are only used when database and VECO 
-          predictions fail. First 100 Google searches per day are free.
+          <strong>Cost Structure:</strong> Database predictions (Tier 1 & 2) are completely free. 
+          Gemini AI predictions cost $0.01 per request and are only used when no database matches are found 
+          (neither exact match nor ±5/10 year patterns).
         </AlertDescription>
       </Alert>
 
       {/* Recent Search Log */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent AI Searches</CardTitle>
-          <CardDescription>
-            Last {stats.recentLogs.length} AI prediction queries
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Recent AI Searches</CardTitle>
+              <CardDescription>
+                {dateFrom || dateTo ? `Filtered ${filteredLogs.length} of ${stats.recentLogs.length} AI prediction queries` : `Last ${stats.recentLogs.length} AI prediction queries`}
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("justify-start text-left font-normal", !dateFrom && "text-muted-foreground")} data-testid="button-date-from">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateFrom ? format(dateFrom, "PPP") : "From date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus />
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("justify-start text-left font-normal", !dateTo && "text-muted-foreground")} data-testid="button-date-to">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateTo ? format(dateTo, "PPP") : "To date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus />
+                </PopoverContent>
+              </Popover>
+              {(dateFrom || dateTo) && (
+                <Button variant="ghost" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }} data-testid="button-clear-dates">
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {stats.recentLogs.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No AI searches recorded yet</p>
+          {filteredLogs.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              {dateFrom || dateTo ? "No AI searches found in selected date range" : "No AI searches recorded yet"}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -233,7 +287,7 @@ export default function Billing() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {stats.recentLogs.map((log) => (
+                  {filteredLogs.map((log) => (
                     <TableRow key={log.id} data-testid={`row-log-${log.id}`}>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
@@ -252,9 +306,10 @@ export default function Billing() {
                             Tier 2
                           </Badge>
                         )}
-                        {log.source === 'google_api' && (
+                        {(log.source === 'google_api' || log.source === 'gemini_api') && (
                           <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
-                            Google
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            Gemini
                           </Badge>
                         )}
                       </TableCell>

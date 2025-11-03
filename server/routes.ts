@@ -1064,18 +1064,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (nearbyYearVehicles.length === 0) {
-        // No similar vehicles in year range - try broader manufacturer match
-        const allManufacturerVehicles = await storage.searchVehicles({
+        // No similar vehicles in ±5 year range - try broader ±10 year match (same make+model)
+        const allSimilarVehiclesBroader = await storage.searchVehicles({
           make: normalizedMake,
+          model: normalizedModel,
           limit: 1000,
           offset: 0,
           sortBy: "year",
           sortOrder: "desc"
         });
 
-        // Filter manufacturer vehicles to ±10 year window for broader match
+        // Filter to vehicles within ±10 years of requested year
         const broaderYearWindow = 10;
-        const nearbyManufacturerVehicles = allManufacturerVehicles.vehicles.filter(v => {
+        const nearbyManufacturerVehicles = allSimilarVehiclesBroader.vehicles.filter(v => {
           // Check if vehicle matches using either single year or year range
           if (v.year !== null && v.year !== undefined) {
             return Math.abs(v.year - yearNum) <= broaderYearWindow;
