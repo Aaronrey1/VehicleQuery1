@@ -1035,12 +1035,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let yearWarning = null;
       if (makeModelExists.vehicles.length > 0) {
-        // Get year range for this make/model (filter out null years)
-        const years = makeModelExists.vehicles
-          .map(v => v.year || v.yearFrom || v.yearTo)
-          .filter(y => y !== null && y !== undefined) as number[];
-        const minYear = years.length > 0 ? Math.min(...years) : yearNum;
-        const maxYear = years.length > 0 ? Math.max(...years) : yearNum;
+        // Get year range for this make/model, properly handling year ranges
+        const minYears: number[] = [];
+        const maxYears: number[] = [];
+        
+        makeModelExists.vehicles.forEach(v => {
+          if (v.year !== null && v.year !== undefined) {
+            // Single year vehicle
+            minYears.push(v.year);
+            maxYears.push(v.year);
+          } else if (v.yearFrom !== null && v.yearTo !== null) {
+            // Year range vehicle
+            minYears.push(v.yearFrom);
+            maxYears.push(v.yearTo);
+          }
+        });
+        
+        const minYear = minYears.length > 0 ? Math.min(...minYears) : yearNum;
+        const maxYear = maxYears.length > 0 ? Math.max(...maxYears) : yearNum;
         
         // Check if requested year is way outside the known range
         const yearDiff = yearNum < minYear ? minYear - yearNum : yearNum - maxYear;
