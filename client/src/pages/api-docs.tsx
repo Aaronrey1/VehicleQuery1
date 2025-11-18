@@ -3,25 +3,297 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Key, ArrowLeft } from "lucide-react";
+import { BookOpen, Key, ArrowLeft, Download } from "lucide-react";
 import { Link } from "wouter";
+import { jsPDF } from "jspdf";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ApiDocs() {
+  const { toast } = useToast();
+  const baseUrl = window.location.origin;
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    let yPos = 20;
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 20;
+    const lineHeight = 7;
+
+    // Helper function to add text with auto-pagination
+    const addText = (text: string, fontSize = 10, isBold = false) => {
+      if (yPos > pageHeight - 30) {
+        doc.addPage();
+        yPos = 20;
+      }
+      doc.setFontSize(fontSize);
+      doc.setFont("helvetica", isBold ? "bold" : "normal");
+      doc.text(text, margin, yPos);
+      yPos += lineHeight;
+    };
+
+    const addTitle = (text: string) => {
+      yPos += 5;
+      addText(text, 16, true);
+      yPos += 2;
+    };
+
+    const addSubtitle = (text: string) => {
+      addText(text, 12, true);
+    };
+
+    const addCode = (text: string) => {
+      doc.setFont("courier", "normal");
+      doc.setFontSize(9);
+      const lines = doc.splitTextToSize(text, 170);
+      lines.forEach((line: string) => {
+        if (yPos > pageHeight - 30) {
+          doc.addPage();
+          yPos = 20;
+        }
+        doc.text(line, margin, yPos);
+        yPos += 5;
+      });
+      doc.setFont("helvetica", "normal");
+      yPos += 3;
+    };
+
+    // Title
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("VehicleDB Pro - API Documentation", margin, yPos);
+    yPos += 15;
+
+    // Authentication Section
+    addTitle("Authentication");
+    addText("All API endpoints require authentication using an API key.", 10);
+    yPos += 2;
+    
+    addSubtitle("Getting an API Key:");
+    addText("API keys can be generated from the Admin panel (Admin → API Keys).", 10);
+    addText("The full key is only shown once at creation. Store it securely.", 10);
+    yPos += 3;
+
+    addSubtitle("Using Your API Key:");
+    addText("Include your API key in the X-API-Key header with every request:", 10);
+    addCode("X-API-Key: vdb_abc123_your-secret-key-here");
+    yPos += 3;
+
+    addSubtitle("Base URL:");
+    addCode(baseUrl);
+    yPos += 5;
+
+    // 1. AI Search Endpoint
+    addTitle("1. AI Search");
+    addSubtitle("Endpoint: GET /api/ai/predict");
+    addText("Predicts port type and device type using multi-tier AI system.", 10);
+    yPos += 3;
+
+    addSubtitle("Query Parameters:");
+    addText("• make (required): Vehicle manufacturer", 10);
+    addText("• model (required): Vehicle model", 10);
+    addText("• year (required): Vehicle year", 10);
+    addText("• userName (optional): User name for email notifications", 10);
+    addText("• userEmail (optional): User email for notifications when approved", 10);
+    yPos += 3;
+
+    addSubtitle("Example Request:");
+    addCode(`GET ${baseUrl}/api/ai/predict?make=FORD&model=F-150&year=2020\nX-API-Key: vdb_abc123_your-secret-key-here`);
+    yPos += 3;
+
+    addSubtitle("Example Response (Exact Match):");
+    addCode(`{
+  "found": true,
+  "exactMatch": {
+    "id": 123,
+    "make": "FORD",
+    "model": "F-150",
+    "year": 2020,
+    "portType": "OBD2",
+    "deviceType": "STANDARD"
+  },
+  "searchPath": [
+    {"source": "Database (Exact Match)", "checked": true, "found": true}
+  ]
+}`);
+    yPos += 5;
+
+    // 2. VIN Decoder Endpoint
+    addTitle("2. VIN Decoder");
+    addSubtitle("Endpoint: POST /api/vin/decode");
+    addText("Decodes VINs using NHTSA API and predicts vehicle specs.", 10);
+    yPos += 3;
+
+    addSubtitle("Request Body:");
+    addText("• vins (required): Array of VINs (max 50)", 10);
+    addText("• userName (optional): User name for notifications", 10);
+    addText("• userEmail (optional): User email for notifications", 10);
+    yPos += 3;
+
+    addSubtitle("Example Request:");
+    addCode(`POST ${baseUrl}/api/vin/decode
+X-API-Key: vdb_abc123_your-secret-key-here
+Content-Type: application/json
+
+{
+  "vins": ["1FTFW1E84MFA12345"],
+  "userName": "John Doe",
+  "userEmail": "john@example.com"
+}`);
+    yPos += 3;
+
+    addSubtitle("Example Response:");
+    addCode(`{
+  "results": [{
+    "vin": "1FTFW1E84MFA12345",
+    "success": true,
+    "make": "FORD",
+    "model": "F-150",
+    "year": 2021,
+    "portType": "OBD2",
+    "deviceType": "STANDARD",
+    "confidence": 100,
+    "source": "Database (Exact Match)"
+  }]
+}`);
+    yPos += 5;
+
+    // 3. Vehicle Search Endpoint
+    addTitle("3. Vehicle Search");
+    addSubtitle("Endpoint: GET /api/vehicles/search");
+    addText("Search vehicle database with flexible filtering.", 10);
+    yPos += 3;
+
+    addSubtitle("Query Parameters (all optional):");
+    addText("• make, model, year, portType, deviceType", 10);
+    addText("• page (default: 1), limit (default: 50)", 10);
+    addText("• sortBy (default: make), sortOrder (asc/desc)", 10);
+    yPos += 3;
+
+    addSubtitle("Example Request:");
+    addCode(`GET ${baseUrl}/api/vehicles/search?make=FORD&year=2020
+X-API-Key: vdb_abc123_your-secret-key-here`);
+    yPos += 3;
+
+    addSubtitle("Example Response:");
+    addCode(`{
+  "vehicles": [{
+    "id": 1,
+    "make": "FORD",
+    "model": "F-150",
+    "year": 2020,
+    "deviceType": "STANDARD",
+    "portType": "OBD2"
+  }],
+  "total": 2
+}`);
+    yPos += 5;
+
+    // 4. Bulk Search Endpoint
+    addTitle("4. Bulk Search");
+    addSubtitle("Endpoint: POST /api/vehicles/bulk-search");
+    addText("Search multiple vehicles in a single request.", 10);
+    yPos += 3;
+
+    addSubtitle("Request Body:");
+    addText("• queries (required): Array of {make, model, year}", 10);
+    addText("• oneToOne (optional): Return only first match per query", 10);
+    yPos += 3;
+
+    addSubtitle("Example Request:");
+    addCode(`POST ${baseUrl}/api/vehicles/bulk-search
+X-API-Key: vdb_abc123_your-secret-key-here
+Content-Type: application/json
+
+{
+  "queries": [
+    {"make": "FORD", "model": "F150", "year": 2020},
+    {"make": "TOYOTA", "model": "CAMRY", "year": 2019}
+  ]
+}`);
+    yPos += 5;
+
+    // 5. Geometris Endpoint
+    addTitle("5. Geometris (Harness Search)");
+    addSubtitle("Endpoint: GET /api/harnesses/search");
+    addText("Search for vehicle harness types.", 10);
+    yPos += 3;
+
+    addSubtitle("Query Parameters (all optional):");
+    addText("• make, model, year, page, limit", 10);
+    yPos += 3;
+
+    addSubtitle("Example Request:");
+    addCode(`GET ${baseUrl}/api/harnesses/search?make=FORD&model=F-150&year=2020
+X-API-Key: vdb_abc123_your-secret-key-here`);
+    yPos += 3;
+
+    addSubtitle("Example Response:");
+    addCode(`{
+  "harnesses": [{
+    "id": 42,
+    "make": "FORD",
+    "model": "F-150",
+    "yearFrom": 2015,
+    "yearTo": 2020,
+    "harnessType": "FORD-2015-UP"
+  }],
+  "total": 2
+}`);
+    yPos += 5;
+
+    // Error Responses
+    addTitle("Error Responses");
+    addText("All endpoints return standard error responses:", 10);
+    yPos += 2;
+    addCode(`{
+  "message": "Error description"
+}`);
+    yPos += 3;
+
+    addText("Common HTTP Status Codes:", 10);
+    addText("• 400: Bad Request (invalid parameters)", 10);
+    addText("• 401: Unauthorized (missing/invalid API key)", 10);
+    addText("• 500: Internal Server Error", 10);
+    yPos += 5;
+
+    // Salesforce Integration
+    addTitle("Salesforce Integration Tips");
+    addText("1. Create a Named Credential in Salesforce", 10);
+    addText("2. Set Identity Type to 'Named Principal'", 10);
+    addText("3. Choose 'Password Authentication' protocol", 10);
+    addText("4. Paste API key in password field", 10);
+    addText("5. In Apex code, use header: X-API-Key: {!$Credential.Password}", 10);
+
+    // Save PDF
+    doc.save("VehicleDB-Pro-API-Documentation.pdf");
+    
+    toast({
+      title: "Success",
+      description: "API documentation PDF downloaded successfully",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-card border-b border-border shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16 gap-4">
-            <Link href="/">
-              <Button variant="ghost" size="sm" data-testid="button-back">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-            </Link>
-            <div className="flex items-center space-x-3">
-              <BookOpen className="text-primary text-2xl" />
-              <h1 className="text-xl font-semibold text-foreground">API Documentation</h1>
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <Link href="/">
+                <Button variant="ghost" size="sm" data-testid="button-back">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back
+                </Button>
+              </Link>
+              <div className="flex items-center space-x-3">
+                <BookOpen className="text-primary text-2xl" />
+                <h1 className="text-xl font-semibold text-foreground">API Documentation</h1>
+              </div>
             </div>
+            <Button onClick={generatePDF} data-testid="button-export-pdf">
+              <Download className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
           </div>
         </div>
       </header>
