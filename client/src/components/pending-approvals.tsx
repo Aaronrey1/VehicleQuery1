@@ -185,6 +185,7 @@ export function PendingApprovals() {
                     <TableHead>Predicted Port</TableHead>
                     <TableHead>Predicted Device</TableHead>
                     <TableHead>Confidence</TableHead>
+                    <TableHead>Submitted By</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -203,6 +204,16 @@ export function PendingApprovals() {
                           <Badge variant="outline" data-testid={`badge-device-${vehicle.id}`}>{vehicle.deviceType}</Badge>
                         </TableCell>
                         <TableCell>{getConfidenceBadge(vehicle.confidence)}</TableCell>
+                        <TableCell className="text-sm" data-testid={`text-submitter-${vehicle.id}`}>
+                          {vehicle.userName && vehicle.userEmail ? (
+                            <div className="space-y-0.5">
+                              <div className="font-medium">{vehicle.userName}</div>
+                              <div className="text-xs text-muted-foreground">{vehicle.userEmail}</div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground italic">Anonymous</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {new Date(vehicle.createdAt).toLocaleDateString()}
                         </TableCell>
@@ -249,7 +260,7 @@ export function PendingApprovals() {
                       </TableRow>
                       {expandedRow === vehicle.id && vehicle.googleSearchResults && (
                         <TableRow>
-                          <TableCell colSpan={6} className="bg-muted/50">
+                          <TableCell colSpan={7} className="bg-muted/50">
                             <div className="p-4 space-y-2">
                               <h4 className="font-semibold text-sm">Google Search Results:</h4>
                               <div className="text-sm text-muted-foreground space-y-2 max-h-60 overflow-y-auto">
