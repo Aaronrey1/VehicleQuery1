@@ -191,9 +191,6 @@ export default function AISearch() {
                   </div>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                If you provide your email, we'll notify you when an admin approves your prediction and it gets added to the database.
-              </p>
             </div>
 
             <Button 
