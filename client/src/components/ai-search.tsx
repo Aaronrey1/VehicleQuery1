@@ -154,10 +154,6 @@ export default function AISearch() {
             </div>
 
             <div className="border-t pt-4 pb-4">
-              <p className="text-sm font-medium mb-3 text-muted-foreground">
-                <Mail className="inline h-4 w-4 mr-1" />
-                Optional: Get notified when your prediction is approved
-              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="ai-user-name" className="text-sm text-muted-foreground">Your Name (optional)</Label>
