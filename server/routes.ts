@@ -299,6 +299,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ipAddress: getClientIp(req),
         resultsCount: allVehicles.length,
         queryDetails: JSON.stringify({ queryCount: queries.length, oneToOne }),
+        userName: null,
+        userEmail: null,
       });
 
       // Return consistent response shape
@@ -787,6 +789,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ipAddress: getClientIp(req),
         resultsCount: result.total,
         queryDetails: null,
+        userName: null,
+        userEmail: null,
       });
       
       res.json(result);
@@ -992,6 +996,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ipAddress: getClientIp(req),
         resultsCount: 0, // Will be 0 or 1 depending on exact match
         queryDetails: null,
+        userName: userNameStr || null,
+        userEmail: userEmailStr || null,
       });
       
       // Normalize the make to handle common aliases (Chevy → Chevrolet, VW → Volkswagen, etc.)
@@ -1678,6 +1684,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ipAddress: getClientIp(req),
         resultsCount: 0, // Will be updated after processing
         queryDetails: JSON.stringify({ vinCount: vins.length }),
+        userName: userNameStr || null,
+        userEmail: userEmailStr || null,
       });
 
       const results = [];

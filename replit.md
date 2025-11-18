@@ -34,7 +34,7 @@ PostgreSQL is used as the database, accessed via the Neon serverless driver. Dri
 - `vehicles`: Stores vehicle data with id, make, model, year, deviceType, portType. Supports year ranges.
 - `harnesses`: Stores harness data, supporting yearFrom and yearTo for ranges.
 - `ai_search_logs`: Records AI Search predictions, source (tier), confidence, and cost for billing.
-- `search_logs`: Tracks special search operations (AI, Bulk, VIN, Geometris) with timestamp, country (via IP geolocation), make/model/year, results count, and query details. Regular database searches are not logged. Used for comprehensive search analytics and usage tracking.
+- `search_logs`: Tracks special search operations (AI, Bulk, VIN, Geometris) with timestamp, country (via IP geolocation), make/model/year, results count, query details, and optional userName/userEmail fields. Regular database searches are not logged. Used for comprehensive search analytics and usage tracking. Search Analytics displays user contact information when provided.
 - `pending_vehicles`: Stores AI predictions (including Gemini AI and Pentaho) awaiting admin approval, along with prediction details, status, and optional `userName` and `userEmail` fields for email notifications when predictions are approved.
 - `users`: For authentication purposes.
 

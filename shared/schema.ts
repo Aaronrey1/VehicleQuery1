@@ -222,6 +222,8 @@ export const searchLogs = pgTable("search_logs", {
   ipAddress: text("ip_address"),
   resultsCount: integer("results_count").notNull().default(0),
   queryDetails: text("query_details"), // JSON string with additional search parameters
+  userName: text("user_name"), // Optional: user's name who performed the search
+  userEmail: text("user_email"), // Optional: user's email who performed the search
 }, (table) => ({
   timestampIdx: index("search_logs_timestamp_idx").on(table.timestamp),
   searchTypeIdx: index("search_logs_type_idx").on(table.searchType),

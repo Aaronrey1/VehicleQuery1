@@ -240,13 +240,15 @@ export default function SearchAnalyticsComponent() {
                         <TableHead>Model</TableHead>
                         <TableHead>Year</TableHead>
                         <TableHead>Country</TableHead>
+                        <TableHead>User Name</TableHead>
+                        <TableHead>User Email</TableHead>
                         <TableHead>Results</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {analytics.recentLogs.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center text-muted-foreground">
+                          <TableCell colSpan={9} className="text-center text-muted-foreground">
                             No search logs yet
                           </TableCell>
                         </TableRow>
@@ -265,6 +267,12 @@ export default function SearchAnalyticsComponent() {
                             <TableCell className="text-sm">{log.model || '-'}</TableCell>
                             <TableCell className="text-sm">{log.year || '-'}</TableCell>
                             <TableCell className="text-sm">{log.country || 'Unknown'}</TableCell>
+                            <TableCell className="text-sm">
+                              {log.userName || <span className="text-muted-foreground italic">Anonymous</span>}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {log.userEmail || <span className="text-muted-foreground italic">-</span>}
+                            </TableCell>
                             <TableCell className="text-sm">{log.resultsCount}</TableCell>
                           </TableRow>
                         ))
