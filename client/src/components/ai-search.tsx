@@ -419,11 +419,6 @@ export default function AISearch() {
                         <p className="font-medium">
                           This prediction has been saved for admin review. Once approved, it will be added to the database for future searches.
                         </p>
-                        {userEmail && userName && (
-                          <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mt-2">
-                            📧 You'll receive an email at <span className="font-bold">{userEmail}</span> when this prediction is approved!
-                          </p>
-                        )}
                         <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
                           💡 Check the "Pending" tab in the Admin section to review predictions
                         </p>

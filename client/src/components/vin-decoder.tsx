@@ -291,11 +291,6 @@ export default function VinDecoder() {
                     <p className="font-medium">
                       Some of your VIN predictions have been saved for admin review. Once approved, they will be added to the database for future searches.
                     </p>
-                    {userEmail && userName && (
-                      <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mt-2">
-                        📧 You'll receive an email at <span className="font-bold">{userEmail}</span> when these predictions are approved!
-                      </p>
-                    )}
                     <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
                       💡 Check the "Pending" tab in the Admin section to review predictions
                     </p>
