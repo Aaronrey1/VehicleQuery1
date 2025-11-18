@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, Loader2, CheckCircle, XCircle, Hash } from "lucide-react";
+import { AlertCircle, Loader2, CheckCircle, XCircle, Hash, Mail, User, Sparkles } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 
@@ -28,11 +28,17 @@ interface VinResult {
 export default function VinDecoder() {
   const [singleVin, setSingleVin] = useState("");
   const [bulkVins, setBulkVins] = useState("");
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const [results, setResults] = useState<VinResult[]>([]);
 
   const decodeMutation = useMutation({
     mutationFn: async (vins: string[]) => {
-      const response = await apiRequest("POST", "/api/vin/decode", { vins });
+      const payload: any = { vins };
+      if (userName) payload.userName = userName;
+      if (userEmail) payload.userEmail = userEmail;
+      
+      const response = await apiRequest("POST", "/api/vin/decode", payload);
       const data = await response.json() as { results: VinResult[] };
       return data;
     },
@@ -95,6 +101,49 @@ export default function VinDecoder() {
           </Alert>
         </CardHeader>
         <CardContent>
+          <div className="border-b pb-4 mb-4">
+            <p className="text-sm font-medium mb-3 text-muted-foreground">
+              <Mail className="inline h-4 w-4 mr-1" />
+              Optional: Get notified when your predictions are approved
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="vin-user-name" className="text-sm text-muted-foreground">Your Name (optional)</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="vin-user-name"
+                    type="text"
+                    placeholder="John Doe"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    className="pl-9"
+                    data-testid="input-vin-user-name"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="vin-user-email" className="text-sm text-muted-foreground">Your Email (optional)</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="vin-user-email"
+                    type="email"
+                    placeholder="john@example.com"
+                    value={userEmail}
+                    onChange={(e) => setUserEmail(e.target.value)}
+                    className="pl-9"
+                    data-testid="input-vin-user-email"
+                  />
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              If you provide your email, we'll notify you when an admin approves your predictions and they get added to the database.
+            </p>
+          </div>
+          
           <Tabs defaultValue="single" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="single" data-testid="tab-single-vin">Single VIN</TabsTrigger>
@@ -245,6 +294,29 @@ export default function VinDecoder() {
                 </TableBody>
               </Table>
             </div>
+            
+            {/* Show pending approval message if any results are pending */}
+            {results.some(r => r.source?.includes("Pending Approval")) && (
+              <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950 mt-4">
+                <Sparkles className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800 dark:text-blue-200">
+                  <div className="space-y-2">
+                    <p className="text-lg font-bold">Predictions Pending Admin Approval</p>
+                    <p className="font-medium">
+                      Some of your VIN predictions have been saved for admin review. Once approved, they will be added to the database for future searches.
+                    </p>
+                    {userEmail && userName && (
+                      <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mt-2">
+                        📧 You'll receive an email at <span className="font-bold">{userEmail}</span> when these predictions are approved!
+                      </p>
+                    )}
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                      💡 Check the "Pending" tab in the Admin section to review predictions
+                    </p>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
       )}
