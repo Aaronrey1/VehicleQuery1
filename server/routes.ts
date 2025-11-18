@@ -196,6 +196,37 @@ function requireAuth(req: any, res: any, next: any) {
   }
 }
 
+// Middleware to validate API key for external integrations (e.g., Salesforce)
+async function validateApiKey(req: any, res: any, next: any) {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    
+    if (!apiKey || typeof apiKey !== 'string') {
+      return res.status(401).json({ message: "API key required. Please provide a valid API key in the X-API-Key header." });
+    }
+    
+    const keyRecord = await storage.getApiKeyByKey(apiKey);
+    
+    if (!keyRecord) {
+      return res.status(401).json({ message: "Invalid or revoked API key" });
+    }
+    
+    // Update last used timestamp (non-blocking)
+    storage.updateApiKeyLastUsed(keyRecord.id).catch(err => {
+      console.error("Failed to update API key last used:", err);
+    });
+    
+    // Store key info in request for potential logging
+    req.apiKeyId = keyRecord.id;
+    req.apiKeyName = keyRecord.name;
+    
+    next();
+  } catch (error) {
+    console.error("API key validation error:", error);
+    res.status(500).json({ message: "API key validation failed" });
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth endpoint for admin password verification
   app.post("/api/auth/verify", async (req, res) => {
@@ -239,8 +270,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Bulk search vehicles
-  app.post("/api/vehicles/bulk-search", async (req, res) => {
+  // Bulk search vehicles (requires API key)
+  app.post("/api/vehicles/bulk-search", validateApiKey, async (req, res) => {
     try {
       const { queries, oneToOne = false } = req.body;
       
@@ -412,8 +443,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .replace(/[-,/.\s()[\]&+*]/g, ''); // Remove dashes, commas, slashes, periods, spaces, parentheses, brackets, ampersands, plus, asterisk
   };
 
-  // Search vehicles
-  app.get("/api/vehicles/search", async (req, res) => {
+  // Search vehicles (requires API key)
+  app.get("/api/vehicles/search", validateApiKey, async (req, res) => {
     try {
       const { make, model, year, deviceType, portType, page = "1", limit = "50", sortBy = "make", sortOrder = "asc" } = req.query;
       
@@ -764,8 +795,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== HARNESS ROUTES ====================
 
-  // Search harnesses
-  app.get("/api/harnesses/search", async (req, res) => {
+  // Search harnesses (requires API key)
+  app.get("/api/harnesses/search", validateApiKey, async (req, res) => {
     try {
       const { make, model, year, page = "1", limit = "50" } = req.query;
       
@@ -973,8 +1004,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // AI Prediction endpoint - pattern-based suggestions
-  app.get("/api/ai/predict", async (req, res) => {
+  // AI Prediction endpoint - pattern-based suggestions (requires API key)
+  app.get("/api/ai/predict", validateApiKey, async (req, res) => {
     try {
       const { make, model, year, userName, userEmail } = req.query;
       
@@ -1705,8 +1736,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // VIN Decoder endpoint
-  app.post("/api/vin/decode", async (req, res) => {
+  // VIN Decoder endpoint (requires API key)
+  app.post("/api/vin/decode", validateApiKey, async (req, res) => {
     try {
       const { vins, userName, userEmail } = req.body;
       
