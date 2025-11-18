@@ -1,7 +1,7 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertVehicleSchema, updateVehicleSchema, searchVehicleSchema, insertHarnessSchema, searchHarnessSchema } from "@shared/schema";
+import { insertVehicleSchema, updateVehicleSchema, searchVehicleSchema, insertHarnessSchema, searchHarnessSchema, insertApiKeySchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import csv from "csv-parser";
@@ -1564,6 +1564,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Delete pending vehicle error:", error);
       res.status(500).json({ message: "Failed to delete pending vehicle" });
+    }
+  });
+
+  // API Key Management Routes (protected - admin only)
+  app.post("/api/api-keys", requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertApiKeySchema.parse(req.body);
+      const apiKey = await storage.createApiKey(validatedData);
+      res.status(201).json(apiKey);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Create API key error:", error);
+      res.status(500).json({ message: "Failed to create API key" });
+    }
+  });
+
+  app.get("/api/api-keys", requireAuth, async (req, res) => {
+    try {
+      const keys = await storage.getApiKeys();
+      res.json(keys);
+    } catch (error) {
+      console.error("Get API keys error:", error);
+      res.status(500).json({ message: "Failed to retrieve API keys" });
+    }
+  });
+
+  app.patch("/api/api-keys/:id/revoke", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.revokeApiKey(id);
+      res.json({ message: "API key revoked successfully" });
+    } catch (error) {
+      console.error("Revoke API key error:", error);
+      res.status(500).json({ message: "Failed to revoke API key" });
+    }
+  });
+
+  app.delete("/api/api-keys/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteApiKey(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Delete API key error:", error);
+      res.status(500).json({ message: "Failed to delete API key" });
     }
   });
 
