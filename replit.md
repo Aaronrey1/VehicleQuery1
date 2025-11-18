@@ -44,7 +44,7 @@ PostgreSQL is used as the database, accessed via the Neon serverless driver. Dri
 - **Frontend Framework:** `react`, `react-dom`, `@tanstack/react-query`, `wouter`
 - **File Processing:** `multer`, `csv-parser`
 - **Geolocation:** `geoip-lite` for IP-based country detection
-- **Email Service:** `nodemailer` for sending email notifications from aaronr@azuga.com when predictions are approved (configured via SMTP environment variables)
+- **Email Service:** `resend` for sending email notifications when predictions are approved (configured via RESEND_API_KEY environment variable). Emails are sent from 'VehicleDB Pro <noreply@resend.dev>' with professional HTML templates. Works automatically in both development and production.
 - **UI & Styling:** `@radix-ui/*`, `class-variance-authority`, `tailwindcss`, `cmdk`, `date-fns`, `clsx`, `tailwind-merge`
 - **Form Management & Validation:** `react-hook-form`, `@hookform/resolvers`, `zod`
 - **Unique ID Generation:** `nanoid`

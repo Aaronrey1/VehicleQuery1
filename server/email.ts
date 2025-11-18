@@ -1,26 +1,15 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-// Create email transporter using environment variables
-const createTransporter = () => {
-  const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT || '587');
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+// Initialize Resend client
+const getResendClient = () => {
+  const apiKey = process.env.RESEND_API_KEY;
   
-  if (!host || !user || !pass) {
-    console.warn('Email configuration incomplete. Email notifications will not be sent.');
+  if (!apiKey) {
+    console.warn('RESEND_API_KEY not configured. Email notifications will not be sent.');
     return null;
   }
 
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465, // true for 465, false for other ports
-    auth: {
-      user,
-      pass,
-    },
-  });
+  return new Resend(apiKey);
 };
 
 interface ApprovalEmailData {
@@ -35,14 +24,12 @@ interface ApprovalEmailData {
 }
 
 export async function sendApprovalEmail(data: ApprovalEmailData): Promise<boolean> {
-  const transporter = createTransporter();
+  const resend = getResendClient();
   
-  if (!transporter) {
-    console.log('Email transporter not configured, skipping email notification');
+  if (!resend) {
+    console.log('Resend client not configured, skipping email notification');
     return false;
   }
-
-  const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
   
   const emailHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -120,13 +107,18 @@ This is an automated notification from VehicleDB Pro. Please do not reply to thi
   `;
 
   try {
-    await transporter.sendMail({
-      from: `"VehicleDB Pro" <${fromEmail}>`,
+    const { error } = await resend.emails.send({
+      from: 'VehicleDB Pro <noreply@resend.dev>',
       to: data.userEmail,
       subject: `Vehicle Data Approved - ${data.make} ${data.model} ${data.year}`,
       text: emailText,
       html: emailHtml,
     });
+    
+    if (error) {
+      console.error('Error sending approval email via Resend:', error);
+      return false;
+    }
     
     console.log(`Approval email sent successfully to ${data.userEmail}`);
     return true;
