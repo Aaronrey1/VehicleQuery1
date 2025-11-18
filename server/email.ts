@@ -108,7 +108,7 @@ This is an automated notification from VehicleDB Pro. Please do not reply to thi
 
   try {
     const { error } = await resend.emails.send({
-      from: 'VehicleDB Pro <noreply@resend.dev>',
+      from: 'Aaron Rey - VehicleDB Pro <noreply@resend.dev>',
       to: data.userEmail,
       subject: `Vehicle Data Approved - ${data.make} ${data.model} ${data.year}`,
       text: emailText,
