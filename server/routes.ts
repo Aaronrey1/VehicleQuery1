@@ -1725,6 +1725,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const makeData = decodedData.find((item: any) => item.Variable === "Make");
           const modelData = decodedData.find((item: any) => item.Variable === "Model");
           const yearData = decodedData.find((item: any) => item.Variable === "Model Year");
+          
+          // Extract NHTSA error information (e.g., check digit warnings)
+          const errorText = decodedData.find((item: any) => item.Variable === "Error Text");
+          const nhtsaWarning = errorText?.Value && errorText.Value !== "0" && errorText.Value !== "0 -" 
+            ? errorText.Value.trim() 
+            : null;
 
           const make = makeData?.Value?.trim();
           const model = modelData?.Value?.trim();
@@ -1766,7 +1772,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               portType: vehicle.portType,
               deviceType: vehicle.deviceType,
               confidence: 100,
-              source: "Database (Exact Match)"
+              source: "Database (Exact Match)",
+              ...(nhtsaWarning && { nhtsaWarning })
             });
             continue;
           }
@@ -1853,7 +1860,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               portType: mostCommonPort[0],
               deviceType: mostCommonDevice[0],
               confidence: avgConfidence,
-              source: `Database (±5 years, ${nearbyVehicles.length} similar vehicles) - Pending Approval`
+              source: `Database (±5 years, ${nearbyVehicles.length} similar vehicles) - Pending Approval`,
+              ...(nhtsaWarning && { nhtsaWarning })
             });
             continue;
           }
@@ -1930,7 +1938,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               portType: mostCommonPort[0],
               deviceType: mostCommonDevice[0],
               confidence: avgConfidence,
-              source: `Database (±10 years, ${broaderVehicles.length} similar vehicles) - Pending Approval`
+              source: `Database (±10 years, ${broaderVehicles.length} similar vehicles) - Pending Approval`,
+              ...(nhtsaWarning && { nhtsaWarning })
             });
             continue;
           }
@@ -1977,7 +1986,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 portType: geminiPrediction.portType,
                 deviceType: geminiPrediction.deviceType,
                 confidence: geminiPrediction.confidence,
-                source: "Gemini AI - Pending Approval"
+                source: "Gemini AI - Pending Approval",
+                ...(nhtsaWarning && { nhtsaWarning })
               });
             } else {
               results.push({
@@ -1989,7 +1999,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 portType: "Unknown",
                 deviceType: "Unknown",
                 confidence: 0,
-                source: "No prediction available"
+                source: "No prediction available",
+                ...(nhtsaWarning && { nhtsaWarning })
               });
             }
           } catch (geminiError) {
@@ -2003,7 +2014,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               portType: "Unknown",
               deviceType: "Unknown",
               confidence: 0,
-              source: "Prediction failed"
+              source: "Prediction failed",
+              ...(nhtsaWarning && { nhtsaWarning })
             });
           }
 

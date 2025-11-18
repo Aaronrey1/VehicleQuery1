@@ -23,6 +23,7 @@ interface VinResult {
   confidence?: number;
   error?: string;
   source?: string;
+  nhtsaWarning?: string;
 }
 
 export default function VinDecoder() {
@@ -273,6 +274,29 @@ export default function VinDecoder() {
                 </TableBody>
               </Table>
             </div>
+            
+            {/* Show NHTSA warnings if any */}
+            {results.some(r => r.nhtsaWarning) && (
+              <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950 mt-4">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+                  <div className="space-y-2">
+                    <p className="font-semibold">NHTSA Warnings Detected</p>
+                    <div className="text-sm space-y-1">
+                      {results.filter(r => r.nhtsaWarning).map((result, idx) => (
+                        <div key={idx} className="flex gap-2">
+                          <span className="font-mono text-xs font-semibold">{result.vin}:</span>
+                          <span className="text-xs">{result.nhtsaWarning}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs mt-2 text-yellow-700 dark:text-yellow-300">
+                      These warnings indicate potential VIN validation issues reported by NHTSA. The vehicle data provided may still be accurate despite these warnings.
+                    </p>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
             
             {/* Show pending approval message if any results are pending */}
             {results.some(r => r.source?.includes("Pending Approval")) && (
