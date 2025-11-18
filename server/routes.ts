@@ -8,6 +8,7 @@ import csv from "csv-parser";
 import { Readable } from "stream";
 import axios from "axios";
 import { predictVehicleSpecs, checkIfHeavyVehicle as geminiCheckHeavyVehicle } from "./gemini";
+import { sendApprovalEmail } from "./email";
 import { getClientIp, getClientCountry } from "./geolocation";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -971,13 +972,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Prediction endpoint - pattern-based suggestions
   app.get("/api/ai/predict", async (req, res) => {
     try {
-      const { make, model, year } = req.query;
+      const { make, model, year, userName, userEmail } = req.query;
       
       if (!make || !model || !year) {
         return res.status(400).json({ message: "Make, model, and year are required" });
       }
 
       const yearNum = parseInt(year as string);
+      const userNameStr = userName ? String(userName) : undefined;
+      const userEmailStr = userEmail ? String(userEmail) : undefined;
       
       // Log the AI search
       await storage.logSearch({
@@ -1170,7 +1173,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               portType: geminiPrediction.portType,
               confidence: geminiPrediction.confidence,
               googleSearchResults: JSON.stringify({ reasoning: geminiPrediction.reasoning }),
-              status: 'pending'
+              status: 'pending',
+              userName: userNameStr,
+              userEmail: userEmailStr
             });
 
             return res.json({
@@ -1262,7 +1267,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             source: 'database_tier2',
             similarVehicles: nearbyManufacturerVehicles.slice(0, 10)
           }),
-          status: 'pending'
+          status: 'pending',
+          userName: userNameStr,
+          userEmail: userEmailStr
         });
 
         return res.json({
@@ -1336,7 +1343,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           source: 'database_tier1',
           similarVehicles: nearbyYearVehicles.slice(0, 10)
         }),
-        status: 'pending'
+        status: 'pending',
+        userName: userNameStr,
+        userEmail: userEmailStr
       });
 
       res.json({
@@ -1489,7 +1498,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/pending-vehicles/:id/approve", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Get pending vehicle data before approving (to send email)
+      const pendingVehicles = await storage.getPendingVehicles();
+      const pendingVehicle = pendingVehicles.find(v => v.id === id);
+      
+      if (!pendingVehicle) {
+        return res.status(404).json({ message: "Pending vehicle not found" });
+      }
+      
+      // Approve the vehicle
       await storage.approvePendingVehicle(id);
+      
+      // Send email notification if user provided email
+      if (pendingVehicle.userEmail && pendingVehicle.userName) {
+        try {
+          await sendApprovalEmail({
+            userName: pendingVehicle.userName,
+            userEmail: pendingVehicle.userEmail,
+            make: pendingVehicle.make,
+            model: pendingVehicle.model,
+            year: pendingVehicle.year,
+            portType: pendingVehicle.portType,
+            deviceType: pendingVehicle.deviceType,
+            confidence: pendingVehicle.confidence
+          });
+          console.log(`Approval email sent to ${pendingVehicle.userEmail}`);
+        } catch (emailError) {
+          // Log email error but don't fail the approval
+          console.error("Failed to send approval email:", emailError);
+        }
+      }
+      
       res.json({ message: "Vehicle approved and added to database" });
     } catch (error) {
       console.error("Approve pending vehicle error:", error);
@@ -1615,7 +1655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // VIN Decoder endpoint
   app.post("/api/vin/decode", async (req, res) => {
     try {
-      const { vins } = req.body;
+      const { vins, userName, userEmail } = req.body;
       
       if (!Array.isArray(vins) || vins.length === 0) {
         return res.status(400).json({ message: "Please provide an array of VINs" });
@@ -1624,6 +1664,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (vins.length > 50) {
         return res.status(400).json({ message: "Maximum 50 VINs per request" });
       }
+
+      const userNameStr = userName ? String(userName) : undefined;
+      const userEmailStr = userEmail ? String(userEmail) : undefined;
 
       // Log the VIN decode search
       await storage.logSearch({
@@ -1788,7 +1831,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 vin: cleanVin,
                 similarVehicles: nearbyVehicles.slice(0, 10)
               }),
-              status: 'pending'
+              status: 'pending',
+              userName: userNameStr,
+              userEmail: userEmailStr
             });
 
             results.push({
@@ -1863,7 +1908,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 vin: cleanVin,
                 similarVehicles: broaderVehicles.slice(0, 10)
               }),
-              status: 'pending'
+              status: 'pending',
+              userName: userNameStr,
+              userEmail: userEmailStr
             });
 
             results.push({
@@ -1908,7 +1955,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   vin: cleanVin,
                   reasoning: geminiPrediction.reasoning 
                 }),
-                status: 'pending'
+                status: 'pending',
+                userName: userNameStr,
+                userEmail: userEmailStr
               });
 
               results.push({
