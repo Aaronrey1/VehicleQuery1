@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Sparkles, TrendingUp, Search, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import { Sparkles, TrendingUp, Search, AlertCircle, CheckCircle2, XCircle, Mail, User } from "lucide-react";
 import { formatForDisplay, formatYearDisplay } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
 
 interface SearchPathStep {
   source: string;
@@ -50,18 +51,29 @@ export default function AISearch() {
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [year, setYear] = useState("");
-  const [searchTriggered, setSearchTriggered] = useState(false);
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [prediction, setPrediction] = useState<PredictionResult | null>(null);
 
-  // AI prediction query
-  const { data: prediction, isLoading, refetch } = useQuery<PredictionResult>({
-    queryKey: [`/api/ai/predict?make=${make}&model=${model}&year=${year}`],
-    enabled: false, // Manual trigger
+  // AI prediction mutation
+  const searchMutation = useMutation({
+    mutationFn: async () => {
+      const params = new URLSearchParams({ make, model, year });
+      if (userName) params.append('userName', userName);
+      if (userEmail) params.append('userEmail', userEmail);
+      
+      const response = await fetch(`/api/ai/predict?${params}`);
+      if (!response.ok) throw new Error('Search failed');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setPrediction(data);
+    }
   });
 
   const handleSearch = () => {
     if (make && model && year) {
-      setSearchTriggered(true);
-      refetch();
+      searchMutation.mutate();
     }
   };
 
@@ -102,59 +114,104 @@ export default function AISearch() {
           </Alert>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="ai-make">Make</Label>
-              <Input
-                id="ai-make"
-                type="text"
-                placeholder="Type any make (e.g., Tesla)"
-                value={make}
-                onChange={(e) => { setMake(e.target.value); setSearchTriggered(false); }}
-                data-testid="input-ai-make"
-              />
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="ai-make">Make</Label>
+                <Input
+                  id="ai-make"
+                  type="text"
+                  placeholder="Type any make (e.g., Tesla)"
+                  value={make}
+                  onChange={(e) => { setMake(e.target.value); setPrediction(null); }}
+                  data-testid="input-ai-make"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ai-model">Model</Label>
+                <Input
+                  id="ai-model"
+                  type="text"
+                  placeholder="Type any model (e.g., Model 3)"
+                  value={model}
+                  onChange={(e) => { setModel(e.target.value); setPrediction(null); }}
+                  data-testid="input-ai-model"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ai-year">Year</Label>
+                <Input
+                  id="ai-year"
+                  type="number"
+                  placeholder="2024"
+                  value={year}
+                  onChange={(e) => { setYear(e.target.value); setPrediction(null); }}
+                  data-testid="input-ai-year"
+                />
+              </div>
+
+              <div className="space-y-2 flex items-end">
+                <Button 
+                  onClick={handleSearch} 
+                  disabled={!make || !model || !year || searchMutation.isPending}
+                  className="w-full"
+                  data-testid="button-ai-search"
+                >
+                  <Search className="mr-2 h-4 w-4" />
+                  {searchMutation.isPending ? "Analyzing..." : "Smart Search"}
+                </Button>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="ai-model">Model</Label>
-              <Input
-                id="ai-model"
-                type="text"
-                placeholder="Type any model (e.g., Model 3)"
-                value={model}
-                onChange={(e) => { setModel(e.target.value); setSearchTriggered(false); }}
-                data-testid="input-ai-model"
-              />
-            </div>
+            <div className="border-t pt-4">
+              <p className="text-sm font-medium mb-3 text-muted-foreground">
+                <Mail className="inline h-4 w-4 mr-1" />
+                Optional: Get notified when your prediction is approved
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ai-user-name" className="text-sm text-muted-foreground">Your Name (optional)</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="ai-user-name"
+                      type="text"
+                      placeholder="John Doe"
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      className="pl-9"
+                      data-testid="input-ai-user-name"
+                    />
+                  </div>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="ai-year">Year</Label>
-              <Input
-                id="ai-year"
-                type="number"
-                placeholder="2024"
-                value={year}
-                onChange={(e) => { setYear(e.target.value); setSearchTriggered(false); }}
-                data-testid="input-ai-year"
-              />
-            </div>
-
-            <div className="space-y-2 flex items-end">
-              <Button 
-                onClick={handleSearch} 
-                disabled={!make || !model || !year || isLoading}
-                className="w-full"
-                data-testid="button-ai-search"
-              >
-                <Search className="mr-2 h-4 w-4" />
-                {isLoading ? "Analyzing..." : "Smart Search"}
-              </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="ai-user-email" className="text-sm text-muted-foreground">Your Email (optional)</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="ai-user-email"
+                      type="email"
+                      placeholder="john@example.com"
+                      value={userEmail}
+                      onChange={(e) => setUserEmail(e.target.value)}
+                      className="pl-9"
+                      data-testid="input-ai-user-email"
+                    />
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                If you provide your email, we'll notify you when an admin approves your prediction and it gets added to the database.
+              </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {searchTriggered && prediction && (
+      {prediction && (
         <Card>
           <CardHeader>
             <CardTitle>
@@ -360,10 +417,15 @@ export default function AISearch() {
                     <Sparkles className="h-4 w-4 text-blue-600" />
                     <AlertDescription className="text-blue-800 dark:text-blue-200">
                       <div className="space-y-2">
-                        <p className="font-semibold">{prediction.message}</p>
-                        <p className="text-sm">
+                        <p className="text-lg font-bold">{prediction.message}</p>
+                        <p className="font-medium">
                           This prediction has been saved for admin review. Once approved, it will be added to the database for future searches.
                         </p>
+                        {userEmail && userName && (
+                          <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mt-2">
+                            📧 You'll receive an email at <span className="font-bold">{userEmail}</span> when this prediction is approved!
+                          </p>
+                        )}
                         <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
                           💡 Check the "Pending" tab in the Admin section to review predictions
                         </p>
