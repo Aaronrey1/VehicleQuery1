@@ -11,11 +11,11 @@ import Billing from "@/components/billing";
 import VinDecoder from "@/components/vin-decoder";
 import { PendingApprovals } from "@/components/pending-approvals";
 import ApiKeysManagement from "@/components/api-keys";
-import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck, Hash, LineChart, Key } from "lucide-react";
+import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck, Hash, LineChart, Key, BookOpen } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Home() {
@@ -104,6 +104,15 @@ export default function Home() {
                 Admin
                 {!isAuthenticated && <Lock className="h-3 w-3" />}
               </button>
+              <Link href="/api-docs">
+                <button
+                  className="transition-colors flex items-center gap-1 text-muted-foreground hover:text-primary"
+                  data-testid="nav-api-docs"
+                >
+                  <BookOpen className="h-3 w-3" />
+                  API Docs
+                </button>
+              </Link>
               {isAuthenticated ? (
                 <Button
                   onClick={logout}

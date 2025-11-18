@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth-context";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
+import ApiDocs from "@/pages/api-docs";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -13,6 +14,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
+      <Route path="/api-docs" component={ApiDocs} />
       <Route component={NotFound} />
     </Switch>
   );
