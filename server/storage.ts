@@ -1,4 +1,4 @@
-import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics } from "@shared/schema";
+import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiKey, type InsertApiKey } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, sql, ilike, desc, asc, gte, lte, ne } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -59,6 +59,14 @@ export interface IStorage {
   // Search logging methods
   logSearch(log: InsertSearchLog): Promise<void>;
   getSearchAnalytics(fromDate?: Date, toDate?: Date): Promise<SearchAnalytics>;
+
+  // API Key methods
+  createApiKey(apiKey: InsertApiKey): Promise<ApiKey>;
+  getApiKeys(): Promise<ApiKey[]>;
+  getApiKeyByKey(key: string): Promise<ApiKey | undefined>;
+  updateApiKeyLastUsed(id: string): Promise<void>;
+  revokeApiKey(id: string): Promise<void>;
+  deleteApiKey(id: string): Promise<void>;
 }
 
 // Helper function to map snake_case database columns to camelCase TypeScript properties
@@ -684,6 +692,57 @@ export class DatabaseStorage implements IStorage {
       searchesByCountry,
       recentLogs,
     };
+  }
+
+  async createApiKey(insertApiKey: InsertApiKey): Promise<ApiKey> {
+    // Generate a secure random API key (64 characters)
+    const key = randomUUID() + randomUUID().replace(/-/g, '');
+    
+    const [apiKey] = await db
+      .insert(apiKeys)
+      .values({
+        ...insertApiKey,
+        key,
+      })
+      .returning();
+    
+    return apiKey;
+  }
+
+  async getApiKeys(): Promise<ApiKey[]> {
+    return await db
+      .select()
+      .from(apiKeys)
+      .orderBy(desc(apiKeys.createdAt));
+  }
+
+  async getApiKeyByKey(key: string): Promise<ApiKey | undefined> {
+    const [apiKey] = await db
+      .select()
+      .from(apiKeys)
+      .where(and(eq(apiKeys.key, key), eq(apiKeys.active, true)));
+    
+    return apiKey || undefined;
+  }
+
+  async updateApiKeyLastUsed(id: string): Promise<void> {
+    await db
+      .update(apiKeys)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(apiKeys.id, id));
+  }
+
+  async revokeApiKey(id: string): Promise<void> {
+    await db
+      .update(apiKeys)
+      .set({ active: false })
+      .where(eq(apiKeys.id, id));
+  }
+
+  async deleteApiKey(id: string): Promise<void> {
+    await db
+      .delete(apiKeys)
+      .where(eq(apiKeys.id, id));
   }
 }
 

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, index, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, index, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -253,3 +253,26 @@ export type SearchAnalytics = {
   }>;
   recentLogs: SearchLog[];
 };
+
+// API Keys for external integrations (e.g., Salesforce)
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: varchar("key", { length: 64 }).notNull().unique(),
+  name: text("name").notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  lastUsedAt: timestamp("last_used_at"),
+}, (table) => ({
+  keyIdx: index("api_key_idx").on(table.key),
+  activeIdx: index("api_key_active_idx").on(table.active),
+}));
+
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
+  id: true,
+  key: true, // Key will be auto-generated
+  createdAt: true,
+  lastUsedAt: true,
+});
+
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+export type ApiKey = typeof apiKeys.$inferSelect;
