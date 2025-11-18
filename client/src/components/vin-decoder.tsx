@@ -96,7 +96,7 @@ export default function VinDecoder() {
           <Alert className="mt-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="text-sm">
-              <strong>How it works:</strong> Enter one or more VINs (17-character codes). We'll decode them using the NHTSA database 
+              <strong>How it works:</strong> Enter one or more VINs (standard 17-character codes, or partial VINs with 10-16 characters). We'll decode them using the NHTSA database 
               and automatically run our AI prediction to suggest the best port type and device type based on 31,000+ vehicle records.
             </AlertDescription>
           </Alert>
@@ -114,14 +114,14 @@ export default function VinDecoder() {
                 <Input
                   id="single-vin"
                   type="text"
-                  placeholder="Enter 17-character VIN (e.g., 1HGBH41JXMN109186)"
+                  placeholder="Enter VIN (e.g., 1HGBH41JXMN109186)"
                   value={singleVin}
                   onChange={(e) => setSingleVin(e.target.value.toUpperCase())}
                   maxLength={17}
                   data-testid="input-single-vin"
                 />
                 <p className="text-xs text-muted-foreground">
-                  VIN must be exactly 17 characters (no spaces or special characters)
+                  Standard VINs are 17 characters. Partial VINs (10-16 characters) may decode with warnings.
                 </p>
               </div>
             </TabsContent>

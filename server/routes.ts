@@ -1693,12 +1693,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const vin of vins) {
         const cleanVin = vin.trim().toUpperCase();
         
-        // Validate VIN format (17 characters, alphanumeric except I, O, Q)
-        if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(cleanVin)) {
+        // Validate VIN format (10-17 characters, alphanumeric except I, O, Q)
+        // NHTSA can decode incomplete VINs and will return warnings
+        if (!/^[A-HJ-NPR-Z0-9]{10,17}$/.test(cleanVin)) {
           results.push({
             vin: cleanVin,
             success: false,
-            error: "Invalid VIN format"
+            error: "Invalid VIN format (must be 10-17 alphanumeric characters)"
           });
           continue;
         }
