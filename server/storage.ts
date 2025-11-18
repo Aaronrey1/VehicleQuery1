@@ -1,7 +1,8 @@
-import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiKey, type InsertApiKey } from "@shared/schema";
+import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiKey, type InsertApiKey, type ApiKeyWithPlaintext } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, sql, ilike, desc, asc, gte, lte, ne } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import bcrypt from "bcrypt";
 
 export interface IStorage {
   // User methods (existing)
@@ -61,9 +62,9 @@ export interface IStorage {
   getSearchAnalytics(fromDate?: Date, toDate?: Date): Promise<SearchAnalytics>;
 
   // API Key methods
-  createApiKey(apiKey: InsertApiKey): Promise<ApiKey>;
+  createApiKey(apiKey: InsertApiKey): Promise<ApiKeyWithPlaintext>;
   getApiKeys(): Promise<ApiKey[]>;
-  getApiKeyByKey(key: string): Promise<ApiKey | undefined>;
+  validateApiKey(key: string): Promise<ApiKey | undefined>;
   updateApiKeyLastUsed(id: string): Promise<void>;
   revokeApiKey(id: string): Promise<void>;
   deleteApiKey(id: string): Promise<void>;
@@ -694,19 +695,30 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async createApiKey(insertApiKey: InsertApiKey): Promise<ApiKey> {
-    // Generate a secure random API key (64 characters)
-    const key = randomUUID() + randomUUID().replace(/-/g, '');
+  async createApiKey(insertApiKey: InsertApiKey): Promise<ApiKeyWithPlaintext> {
+    // Generate API key with format: vdb_[prefix]_[secret]
+    const prefix = randomUUID().replace(/-/g, '').substring(0, 8);
+    const secret = randomUUID() + randomUUID().replace(/-/g, '');
+    const key = `vdb_${prefix}_${secret}`;
+    
+    // Hash the full key before storing
+    const saltRounds = 10;
+    const keyHash = await bcrypt.hash(key, saltRounds);
     
     const [apiKey] = await db
       .insert(apiKeys)
       .values({
         ...insertApiKey,
-        key,
+        keyHash,
+        keyPrefix: `vdb_${prefix}`,
       })
       .returning();
     
-    return apiKey;
+    // Return the API key with the plaintext key (only at creation)
+    return {
+      ...apiKey,
+      key,
+    };
   }
 
   async getApiKeys(): Promise<ApiKey[]> {
@@ -716,13 +728,22 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(apiKeys.createdAt));
   }
 
-  async getApiKeyByKey(key: string): Promise<ApiKey | undefined> {
-    const [apiKey] = await db
+  async validateApiKey(key: string): Promise<ApiKey | undefined> {
+    // Get all active API keys
+    const allKeys = await db
       .select()
       .from(apiKeys)
-      .where(and(eq(apiKeys.key, key), eq(apiKeys.active, true)));
+      .where(eq(apiKeys.active, true));
     
-    return apiKey || undefined;
+    // Check each key hash to find a match
+    for (const apiKey of allKeys) {
+      const isValid = await bcrypt.compare(key, apiKey.keyHash);
+      if (isValid) {
+        return apiKey;
+      }
+    }
+    
+    return undefined;
   }
 
   async updateApiKeyLastUsed(id: string): Promise<void> {

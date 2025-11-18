@@ -205,7 +205,7 @@ async function validateApiKey(req: any, res: any, next: any) {
       return res.status(401).json({ message: "API key required. Please provide a valid API key in the X-API-Key header." });
     }
     
-    const keyRecord = await storage.getApiKeyByKey(apiKey);
+    const keyRecord = await storage.validateApiKey(apiKey);
     
     if (!keyRecord) {
       return res.status(401).json({ message: "Invalid or revoked API key" });

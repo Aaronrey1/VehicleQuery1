@@ -12,7 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Copy, Key, Trash2, Ban, CheckCircle, AlertCircle } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertApiKeySchema, type ApiKey } from "@shared/schema";
+import { insertApiKeySchema, type ApiKey, type ApiKeyWithPlaintext } from "@shared/schema";
 import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -40,7 +40,7 @@ export default function ApiKeysManagement() {
       const response = await apiRequest("POST", "/api/api-keys", data);
       return response.json();
     },
-    onSuccess: (data: ApiKey) => {
+    onSuccess: (data: ApiKeyWithPlaintext) => {
       queryClient.invalidateQueries({ queryKey: ["/api/api-keys"] });
       setNewlyCreatedKey(data.key);
       form.reset();
@@ -260,19 +260,12 @@ export default function ApiKeysManagement() {
                         {key.name}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <code className="text-xs bg-muted px-2 py-1 rounded">
-                            {key.key.substring(0, 16)}...{key.key.substring(key.key.length - 4)}
-                          </code>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => copyToClipboard(key.key)}
-                            data-testid={`button-copy-key-${key.id}`}
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </div>
+                        <code className="text-xs bg-muted px-2 py-1 rounded">
+                          {key.keyPrefix}••••••••
+                        </code>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Full key hidden for security
+                        </p>
                       </TableCell>
                       <TableCell>
                         {key.active ? (
