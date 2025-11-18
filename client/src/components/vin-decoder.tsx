@@ -101,7 +101,49 @@ export default function VinDecoder() {
           </Alert>
         </CardHeader>
         <CardContent>
-          <div className="border-b pb-4 mb-4">
+          <Tabs defaultValue="single" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="single" data-testid="tab-single-vin">Single VIN</TabsTrigger>
+              <TabsTrigger value="bulk" data-testid="tab-bulk-vin">Bulk VINs</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="single" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="single-vin">VIN Number</Label>
+                <Input
+                  id="single-vin"
+                  type="text"
+                  placeholder="Enter 17-character VIN (e.g., 1HGBH41JXMN109186)"
+                  value={singleVin}
+                  onChange={(e) => setSingleVin(e.target.value.toUpperCase())}
+                  maxLength={17}
+                  data-testid="input-single-vin"
+                />
+                <p className="text-xs text-muted-foreground">
+                  VIN must be exactly 17 characters (no spaces or special characters)
+                </p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="bulk" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="bulk-vins">VIN Numbers (one per line)</Label>
+                <Textarea
+                  id="bulk-vins"
+                  placeholder="1HGBH41JXMN109186&#10;5UXWX7C5XBA123456&#10;WBADT43452G123456"
+                  value={bulkVins}
+                  onChange={(e) => setBulkVins(e.target.value.toUpperCase())}
+                  rows={8}
+                  data-testid="input-bulk-vins"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter multiple VINs, one per line (up to 50 VINs at a time)
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="border-t pt-4 pb-4 mt-4">
             <p className="text-sm font-medium mb-3 text-muted-foreground">
               <Mail className="inline h-4 w-4 mr-1" />
               Optional: Get notified when your predictions are approved
@@ -143,78 +185,22 @@ export default function VinDecoder() {
               If you provide your email, we'll notify you when an admin approves your predictions and they get added to the database.
             </p>
           </div>
-          
-          <Tabs defaultValue="single" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="single" data-testid="tab-single-vin">Single VIN</TabsTrigger>
-              <TabsTrigger value="bulk" data-testid="tab-bulk-vin">Bulk VINs</TabsTrigger>
-            </TabsList>
 
-            <TabsContent value="single" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="single-vin">VIN Number</Label>
-                <Input
-                  id="single-vin"
-                  type="text"
-                  placeholder="Enter 17-character VIN (e.g., 1HGBH41JXMN109186)"
-                  value={singleVin}
-                  onChange={(e) => setSingleVin(e.target.value.toUpperCase())}
-                  maxLength={17}
-                  data-testid="input-single-vin"
-                />
-                <p className="text-xs text-muted-foreground">
-                  VIN must be exactly 17 characters (no spaces or special characters)
-                </p>
-              </div>
-              <Button 
-                onClick={handleSingleDecode}
-                disabled={decodeMutation.isPending || singleVin.trim().length !== 17}
-                className="w-full"
-                data-testid="button-decode-single"
-              >
-                {decodeMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Decoding...
-                  </>
-                ) : (
-                  <>Decode VIN</>
-                )}
-              </Button>
-            </TabsContent>
-
-            <TabsContent value="bulk" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="bulk-vins">VIN Numbers (one per line)</Label>
-                <Textarea
-                  id="bulk-vins"
-                  placeholder="1HGBH41JXMN109186&#10;5UXWX7C5XBA123456&#10;WBADT43452G123456"
-                  value={bulkVins}
-                  onChange={(e) => setBulkVins(e.target.value.toUpperCase())}
-                  rows={8}
-                  data-testid="input-bulk-vins"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter multiple VINs, one per line (up to 50 VINs at a time)
-                </p>
-              </div>
-              <Button 
-                onClick={handleBulkDecode}
-                disabled={decodeMutation.isPending || bulkVins.trim().length === 0}
-                className="w-full"
-                data-testid="button-decode-bulk"
-              >
-                {decodeMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Decoding {bulkVins.split('\n').filter(v => v.trim()).length} VINs...
-                  </>
-                ) : (
-                  <>Decode VINs</>
-                )}
-              </Button>
-            </TabsContent>
-          </Tabs>
+          <Button 
+            onClick={singleVin ? handleSingleDecode : handleBulkDecode}
+            disabled={decodeMutation.isPending || (!singleVin.trim() && !bulkVins.trim())}
+            className="w-full"
+            data-testid="button-decode-vin"
+          >
+            {decodeMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Decoding...
+              </>
+            ) : (
+              <>Decode VIN(s)</>
+            )}
+          </Button>
         </CardContent>
       </Card>
 

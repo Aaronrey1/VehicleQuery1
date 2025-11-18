@@ -115,7 +115,7 @@ export default function AISearch() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="ai-make">Make</Label>
                 <Input
@@ -151,21 +151,9 @@ export default function AISearch() {
                   data-testid="input-ai-year"
                 />
               </div>
-
-              <div className="space-y-2 flex items-end">
-                <Button 
-                  onClick={handleSearch} 
-                  disabled={!make || !model || !year || searchMutation.isPending}
-                  className="w-full"
-                  data-testid="button-ai-search"
-                >
-                  <Search className="mr-2 h-4 w-4" />
-                  {searchMutation.isPending ? "Analyzing..." : "Smart Search"}
-                </Button>
-              </div>
             </div>
 
-            <div className="border-t pt-4">
+            <div className="border-t pt-4 pb-4">
               <p className="text-sm font-medium mb-3 text-muted-foreground">
                 <Mail className="inline h-4 w-4 mr-1" />
                 Optional: Get notified when your prediction is approved
@@ -207,6 +195,16 @@ export default function AISearch() {
                 If you provide your email, we'll notify you when an admin approves your prediction and it gets added to the database.
               </p>
             </div>
+
+            <Button 
+              onClick={handleSearch} 
+              disabled={!make || !model || !year || searchMutation.isPending}
+              className="w-full"
+              data-testid="button-ai-search"
+            >
+              <Search className="mr-2 h-4 w-4" />
+              {searchMutation.isPending ? "Analyzing..." : "Smart Search"}
+            </Button>
           </div>
         </CardContent>
       </Card>
