@@ -1192,6 +1192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             portType: geminiPrediction.portType,
             confidence: geminiPrediction.confidence,
             googleSearchResults: JSON.stringify({ reasoning: geminiPrediction.reasoning }),
+            source: 'gemini_api',
             status: 'pending',
             userName: userNameStr,
             userEmail: userEmailStr
@@ -1283,6 +1284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           source: 'database_tier1',
           similarVehicles: nearbyYearVehicles.slice(0, 10)
         }),
+        source: 'database_tier1',
         status: 'pending',
         userName: userNameStr,
         userEmail: userEmailStr
@@ -1891,6 +1893,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 vin: cleanVin,
                 similarVehicles: nearbyVehicles.slice(0, 10)
               }),
+              source: 'database_tier1',
               status: 'pending',
               userName: userNameStr,
               userEmail: userEmailStr
@@ -1969,6 +1972,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 vin: cleanVin,
                 similarVehicles: broaderVehicles.slice(0, 10)
               }),
+              source: 'database_tier2',
               status: 'pending',
               userName: userNameStr,
               userEmail: userEmailStr
@@ -2017,6 +2021,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   vin: cleanVin,
                   reasoning: geminiPrediction.reasoning 
                 }),
+                source: 'gemini_api',
                 status: 'pending',
                 userName: userNameStr,
                 userEmail: userEmailStr

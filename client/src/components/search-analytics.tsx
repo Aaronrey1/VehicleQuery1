@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -7,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Download, X, CheckCircle, Clock, XCircle } from "lucide-react";
+import { CalendarIcon, Download, X, CheckCircle, Clock, XCircle, Trash2, Sparkles, Database } from "lucide-react";
 import { format } from "date-fns";
 import type { SearchAnalytics, PendingVehicle } from "@shared/schema";
 
@@ -20,6 +22,7 @@ interface ApprovalAnalytics {
 }
 
 export default function SearchAnalyticsComponent() {
+  const { toast } = useToast();
   const [fromDate, setFromDate] = useState<Date | undefined>();
   const [toDate, setToDate] = useState<Date | undefined>();
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
@@ -86,6 +89,73 @@ export default function SearchAnalyticsComponent() {
     if (status === 'rejected') return 'bg-red-500';
     return 'bg-gray-500';
   };
+
+  const getSourceBadge = (source: string | null) => {
+    if (!source) return <span className="text-muted-foreground italic">-</span>;
+    
+    if (source === 'database_tier1') {
+      return (
+        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+          <Database className="h-3 w-3 mr-1" />
+          DB ±5
+        </Badge>
+      );
+    }
+    if (source === 'database_tier2') {
+      return (
+        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
+          <Database className="h-3 w-3 mr-1" />
+          DB ±10
+        </Badge>
+      );
+    }
+    if (source === 'google_api') {
+      return (
+        <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">
+          <Sparkles className="h-3 w-3 mr-1" />
+          Google
+        </Badge>
+      );
+    }
+    if (source === 'gemini_api') {
+      return (
+        <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
+          <Sparkles className="h-3 w-3 mr-1" />
+          Gemini
+        </Badge>
+      );
+    }
+    if (source === 'veco') {
+      return (
+        <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
+          VECO
+        </Badge>
+      );
+    }
+    return <Badge variant="outline">{source}</Badge>;
+  };
+
+  // Delete mutation for approval analytics
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/pending-vehicles/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [approvalQueryKey()] });
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/stats"] });
+      toast({
+        title: "Record Deleted",
+        description: "The approval record has been permanently deleted and billing stats updated.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete the record. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <section className="space-y-6">
@@ -236,6 +306,7 @@ export default function SearchAnalyticsComponent() {
                       <TableRow>
                         <TableHead>Timestamp</TableHead>
                         <TableHead>Type</TableHead>
+                        <TableHead>Source</TableHead>
                         <TableHead>Make</TableHead>
                         <TableHead>Model</TableHead>
                         <TableHead>Year</TableHead>
@@ -248,7 +319,7 @@ export default function SearchAnalyticsComponent() {
                     <TableBody>
                       {analytics.recentLogs.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={9} className="text-center text-muted-foreground">
+                          <TableCell colSpan={10} className="text-center text-muted-foreground">
                             No search logs yet
                           </TableCell>
                         </TableRow>
@@ -262,6 +333,9 @@ export default function SearchAnalyticsComponent() {
                               <Badge className={getSearchTypeBadgeColor(log.searchType)}>
                                 {log.searchType}
                               </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs font-mono">
+                              {log.endpoint || <span className="text-muted-foreground italic">-</span>}
                             </TableCell>
                             <TableCell className="text-sm">{log.make || '-'}</TableCell>
                             <TableCell className="text-sm">{log.model || '-'}</TableCell>
@@ -392,18 +466,20 @@ export default function SearchAnalyticsComponent() {
                           <TableRow>
                             <TableHead>Date</TableHead>
                             <TableHead>Status</TableHead>
+                            <TableHead>Source</TableHead>
                             <TableHead>Make</TableHead>
                             <TableHead>Model</TableHead>
                             <TableHead>Year</TableHead>
                             <TableHead>Port Type</TableHead>
                             <TableHead>Device Type</TableHead>
                             <TableHead>Confidence</TableHead>
+                            <TableHead>Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {approvalData.records.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={8} className="text-center text-muted-foreground">
+                              <TableCell colSpan={10} className="text-center text-muted-foreground">
                                 No approval records found
                               </TableCell>
                             </TableRow>
@@ -418,6 +494,9 @@ export default function SearchAnalyticsComponent() {
                                     {record.status}
                                   </Badge>
                                 </TableCell>
+                                <TableCell>
+                                  {getSourceBadge(record.source)}
+                                </TableCell>
                                 <TableCell className="font-medium">{record.make}</TableCell>
                                 <TableCell className="font-medium">{record.model}</TableCell>
                                 <TableCell>{record.year}</TableCell>
@@ -425,6 +504,17 @@ export default function SearchAnalyticsComponent() {
                                 <TableCell className="text-sm">{record.deviceType || '-'}</TableCell>
                                 <TableCell className="text-sm">
                                   {record.confidence ? `${record.confidence}%` : '-'}
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => deleteMutation.mutate(record.id)}
+                                    disabled={deleteMutation.isPending}
+                                    data-testid={`button-delete-approval-${idx}`}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
                                 </TableCell>
                               </TableRow>
                             ))

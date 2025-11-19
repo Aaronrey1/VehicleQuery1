@@ -191,6 +191,7 @@ export const pendingVehicles = pgTable("pending_vehicles", {
   portType: text("port_type").notNull(),
   confidence: integer("confidence").notNull(),
   googleSearchResults: text("google_search_results"), // JSON string of Google results
+  source: text("source"), // AI prediction source: 'google_api', 'gemini_api', 'database_tier1', etc.
   status: text("status").notNull().default("pending"), // 'pending', 'approved', 'rejected'
   userName: text("user_name"), // Optional: user's name for email notification
   userEmail: text("user_email"), // Optional: user's email for approval notification
