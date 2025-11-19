@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Download, X, CheckCircle, Clock, XCircle, Trash2, Sparkles, Database } from "lucide-react";
+import { CalendarIcon, Download, X, CheckCircle, Clock, XCircle, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import type { SearchAnalytics, PendingVehicle } from "@shared/schema";
 
@@ -88,51 +88,6 @@ export default function SearchAnalyticsComponent() {
     if (status === 'pending') return 'bg-yellow-500';
     if (status === 'rejected') return 'bg-red-500';
     return 'bg-gray-500';
-  };
-
-  const getSourceBadge = (source: string | null) => {
-    if (!source) return <span className="text-muted-foreground italic">-</span>;
-    
-    if (source === 'database_tier1') {
-      return (
-        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-          <Database className="h-3 w-3 mr-1" />
-          DB ±5
-        </Badge>
-      );
-    }
-    if (source === 'database_tier2') {
-      return (
-        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
-          <Database className="h-3 w-3 mr-1" />
-          DB ±10
-        </Badge>
-      );
-    }
-    if (source === 'google_api') {
-      return (
-        <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">
-          <Sparkles className="h-3 w-3 mr-1" />
-          Google
-        </Badge>
-      );
-    }
-    if (source === 'gemini_api') {
-      return (
-        <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
-          <Sparkles className="h-3 w-3 mr-1" />
-          Gemini
-        </Badge>
-      );
-    }
-    if (source === 'veco') {
-      return (
-        <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
-          VECO
-        </Badge>
-      );
-    }
-    return <Badge variant="outline">{source}</Badge>;
   };
 
   // Delete mutation for approval analytics
@@ -306,7 +261,6 @@ export default function SearchAnalyticsComponent() {
                       <TableRow>
                         <TableHead>Timestamp</TableHead>
                         <TableHead>Type</TableHead>
-                        <TableHead>Source</TableHead>
                         <TableHead>Make</TableHead>
                         <TableHead>Model</TableHead>
                         <TableHead>Year</TableHead>
@@ -319,7 +273,7 @@ export default function SearchAnalyticsComponent() {
                     <TableBody>
                       {analytics.recentLogs.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={10} className="text-center text-muted-foreground">
+                          <TableCell colSpan={9} className="text-center text-muted-foreground">
                             No search logs yet
                           </TableCell>
                         </TableRow>
@@ -333,9 +287,6 @@ export default function SearchAnalyticsComponent() {
                               <Badge className={getSearchTypeBadgeColor(log.searchType)}>
                                 {log.searchType}
                               </Badge>
-                            </TableCell>
-                            <TableCell className="text-xs font-mono">
-                              {log.endpoint || <span className="text-muted-foreground italic">-</span>}
                             </TableCell>
                             <TableCell className="text-sm">{log.make || '-'}</TableCell>
                             <TableCell className="text-sm">{log.model || '-'}</TableCell>
@@ -466,7 +417,6 @@ export default function SearchAnalyticsComponent() {
                           <TableRow>
                             <TableHead>Date</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead>Source</TableHead>
                             <TableHead>Make</TableHead>
                             <TableHead>Model</TableHead>
                             <TableHead>Year</TableHead>
@@ -479,7 +429,7 @@ export default function SearchAnalyticsComponent() {
                         <TableBody>
                           {approvalData.records.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={10} className="text-center text-muted-foreground">
+                              <TableCell colSpan={9} className="text-center text-muted-foreground">
                                 No approval records found
                               </TableCell>
                             </TableRow>
@@ -493,9 +443,6 @@ export default function SearchAnalyticsComponent() {
                                   <Badge className={getStatusBadgeColor(record.status)}>
                                     {record.status}
                                   </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  {getSourceBadge(record.source)}
                                 </TableCell>
                                 <TableCell className="font-medium">{record.make}</TableCell>
                                 <TableCell className="font-medium">{record.model}</TableCell>
