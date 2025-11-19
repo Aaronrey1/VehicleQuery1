@@ -574,6 +574,79 @@ export class DatabaseStorage implements IStorage {
       .from(pendingVehicles)
       .where(eq(pendingVehicles.status, 'rejected'));
 
+    // Get tier approval breakdown (approved/rejected by source)
+    const tierApprovalResults = await db
+      .select({
+        source: pendingVehicles.source,
+        status: pendingVehicles.status,
+        count: sql<number>`count(*)`,
+      })
+      .from(pendingVehicles)
+      .where(sql`${pendingVehicles.status} IN ('approved', 'rejected')`)
+      .groupBy(pendingVehicles.source, pendingVehicles.status);
+
+    // Build tier approval breakdown array
+    const tierApprovalMap = new Map<string, { approved: number; rejected: number }>();
+    tierApprovalResults.forEach((row) => {
+      const source = row.source || 'unknown';
+      if (!tierApprovalMap.has(source)) {
+        tierApprovalMap.set(source, { approved: 0, rejected: 0 });
+      }
+      const counts = tierApprovalMap.get(source)!;
+      if (row.status === 'approved') {
+        counts.approved = Number(row.count);
+      } else if (row.status === 'rejected') {
+        counts.rejected = Number(row.count);
+      }
+    });
+
+    const tierApprovalBreakdown: Array<{ name: string; value: number; color: string }> = [];
+    
+    // Database Tier 1 (±5 years)
+    const tier1Data = tierApprovalMap.get('database_tier1') || { approved: 0, rejected: 0 };
+    if (tier1Data.approved > 0) {
+      tierApprovalBreakdown.push({ name: 'DB ±5yr - Approved', value: tier1Data.approved, color: '#10b981' });
+    }
+    if (tier1Data.rejected > 0) {
+      tierApprovalBreakdown.push({ name: 'DB ±5yr - Rejected', value: tier1Data.rejected, color: '#ef4444' });
+    }
+
+    // Database Tier 2 (±10 years)
+    const tier2Data = tierApprovalMap.get('database_tier2') || { approved: 0, rejected: 0 };
+    if (tier2Data.approved > 0) {
+      tierApprovalBreakdown.push({ name: 'DB ±10yr - Approved', value: tier2Data.approved, color: '#10b981' });
+    }
+    if (tier2Data.rejected > 0) {
+      tierApprovalBreakdown.push({ name: 'DB ±10yr - Rejected', value: tier2Data.rejected, color: '#ef4444' });
+    }
+
+    // Google API
+    const googleData = tierApprovalMap.get('google_api') || { approved: 0, rejected: 0 };
+    if (googleData.approved > 0) {
+      tierApprovalBreakdown.push({ name: 'Google API - Approved', value: googleData.approved, color: '#10b981' });
+    }
+    if (googleData.rejected > 0) {
+      tierApprovalBreakdown.push({ name: 'Google API - Rejected', value: googleData.rejected, color: '#ef4444' });
+    }
+
+    // Gemini AI
+    const geminiData = tierApprovalMap.get('gemini_api') || { approved: 0, rejected: 0 };
+    if (geminiData.approved > 0) {
+      tierApprovalBreakdown.push({ name: 'Gemini AI - Approved', value: geminiData.approved, color: '#10b981' });
+    }
+    if (geminiData.rejected > 0) {
+      tierApprovalBreakdown.push({ name: 'Gemini AI - Rejected', value: geminiData.rejected, color: '#ef4444' });
+    }
+
+    // Unknown/Legacy (NULL source)
+    const unknownData = tierApprovalMap.get('unknown') || { approved: 0, rejected: 0 };
+    if (unknownData.approved > 0) {
+      tierApprovalBreakdown.push({ name: 'Legacy - Approved', value: unknownData.approved, color: '#10b981' });
+    }
+    if (unknownData.rejected > 0) {
+      tierApprovalBreakdown.push({ name: 'Legacy - Rejected', value: unknownData.rejected, color: '#ef4444' });
+    }
+
     const searchTierBreakdown = [
       { name: 'Exact Matches', value: Number(exactMatchCount?.count || 0), color: '#10b981' },
       { name: 'Database Pattern (±5 years)', value: Number(tier1Count?.count || 0), color: '#3b82f6' },
@@ -591,6 +664,7 @@ export class DatabaseStorage implements IStorage {
     return {
       searchTierBreakdown,
       approvalAnalytics,
+      tierApprovalBreakdown,
     };
   }
 
