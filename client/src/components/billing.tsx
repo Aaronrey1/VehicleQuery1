@@ -298,18 +298,29 @@ export default function Billing() {
                       <TableCell>
                         {log.source === 'database_tier1' && (
                           <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                            Tier 1
+                            Database ±5
                           </Badge>
                         )}
                         {log.source === 'database_tier2' && (
                           <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
-                            Tier 2
+                            Database ±10
                           </Badge>
                         )}
-                        {(log.source === 'google_api' || log.source === 'gemini_api') && (
+                        {log.source === 'google_api' && (
+                          <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            Google API
+                          </Badge>
+                        )}
+                        {log.source === 'gemini_api' && (
                           <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
                             <Sparkles className="h-3 w-3 mr-1" />
-                            Gemini
+                            Gemini AI
+                          </Badge>
+                        )}
+                        {log.source === 'veco' && (
+                          <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
+                            VECO API
                           </Badge>
                         )}
                       </TableCell>
