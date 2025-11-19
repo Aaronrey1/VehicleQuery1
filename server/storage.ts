@@ -574,11 +574,11 @@ export class DatabaseStorage implements IStorage {
       .from(pendingVehicles)
       .where(eq(pendingVehicles.status, 'rejected'));
 
-    // Get tier approval breakdown (approved/rejected by source)
+    // Get tier breakdown with pending/approved/rejected for each tier
     // Join with ai_search_logs to get the actual tier/source for each prediction
-    const tierApprovalResults = await db
+    const tierBreakdownResults = await db
       .select({
-        source: sql<string>`COALESCE(${aiSearchLogs.source}, 'unknown')`,
+        source: sql<string>`COALESCE(${aiSearchLogs.source}, 'unmatched')`,
         status: pendingVehicles.status,
         count: sql<number>`count(*)`,
       })
@@ -586,70 +586,50 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(aiSearchLogs, 
         sql`${pendingVehicles.make} = ${aiSearchLogs.make} AND ${pendingVehicles.model} = ${aiSearchLogs.model} AND ${pendingVehicles.year} = ${aiSearchLogs.year}`
       )
-      .where(sql`${pendingVehicles.status} IN ('approved', 'rejected')`)
       .groupBy(aiSearchLogs.source, pendingVehicles.status);
 
-    // Build tier approval breakdown array
-    const tierApprovalMap = new Map<string, { approved: number; rejected: number }>();
-    tierApprovalResults.forEach((row) => {
-      const source = row.source || 'unknown';
-      if (!tierApprovalMap.has(source)) {
-        tierApprovalMap.set(source, { approved: 0, rejected: 0 });
+    // Build tier map with pending/approved/rejected counts
+    const tierMap = new Map<string, { pending: number; approved: number; rejected: number }>();
+    tierBreakdownResults.forEach((row) => {
+      const source = row.source || 'unmatched';
+      if (!tierMap.has(source)) {
+        tierMap.set(source, { pending: 0, approved: 0, rejected: 0 });
       }
-      const counts = tierApprovalMap.get(source)!;
-      if (row.status === 'approved') {
+      const counts = tierMap.get(source)!;
+      if (row.status === 'pending') {
+        counts.pending = Number(row.count);
+      } else if (row.status === 'approved') {
         counts.approved = Number(row.count);
       } else if (row.status === 'rejected') {
         counts.rejected = Number(row.count);
       }
     });
 
-    const tierApprovalBreakdown: Array<{ name: string; value: number; color: string }> = [];
-    
-    // Database Tier 1 (±5 years) - Blue shades
-    const tier1Data = tierApprovalMap.get('database_tier1') || { approved: 0, rejected: 0 };
-    if (tier1Data.approved > 0) {
-      tierApprovalBreakdown.push({ name: 'DB ±5yr - Approved', value: tier1Data.approved, color: '#3b82f6' }); // Blue
-    }
-    if (tier1Data.rejected > 0) {
-      tierApprovalBreakdown.push({ name: 'DB ±5yr - Rejected', value: tier1Data.rejected, color: '#1e40af' }); // Dark blue
-    }
+    // Helper function to create tier data
+    const createTierData = (source: string, name: string, baseColor: string) => {
+      const data = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
+      const total = data.pending + data.approved + data.rejected;
+      
+      if (total === 0) return null;
+      
+      return {
+        name,
+        data: [
+          { name: 'Pending', value: data.pending, color: '#f59e0b' },
+          { name: 'Approved', value: data.approved, color: '#10b981' },
+          { name: 'Rejected', value: data.rejected, color: '#ef4444' },
+        ].filter(item => item.value > 0),
+        total,
+      };
+    };
 
-    // Database Tier 2 (±10 years) - Cyan shades
-    const tier2Data = tierApprovalMap.get('database_tier2') || { approved: 0, rejected: 0 };
-    if (tier2Data.approved > 0) {
-      tierApprovalBreakdown.push({ name: 'DB ±10yr - Approved', value: tier2Data.approved, color: '#06b6d4' }); // Cyan
-    }
-    if (tier2Data.rejected > 0) {
-      tierApprovalBreakdown.push({ name: 'DB ±10yr - Rejected', value: tier2Data.rejected, color: '#0e7490' }); // Dark cyan
-    }
-
-    // Google API - Orange shades
-    const googleData = tierApprovalMap.get('google_api') || { approved: 0, rejected: 0 };
-    if (googleData.approved > 0) {
-      tierApprovalBreakdown.push({ name: 'Google API - Approved', value: googleData.approved, color: '#f59e0b' }); // Orange
-    }
-    if (googleData.rejected > 0) {
-      tierApprovalBreakdown.push({ name: 'Google API - Rejected', value: googleData.rejected, color: '#b45309' }); // Dark orange
-    }
-
-    // Gemini AI - Purple shades
-    const geminiData = tierApprovalMap.get('gemini_api') || { approved: 0, rejected: 0 };
-    if (geminiData.approved > 0) {
-      tierApprovalBreakdown.push({ name: 'Gemini AI - Approved', value: geminiData.approved, color: '#a855f7' }); // Purple
-    }
-    if (geminiData.rejected > 0) {
-      tierApprovalBreakdown.push({ name: 'Gemini AI - Rejected', value: geminiData.rejected, color: '#7e22ce' }); // Dark purple
-    }
-
-    // Unmatched predictions - Gray shades (couldn't match to ai_search_logs)
-    const unknownData = tierApprovalMap.get('unknown') || { approved: 0, rejected: 0 };
-    if (unknownData.approved > 0) {
-      tierApprovalBreakdown.push({ name: 'Unmatched - Approved', value: unknownData.approved, color: '#6b7280' }); // Gray
-    }
-    if (unknownData.rejected > 0) {
-      tierApprovalBreakdown.push({ name: 'Unmatched - Rejected', value: unknownData.rejected, color: '#374151' }); // Dark gray
-    }
+    const individualTierCharts = {
+      tier1: createTierData('database_tier1', 'DB ±5yr', '#3b82f6'),
+      tier2: createTierData('database_tier2', 'DB ±10yr', '#06b6d4'),
+      googleApi: createTierData('google_api', 'Google API', '#f59e0b'),
+      geminiAi: createTierData('gemini_api', 'Gemini AI', '#a855f7'),
+      unmatched: createTierData('unmatched', 'Unmatched', '#6b7280'),
+    };
 
     const searchTierBreakdown = [
       { name: 'Exact Matches', value: Number(exactMatchCount?.count || 0), color: '#10b981' },
@@ -668,7 +648,7 @@ export class DatabaseStorage implements IStorage {
     return {
       searchTierBreakdown,
       approvalAnalytics,
-      tierApprovalBreakdown,
+      individualTierCharts,
     };
   }
 
