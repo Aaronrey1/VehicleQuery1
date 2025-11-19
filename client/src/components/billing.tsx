@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { DollarSign, TrendingUp, Database, Sparkles, AlertCircle, CreditCard, CalendarIcon } from "lucide-react";
-import type { BillingStats } from "@shared/schema";
+import { DollarSign, TrendingUp, Database, Sparkles, AlertCircle, CreditCard, CalendarIcon, PieChart as PieChartIcon } from "lucide-react";
+import type { BillingStats, BillingPieCharts } from "@shared/schema";
 import { formatDistanceToNow, format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 
 export default function Billing() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
@@ -18,6 +19,10 @@ export default function Billing() {
 
   const { data: stats, isLoading } = useQuery<BillingStats>({
     queryKey: ['/api/billing/stats'],
+  });
+
+  const { data: pieCharts, isLoading: pieChartsLoading } = useQuery<BillingPieCharts>({
+    queryKey: ['/api/billing/pie-charts'],
   });
 
   // Filter logs based on date range
@@ -217,6 +222,79 @@ export default function Billing() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pie Charts Section */}
+      {!pieChartsLoading && pieCharts && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieChartIcon className="h-5 w-5" />
+                Search Tier Breakdown
+              </CardTitle>
+              <CardDescription>
+                Distribution of searches by tier (exact, database pattern, AI)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={pieCharts.searchTierBreakdown}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {pieCharts.searchTierBreakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieChartIcon className="h-5 w-5" />
+                Approval Analytics
+              </CardTitle>
+              <CardDescription>
+                Status of AI predictions (pending, approved, rejected)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={pieCharts.approvalAnalytics}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {pieCharts.approvalAnalytics.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Pricing Info */}
       <Alert>
