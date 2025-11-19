@@ -60,6 +60,13 @@ PostgreSQL is used as the database, accessed via the Neon serverless driver. Dri
 
 ## Recent Changes
 - **Date: November 19, 2025**
+  - **Billing Pie Charts:** Added two visual analytics pie charts to the Billing tab for better data insights:
+    1. **Search Tier Breakdown**: Displays distribution of searches by tier (Exact Matches in green, Database Pattern ±5 years in blue, Gemini AI in purple). Helps visualize how searches are categorized and which tiers are most used.
+    2. **Approval Analytics**: Shows status of AI predictions (Pending in orange, Approved in green, Rejected in red). Provides quick overview of prediction approval workflow status.
+    - Created `/api/billing/pie-charts` endpoint that returns BillingPieCharts data with color-coded categories
+    - Implemented `getBillingPieCharts()` storage method querying search_logs, ai_search_logs, and pending_vehicles tables
+    - Frontend uses Recharts library (PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip) for responsive, interactive visualizations
+    - Charts automatically filter out zero values and display only meaningful data with labels
   - **Exact Match Tracking:** Added `exactMatch` boolean field to `search_logs` table to distinguish free exact database matches from billable AI predictions. This enables accurate analytics breakdown showing "X exact / Y predictions" for AI Search and VIN Decoder. Search Analytics now displays this breakdown under each search type total. AI Search endpoint logs `exactMatch=true` for database hits, `false` for predictions (database tier1 or Gemini AI). VIN Decoder logs each VIN separately with appropriate exact match flag. Backfilled 86 historical records with `exactMatch=false` for legacy data consistency.
   - **Simplified AI Prediction Logic:** Changed from 4-tier to 3-tier system by removing ±10 years database tier and Pentaho API. New flow: exact match → ±5 years → Gemini AI directly. This reduces complexity and API costs while maintaining prediction quality.
   - Added API Call Analytics dashboard to track API key usage, endpoint calls, and timestamps
