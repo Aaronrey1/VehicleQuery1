@@ -244,7 +244,7 @@ export default function Billing() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''}
+                    label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
@@ -278,7 +278,7 @@ export default function Billing() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''}
+                    label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
