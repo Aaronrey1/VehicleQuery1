@@ -228,6 +228,7 @@ export const searchLogs = pgTable("search_logs", {
   userEmail: text("user_email"), // Optional: user's email who performed the search
   apiKeyId: varchar("api_key_id"), // Optional: API key used for this search
   endpoint: text("endpoint"), // API endpoint called (e.g., '/api/ai/predict', '/api/vin/decode')
+  exactMatch: boolean("exact_match"), // For AI/VIN searches: true if found exact match, false if needed prediction
 }, (table) => ({
   timestampIdx: index("search_logs_timestamp_idx").on(table.timestamp),
   searchTypeIdx: index("search_logs_type_idx").on(table.searchType),

@@ -1023,22 +1023,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userNameStr = userName ? String(userName) : undefined;
       const userEmailStr = userEmail ? String(userEmail) : undefined;
       
-      // Log the AI search
-      await storage.logSearch({
-        searchType: 'ai',
-        make: make as string,
-        model: model as string,
-        year: yearNum,
-        country: getClientCountry(req),
-        ipAddress: getClientIp(req),
-        resultsCount: 0, // Will be 0 or 1 depending on exact match
-        queryDetails: null,
-        userName: userNameStr || null,
-        userEmail: userEmailStr || null,
-        apiKeyId: (req as any).apiKeyId || null,
-        endpoint: '/api/ai/predict',
-      });
-      
       // Normalize the make to handle common aliases (Chevy → Chevrolet, VW → Volkswagen, etc.)
       const normalizedMake = normalizeMake(make as string);
 
@@ -1127,6 +1111,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const matchedVehicle = exactMatch.vehicles[0];
         const isAllModelsFallback = matchedVehicle.model === 'ALL MODELS';
         
+        // Log exact match search
+        await storage.logSearch({
+          searchType: 'ai',
+          make: make as string,
+          model: model as string,
+          year: yearNum,
+          country: getClientCountry(req),
+          ipAddress: getClientIp(req),
+          resultsCount: 1,
+          queryDetails: null,
+          userName: userNameStr || null,
+          userEmail: userEmailStr || null,
+          apiKeyId: (req as any).apiKeyId || null,
+          endpoint: '/api/ai/predict',
+          exactMatch: true,
+        });
+        
         return res.json({
           found: true,
           exactMatch: matchedVehicle,
@@ -1172,6 +1173,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const geminiPrediction = await predictVehicleSpecs(make as string, model as string, yearNum);
 
         if (geminiPrediction) {
+          // Log Gemini AI prediction search
+          await storage.logSearch({
+            searchType: 'ai',
+            make: make as string,
+            model: model as string,
+            year: yearNum,
+            country: getClientCountry(req),
+            ipAddress: getClientIp(req),
+            resultsCount: 0,
+            queryDetails: null,
+            userName: userNameStr || null,
+            userEmail: userEmailStr || null,
+            apiKeyId: (req as any).apiKeyId || null,
+            endpoint: '/api/ai/predict',
+            exactMatch: false,
+          });
+          
           // Log Gemini AI search (Estimated $0.001-0.01 per request)
           // Using 10 as cost = $0.01 (1 cent) as conservative estimate
           await storage.logAiSearch({
@@ -1262,6 +1280,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tier1DeviceConfidence = Math.round(deviceConfidence);
       const avgConfidence = Math.round((tier1PortConfidence + tier1DeviceConfidence) / 2);
 
+      // Log database tier1 prediction search
+      await storage.logSearch({
+        searchType: 'ai',
+        make: make as string,
+        model: model as string,
+        year: yearNum,
+        country: getClientCountry(req),
+        ipAddress: getClientIp(req),
+        resultsCount: 0,
+        queryDetails: null,
+        userName: userNameStr || null,
+        userEmail: userEmailStr || null,
+        apiKeyId: (req as any).apiKeyId || null,
+        endpoint: '/api/ai/predict',
+        exactMatch: false,
+      });
+      
       // Log Tier 1 search (Database - Free)
       await storage.logAiSearch({
         make: normalizedMake || String(make),
