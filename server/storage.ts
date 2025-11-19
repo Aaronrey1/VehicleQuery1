@@ -1,4 +1,4 @@
-import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiCallAnalytics, type ApiKey, type InsertApiKey, type ApiKeyWithPlaintext } from "@shared/schema";
+import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type BillingPieCharts, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiCallAnalytics, type ApiKey, type InsertApiKey, type ApiKeyWithPlaintext } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, sql, ilike, desc, asc, gte, lte, ne } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -47,6 +47,7 @@ export interface IStorage {
   // AI Search logging methods
   logAiSearch(log: InsertAiSearchLog): Promise<void>;
   getBillingStats(): Promise<BillingStats>;
+  getBillingPieCharts(): Promise<BillingPieCharts>;
   getTodayGeminiSearchCount(): Promise<number>;
 
   // Pending vehicles methods (Google API results awaiting approval)
@@ -526,6 +527,58 @@ export class DatabaseStorage implements IStorage {
       tier2Searches: Number(tier2Count?.count || 0),
       totalCostCents: Number(costSum?.sum || 0),
       recentLogs,
+    };
+  }
+
+  async getBillingPieCharts(): Promise<BillingPieCharts> {
+    const [exactMatchCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(searchLogs)
+      .where(and(
+        sql`${searchLogs.searchType} IN ('ai', 'vin')`,
+        eq(searchLogs.exactMatch, true)
+      ));
+
+    const [tier1Count] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'database_tier1'));
+
+    const [geminiCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'gemini_api'));
+
+    const [pendingCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(pendingVehicles)
+      .where(eq(pendingVehicles.status, 'pending'));
+
+    const [approvedCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(pendingVehicles)
+      .where(eq(pendingVehicles.status, 'approved'));
+
+    const [rejectedCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(pendingVehicles)
+      .where(eq(pendingVehicles.status, 'rejected'));
+
+    const searchTierBreakdown = [
+      { name: 'Exact Matches', value: Number(exactMatchCount?.count || 0), color: '#10b981' },
+      { name: 'Database Pattern (±5 years)', value: Number(tier1Count?.count || 0), color: '#3b82f6' },
+      { name: 'Gemini AI', value: Number(geminiCount?.count || 0), color: '#a855f7' },
+    ];
+
+    const approvalAnalytics = [
+      { name: 'Pending', value: Number(pendingCount?.count || 0), color: '#f59e0b' },
+      { name: 'Approved', value: Number(approvedCount?.count || 0), color: '#10b981' },
+      { name: 'Rejected', value: Number(rejectedCount?.count || 0), color: '#ef4444' },
+    ];
+
+    return {
+      searchTierBreakdown,
+      approvalAnalytics,
     };
   }
 

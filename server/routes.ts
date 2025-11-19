@@ -1362,6 +1362,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/billing/pie-charts", async (req, res) => {
+    try {
+      const pieCharts = await storage.getBillingPieCharts();
+      res.json(pieCharts);
+    } catch (error) {
+      console.error("Billing pie charts error:", error);
+      res.status(500).json({ message: "Failed to get billing pie charts" });
+    }
+  });
+
   // Get dashboard analytics (real data instead of mock)
   app.get("/api/analytics/dashboard", async (req, res) => {
     try {
