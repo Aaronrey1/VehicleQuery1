@@ -184,6 +184,7 @@ export type BillingStats = {
 export type BillingPieCharts = {
   searchTierBreakdown: Array<{ name: string; value: number; color: string }>;
   approvalAnalytics: Array<{ name: string; value: number; color: string }>;
+  tierApprovalBreakdown: Array<{ name: string; value: number; color: string }>;
 };
 
 // Pending vehicles from Google API awaiting admin approval
