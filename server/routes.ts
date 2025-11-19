@@ -1870,16 +1870,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const tier1DeviceConfidence = Math.round(deviceConfidence);
             const avgConfidence = Math.round((tier1PortConfidence + tier1DeviceConfidence) / 2);
 
-            // Log Tier 1 search (Database - Free)
-            await storage.logAiSearch({
-              make: normalizedMake || make,
-              model: model,
-              year: year,
-              source: 'database_tier1',
-              confidence: avgConfidence,
-              cost: 0 // Database searches are free
-            });
-
             // Save Tier 1 prediction to pending for admin approval
             await storage.createPendingVehicle({
               make: normalizedMake || make,
@@ -1949,16 +1939,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const tier2DeviceConfidence = Math.round(deviceConfidence * 0.6);
             const avgConfidence = Math.round((tier2PortConfidence + tier2DeviceConfidence) / 2);
 
-            // Log Tier 2 search (Database - Free)
-            await storage.logAiSearch({
-              make: normalizedMake || make,
-              model: model,
-              year: year,
-              source: 'database_tier2',
-              confidence: avgConfidence,
-              cost: 0 // Database searches are free
-            });
-
             // Save Tier 2 prediction to pending for admin approval
             await storage.createPendingVehicle({
               make: normalizedMake || make,
@@ -1998,16 +1978,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const geminiPrediction = await predictVehicleSpecs(make, model, year);
             
             if (geminiPrediction) {
-              // Log Gemini AI search (Tier 3 - Estimated $0.01 per request)
-              await storage.logAiSearch({
-                make: normalizedMake || make,
-                model: model,
-                year: year,
-                source: 'gemini_api',
-                confidence: geminiPrediction.confidence,
-                cost: 10 // 10 tenths of a cent = $0.01 (conservative estimate)
-              });
-
               // Save Gemini result to pending for admin approval
               await storage.createPendingVehicle({
                 make: normalizedMake || make,
