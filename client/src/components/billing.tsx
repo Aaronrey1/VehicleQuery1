@@ -261,46 +261,45 @@ export default function Billing() {
               </CardContent>
             </Card>
 
-            {pieCharts.tierApprovalBreakdown.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <PieChartIcon className="h-5 w-5" />
-                    Tier Approval Breakdown
-                  </CardTitle>
-                  <CardDescription>
-                    Approved vs rejected predictions by tier
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={350}>
-                    <PieChart>
-                      <Pie
-                        data={pieCharts.tierApprovalBreakdown}
-                        cx="50%"
-                        cy="45%"
-                        outerRadius={90}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {pieCharts.tierApprovalBreakdown.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        formatter={(value, name) => [`${value} predictions`, name]}
-                      />
-                      <Legend 
-                        verticalAlign="bottom" 
-                        height={80}
-                        wrapperStyle={{ fontSize: '12px' }}
-                        formatter={(value, entry: any) => `${value}: ${entry.payload.value}`}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            )}
+{/* Individual tier charts */}
+            {Object.entries(pieCharts.individualTierCharts).map(([key, tierData]) => {
+              if (!tierData) return null;
+              return (
+                <Card key={key}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <PieChartIcon className="h-5 w-5" />
+                      {tierData.name}
+                    </CardTitle>
+                    <CardDescription>
+                      {tierData.total} total predictions
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={tierData.data}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
+                          outerRadius={70}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {tierData.data.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value, name) => [`${value} predictions`, name]} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
           <Card>
