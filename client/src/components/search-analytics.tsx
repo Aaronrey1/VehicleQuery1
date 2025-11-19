@@ -210,6 +210,9 @@ export default function SearchAnalyticsComponent() {
                     {analytics.searchesByType.ai.toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">AI Search</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {analytics.exactMatchBreakdown.ai.exactMatches} exact / {analytics.exactMatchBreakdown.ai.predictions} predictions
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-600 mb-2" data-testid="analytics-bulk-searches">
@@ -222,6 +225,9 @@ export default function SearchAnalyticsComponent() {
                     {analytics.searchesByType.vin.toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">VIN Decoder</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {analytics.exactMatchBreakdown.vin.exactMatches} exact / {analytics.exactMatchBreakdown.vin.predictions} predictions
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-pink-600 mb-2" data-testid="analytics-geometris-searches">

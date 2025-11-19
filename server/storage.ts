@@ -685,6 +685,44 @@ export class DatabaseStorage implements IStorage {
       count: Number(row.count),
     }));
 
+    // Get exact match breakdown for AI searches
+    const [aiExactMatches] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(searchLogs)
+      .where(and(
+        whereClause,
+        eq(searchLogs.searchType, 'ai'),
+        eq(searchLogs.exactMatch, true)
+      ) as any);
+    
+    const [aiPredictions] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(searchLogs)
+      .where(and(
+        whereClause,
+        eq(searchLogs.searchType, 'ai'),
+        eq(searchLogs.exactMatch, false)
+      ) as any);
+
+    // Get exact match breakdown for VIN searches
+    const [vinExactMatches] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(searchLogs)
+      .where(and(
+        whereClause,
+        eq(searchLogs.searchType, 'vin'),
+        eq(searchLogs.exactMatch, true)
+      ) as any);
+    
+    const [vinPredictions] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(searchLogs)
+      .where(and(
+        whereClause,
+        eq(searchLogs.searchType, 'vin'),
+        eq(searchLogs.exactMatch, false)
+      ) as any);
+
     // Get recent logs
     const recentLogs = await db
       .select()
@@ -696,6 +734,16 @@ export class DatabaseStorage implements IStorage {
     return {
       totalSearches,
       searchesByType,
+      exactMatchBreakdown: {
+        ai: {
+          exactMatches: Number(aiExactMatches?.count || 0),
+          predictions: Number(aiPredictions?.count || 0),
+        },
+        vin: {
+          exactMatches: Number(vinExactMatches?.count || 0),
+          predictions: Number(vinPredictions?.count || 0),
+        },
+      },
       searchesByCountry,
       recentLogs,
     };

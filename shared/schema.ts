@@ -253,6 +253,10 @@ export type SearchAnalytics = {
     vin: number;
     geometris: number;
   };
+  exactMatchBreakdown: {
+    ai: { exactMatches: number; predictions: number };
+    vin: { exactMatches: number; predictions: number };
+  };
   searchesByCountry: Array<{
     country: string;
     count: number;
