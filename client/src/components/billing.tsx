@@ -273,15 +273,13 @@ export default function Billing() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={350}>
                     <PieChart>
                       <Pie
                         data={pieCharts.tierApprovalBreakdown}
                         cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
-                        outerRadius={80}
+                        cy="45%"
+                        outerRadius={90}
                         fill="#8884d8"
                         dataKey="value"
                       >
@@ -289,8 +287,15 @@ export default function Billing() {
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip />
-                      <Legend />
+                      <Tooltip 
+                        formatter={(value, name) => [`${value} predictions`, name]}
+                      />
+                      <Legend 
+                        verticalAlign="bottom" 
+                        height={80}
+                        wrapperStyle={{ fontSize: '12px' }}
+                        formatter={(value, entry: any) => `${value}: ${entry.payload.value}`}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>
