@@ -1166,176 +1166,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (nearbyYearVehicles.length === 0) {
-        // No similar vehicles in ±5 year range - try broader ±10 year match (same make+model)
-        const allSimilarVehiclesBroader = await storage.searchVehicles({
-          make: normalizedMake,
-          model: normalizedModel,
-          limit: 1000,
-          offset: 0,
-          sortBy: "year",
-          sortOrder: "desc"
-        });
+        // No similar vehicles in ±5 year range - go directly to Gemini AI
+        console.log(`No database matches for ${make} ${model} ${yearNum}, calling Gemini AI...`);
+        
+        const geminiPrediction = await predictVehicleSpecs(make as string, model as string, yearNum);
 
-        // Filter to vehicles within ±10 years of requested year
-        const broaderYearWindow = 10;
-        const nearbyManufacturerVehicles = allSimilarVehiclesBroader.vehicles.filter(v => {
-          // Check if vehicle matches using either single year or year range
-          if (v.year !== null && v.year !== undefined) {
-            return Math.abs(v.year - yearNum) <= broaderYearWindow;
-          } else if (v.yearFrom !== null && v.yearTo !== null) {
-            // Check if either the range overlaps with the window or the requested year is in range
-            return (yearNum >= v.yearFrom && yearNum <= v.yearTo) ||
-                   (Math.abs(v.yearFrom - yearNum) <= broaderYearWindow) ||
-                   (Math.abs(v.yearTo - yearNum) <= broaderYearWindow);
-          }
-          return false;
-        });
+        if (geminiPrediction) {
+          // Log Gemini AI search (Estimated $0.001-0.01 per request)
+          // Using 10 as cost = $0.01 (1 cent) as conservative estimate
+          await storage.logAiSearch({
+            make: normalizedMake || String(make),
+            model: String(model),
+            year: yearNum,
+            source: 'gemini_api',
+            confidence: geminiPrediction.confidence,
+            cost: 10 // 10 tenths of a cent = $0.01 (conservative estimate)
+          });
 
-        if (nearbyManufacturerVehicles.length === 0) {
-          // No database matches found - try Tier 3: Gemini AI
-          console.log(`No database matches for ${make} ${model} ${yearNum}, calling Gemini AI...`);
-          
-          const geminiPrediction = await predictVehicleSpecs(make as string, model as string, yearNum);
+          // Store Gemini result as pending vehicle for admin approval
+          await storage.createPendingVehicle({
+            make: normalizedMake || '',
+            model: String(model),
+            year: yearNum,
+            deviceType: geminiPrediction.deviceType,
+            portType: geminiPrediction.portType,
+            confidence: geminiPrediction.confidence,
+            googleSearchResults: JSON.stringify({ reasoning: geminiPrediction.reasoning }),
+            status: 'pending',
+            userName: userNameStr,
+            userEmail: userEmailStr
+          });
 
-          if (geminiPrediction) {
-            // Log Gemini AI search (Tier 3 - Estimated $0.001-0.01 per request)
-            // Using 10 as cost = $0.01 (1 cent) as conservative estimate
-            await storage.logAiSearch({
-              make: normalizedMake || String(make),
-              model: String(model),
-              year: yearNum,
-              source: 'gemini_api',
-              confidence: geminiPrediction.confidence,
-              cost: 10 // 10 tenths of a cent = $0.01 (conservative estimate)
-            });
-
-            // Store Gemini result as pending vehicle for admin approval
-            await storage.createPendingVehicle({
-              make: normalizedMake || '',
-              model: String(model),
-              year: yearNum,
-              deviceType: geminiPrediction.deviceType,
-              portType: geminiPrediction.portType,
-              confidence: geminiPrediction.confidence,
-              googleSearchResults: JSON.stringify({ reasoning: geminiPrediction.reasoning }),
-              status: 'pending',
-              userName: userNameStr,
-              userEmail: userEmailStr
-            });
-
-            return res.json({
-              found: false,
-              pendingApproval: true,
-              message: 'Prediction submitted for admin approval',
-              predictions: {
-                portType: geminiPrediction.portType,
-                portConfidence: geminiPrediction.confidence,
-                deviceType: geminiPrediction.deviceType,
-                deviceConfidence: geminiPrediction.confidence,
-                basedOn: 0,
-                source: 'gemini',
-                searchResults: geminiPrediction.reasoning,
-                similarVehicles: []
-              },
-              yearWarning,
-              makeModelWarning,
-              searchPath: [
-                { source: 'Database (Exact Match)', checked: true, found: false },
-                { source: 'Database (±5 years)', checked: true, found: false },
-                { source: 'Database (±10 years)', checked: true, found: false },
-                { source: 'Gemini AI', checked: true, found: true }
-              ]
-            });
-          }
-
-          // Gemini failed - no more prediction sources available
           return res.json({
             found: false,
-            predictions: null,
+            pendingApproval: true,
+            message: 'Prediction submitted for admin approval',
+            predictions: {
+              portType: geminiPrediction.portType,
+              portConfidence: geminiPrediction.confidence,
+              deviceType: geminiPrediction.deviceType,
+              deviceConfidence: geminiPrediction.confidence,
+              basedOn: 0,
+              source: 'gemini',
+              searchResults: geminiPrediction.reasoning,
+              similarVehicles: []
+            },
             yearWarning,
             makeModelWarning,
             searchPath: [
               { source: 'Database (Exact Match)', checked: true, found: false },
               { source: 'Database (±5 years)', checked: true, found: false },
-              { source: 'Database (±10 years)', checked: true, found: false },
-              { source: 'Gemini AI', checked: true, found: false }
+              { source: 'Gemini AI', checked: true, found: true }
             ]
           });
         }
 
-        // Use nearby manufacturer vehicles for broader prediction
-        // TWO-STEP: First predict port type, then device type
-        
-        // STEP 1: Predict PORT TYPE from manufacturer vehicles
-        const portTypeCounts = new Map<string, number>();
-        nearbyManufacturerVehicles.forEach(v => {
-          portTypeCounts.set(v.portType, (portTypeCounts.get(v.portType) || 0) + 1);
-        });
-
-        const mostCommonPort = Array.from(portTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
-        const portConfidence = (mostCommonPort[1] / nearbyManufacturerVehicles.length) * 100;
-
-        // STEP 2: Filter to vehicles with that port type, then predict DEVICE TYPE
-        const vehiclesWithPort = nearbyManufacturerVehicles.filter(v => v.portType === mostCommonPort[0]);
-        
-        const deviceTypeCounts = new Map<string, number>();
-        vehiclesWithPort.forEach(v => {
-          deviceTypeCounts.set(v.deviceType, (deviceTypeCounts.get(v.deviceType) || 0) + 1);
-        });
-
-        const mostCommonDevice = Array.from(deviceTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
-        const deviceConfidence = (mostCommonDevice[1] / vehiclesWithPort.length) * 100;
-
-        const tier2PortConfidence = Math.round(portConfidence * 0.6);
-        const tier2DeviceConfidence = Math.round(deviceConfidence * 0.6);
-        const avgConfidence = Math.round((tier2PortConfidence + tier2DeviceConfidence) / 2);
-
-        // Log Tier 2 search (Database - Free)
-        await storage.logAiSearch({
-          make: normalizedMake || String(make),
-          model: String(model),
-          year: yearNum,
-          source: 'database_tier2',
-          confidence: avgConfidence,
-          cost: 0 // Database searches are free
-        });
-
-        // Save Tier 2 prediction to pending for admin approval
-        await storage.createPendingVehicle({
-          make: normalizedMake || '',
-          model: String(model),
-          year: yearNum,
-          deviceType: mostCommonDevice[0],
-          portType: mostCommonPort[0],
-          confidence: avgConfidence,
-          googleSearchResults: JSON.stringify({
-            source: 'database_tier2',
-            similarVehicles: nearbyManufacturerVehicles.slice(0, 10)
-          }),
-          status: 'pending',
-          userName: userNameStr,
-          userEmail: userEmailStr
-        });
-
+        // Gemini failed - no more prediction sources available
         return res.json({
           found: false,
-          pendingApproval: true,
-          message: 'Prediction submitted for admin approval',
-          predictions: {
-            portType: mostCommonPort[0],
-            portConfidence: tier2PortConfidence,
-            deviceType: mostCommonDevice[0],
-            deviceConfidence: tier2DeviceConfidence,
-            basedOn: nearbyManufacturerVehicles.length,
-            source: 'database_tier2',
-            similarVehicles: nearbyManufacturerVehicles.slice(0, 10)
-          },
+          predictions: null,
           yearWarning,
           makeModelWarning,
           searchPath: [
             { source: 'Database (Exact Match)', checked: true, found: false },
             { source: 'Database (±5 years)', checked: true, found: false },
-            { source: 'Database (±10 years)', checked: true, found: true }
+            { source: 'Gemini AI', checked: true, found: false }
           ]
         });
       }
