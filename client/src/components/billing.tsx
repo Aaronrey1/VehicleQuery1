@@ -122,8 +122,8 @@ export default function Billing() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Gemini AI Calls</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400" data-testid="text-google-searches">
-              {stats.googleSearches}
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400" data-testid="text-gemini-searches">
+              {stats.geminiSearches}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               ${totalCostDollars} spent
@@ -158,10 +158,10 @@ export default function Billing() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Tier 1 (Database)</span>
+                <span className="text-sm font-medium">Database ±5 Years</span>
                 <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
                   <Database className="h-3 w-3 mr-1" />
                   FREE
@@ -169,47 +169,33 @@ export default function Billing() {
               </div>
               <div className="text-2xl font-bold" data-testid="text-tier1-count">{stats.tier1Searches}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                ±5 year match, high confidence
+                Pattern matching within ±5 years
               </p>
             </div>
 
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Tier 2 (Database)</span>
-                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                  <Database className="h-3 w-3 mr-1" />
-                  FREE
-                </Badge>
-              </div>
-              <div className="text-2xl font-bold" data-testid="text-tier2-count">{stats.tier2Searches}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                ±10 year match, medium confidence
-              </p>
-            </div>
-
-            <div className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Tier 3 (Gemini AI)</span>
+                <span className="text-sm font-medium">Gemini AI</span>
                 <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
                   <Sparkles className="h-3 w-3 mr-1" />
                   PAID
                 </Badge>
               </div>
-              <div className="text-2xl font-bold" data-testid="text-tier3-count">{stats.googleSearches}</div>
+              <div className="text-2xl font-bold" data-testid="text-gemini-count">{stats.geminiSearches}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                $0.01 per prediction
+                $0.01 per AI prediction
               </p>
             </div>
 
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Tier 4 (VECO)</span>
+                <span className="text-sm font-medium">VECO API</span>
                 <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
                   <Database className="h-3 w-3 mr-1" />
                   FREE
                 </Badge>
               </div>
-              <div className="text-2xl font-bold" data-testid="text-tier4-count">{stats.vecoSearches || 0}</div>
+              <div className="text-2xl font-bold" data-testid="text-veco-count">{stats.vecoSearches || 0}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 OBD-II compatibility check
               </p>
@@ -222,9 +208,9 @@ export default function Billing() {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Cost Structure:</strong> Database predictions (Tier 1 & 2) are completely free. 
+          <strong>Cost Structure:</strong> Database predictions (exact match and ±5 year patterns) are completely free. 
           Gemini AI predictions cost $0.01 per request and are only used when no database matches are found 
-          (neither exact match nor ±5/10 year patterns).
+          within ±5 years.
         </AlertDescription>
       </Alert>
 

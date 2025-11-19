@@ -172,7 +172,7 @@ export type AiSearchLog = typeof aiSearchLogs.$inferSelect;
 export type BillingStats = {
   totalSearches: number;
   databaseSearches: number; // Free
-  googleSearches: number; // Paid
+  geminiSearches: number; // Paid - Gemini AI calls
   vecoSearches: number; // Free
   totalCostCents: number; // in tenths of a cent (divide by 1000 for dollars)
   tier1Searches: number;

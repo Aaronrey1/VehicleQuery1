@@ -1,4 +1,4 @@
-import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiKey, type InsertApiKey, type ApiKeyWithPlaintext } from "@shared/schema";
+import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiCallAnalytics, type ApiKey, type InsertApiKey, type ApiKeyWithPlaintext } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, sql, ilike, desc, asc, gte, lte, ne } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -47,7 +47,7 @@ export interface IStorage {
   // AI Search logging methods
   logAiSearch(log: InsertAiSearchLog): Promise<void>;
   getBillingStats(): Promise<BillingStats>;
-  getTodayGoogleSearchCount(): Promise<number>;
+  getTodayGeminiSearchCount(): Promise<number>;
 
   // Pending vehicles methods (Google API results awaiting approval)
   createPendingVehicle(vehicle: InsertPendingVehicle): Promise<PendingVehicle>;
@@ -479,12 +479,12 @@ export class DatabaseStorage implements IStorage {
     const [databaseCount] = await db
       .select({ count: sql<number>`count(*)` })
       .from(aiSearchLogs)
-      .where(sql`${aiSearchLogs.source} != 'google_api'`);
+      .where(sql`${aiSearchLogs.source} != 'gemini_api'`);
 
-    const [googleCount] = await db
+    const [geminiCount] = await db
       .select({ count: sql<number>`count(*)` })
       .from(aiSearchLogs)
-      .where(eq(aiSearchLogs.source, 'google_api'));
+      .where(eq(aiSearchLogs.source, 'gemini_api'));
 
     const [tier1Count] = await db
       .select({ count: sql<number>`count(*)` })
@@ -514,7 +514,7 @@ export class DatabaseStorage implements IStorage {
     return {
       totalSearches: Number(totalCount?.count || 0),
       databaseSearches: Number(databaseCount?.count || 0),
-      googleSearches: Number(googleCount?.count || 0),
+      geminiSearches: Number(geminiCount?.count || 0),
       vecoSearches: Number(vecoCount?.count || 0),
       tier1Searches: Number(tier1Count?.count || 0),
       tier2Searches: Number(tier2Count?.count || 0),
@@ -590,7 +590,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(pendingVehicles).where(eq(pendingVehicles.id, id));
   }
 
-  async getTodayGoogleSearchCount(): Promise<number> {
+  async getTodayGeminiSearchCount(): Promise<number> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -599,7 +599,7 @@ export class DatabaseStorage implements IStorage {
       .from(aiSearchLogs)
       .where(
         and(
-          eq(aiSearchLogs.source, 'google_api'),
+          eq(aiSearchLogs.source, 'gemini_api'),
           sql`${aiSearchLogs.timestamp} >= ${today.toISOString()}`
         )
       );
