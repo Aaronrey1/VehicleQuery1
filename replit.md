@@ -60,6 +60,7 @@ PostgreSQL is used as the database, accessed via the Neon serverless driver. Dri
 
 ## Recent Changes
 - **Date: November 19, 2025**
+  - **Exact Match Tracking:** Added `exactMatch` boolean field to `search_logs` table to distinguish free exact database matches from billable AI predictions. This enables accurate analytics breakdown showing "X exact / Y predictions" for AI Search and VIN Decoder. Search Analytics now displays this breakdown under each search type total. AI Search endpoint logs `exactMatch=true` for database hits, `false` for predictions (database tier1 or Gemini AI). VIN Decoder logs each VIN separately with appropriate exact match flag. Backfilled 86 historical records with `exactMatch=false` for legacy data consistency.
   - **Simplified AI Prediction Logic:** Changed from 4-tier to 3-tier system by removing ±10 years database tier and Pentaho API. New flow: exact match → ±5 years → Gemini AI directly. This reduces complexity and API costs while maintaining prediction quality.
   - Added API Call Analytics dashboard to track API key usage, endpoint calls, and timestamps
   - Updated `search_logs` table with `apiKeyId` and `endpoint` fields to track which API key made each request and which endpoint was called
