@@ -161,15 +161,15 @@ export default function Billing() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Database ±5 Years</span>
+                <span className="text-sm font-medium">Database Searches</span>
                 <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
                   <Database className="h-3 w-3 mr-1" />
                   FREE
                 </Badge>
               </div>
-              <div className="text-2xl font-bold" data-testid="text-tier1-count">{stats.tier1Searches}</div>
+              <div className="text-2xl font-bold" data-testid="text-database-count">{stats.tier1Searches + stats.tier2Searches}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                Pattern matching within ±5 years
+                Pattern matching (±5 and ±10 years)
               </p>
             </div>
 
@@ -222,9 +222,8 @@ export default function Billing() {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Cost Structure:</strong> Database predictions (exact match and ±5 year patterns) are completely free. 
-          Google API (historical) and Gemini AI (current) predictions cost $0.01 per request and are only used when no database matches are found 
-          within ±5 years.
+          <strong>Cost Structure:</strong> Database predictions (exact match and pattern matching within ±5/±10 years) are completely free. 
+          Google API (historical) and Gemini AI (current) predictions cost $0.01 per request and are only used when no database matches are found.
         </AlertDescription>
       </Alert>
 
