@@ -1753,22 +1753,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userNameStr = userName ? String(userName) : undefined;
       const userEmailStr = userEmail ? String(userEmail) : undefined;
 
-      // Log the VIN decode search
-      await storage.logSearch({
-        searchType: 'vin',
-        make: null,
-        model: null,
-        year: null,
-        country: getClientCountry(req),
-        ipAddress: getClientIp(req),
-        resultsCount: 0, // Will be updated after processing
-        queryDetails: JSON.stringify({ vinCount: vins.length }),
-        userName: userNameStr || null,
-        userEmail: userEmailStr || null,
-        apiKeyId: (req as any).apiKeyId || null,
-        endpoint: '/api/vin/decode',
-      });
-
       const results = [];
 
       for (const vin of vins) {
@@ -1845,6 +1829,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           if (exactMatch.vehicles.length > 0) {
             const vehicle = exactMatch.vehicles[0];
+            
+            // Log exact match VIN search
+            await storage.logSearch({
+              searchType: 'vin',
+              make: make,
+              model: model,
+              year: year,
+              country: getClientCountry(req),
+              ipAddress: getClientIp(req),
+              resultsCount: 1,
+              queryDetails: JSON.stringify({ vin: cleanVin }),
+              userName: userNameStr || null,
+              userEmail: userEmailStr || null,
+              apiKeyId: (req as any).apiKeyId || null,
+              endpoint: '/api/vin/decode',
+              exactMatch: true,
+            });
+            
             results.push({
               vin: cleanVin,
               success: true,
@@ -1905,6 +1907,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const tier1DeviceConfidence = Math.round(deviceConfidence);
             const avgConfidence = Math.round((tier1PortConfidence + tier1DeviceConfidence) / 2);
 
+            // Log VIN prediction search
+            await storage.logSearch({
+              searchType: 'vin',
+              make: make,
+              model: model,
+              year: year,
+              country: getClientCountry(req),
+              ipAddress: getClientIp(req),
+              resultsCount: 0,
+              queryDetails: JSON.stringify({ vin: cleanVin }),
+              userName: userNameStr || null,
+              userEmail: userEmailStr || null,
+              apiKeyId: (req as any).apiKeyId || null,
+              endpoint: '/api/vin/decode',
+              exactMatch: false,
+            });
+            
             // Save Tier 1 prediction to pending for admin approval
             await storage.createPendingVehicle({
               make: normalizedMake || make,
@@ -1974,6 +1993,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const tier2DeviceConfidence = Math.round(deviceConfidence * 0.6);
             const avgConfidence = Math.round((tier2PortConfidence + tier2DeviceConfidence) / 2);
 
+            // Log VIN prediction search
+            await storage.logSearch({
+              searchType: 'vin',
+              make: make,
+              model: model,
+              year: year,
+              country: getClientCountry(req),
+              ipAddress: getClientIp(req),
+              resultsCount: 0,
+              queryDetails: JSON.stringify({ vin: cleanVin }),
+              userName: userNameStr || null,
+              userEmail: userEmailStr || null,
+              apiKeyId: (req as any).apiKeyId || null,
+              endpoint: '/api/vin/decode',
+              exactMatch: false,
+            });
+            
             // Save Tier 2 prediction to pending for admin approval
             await storage.createPendingVehicle({
               make: normalizedMake || make,
@@ -2013,6 +2049,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const geminiPrediction = await predictVehicleSpecs(make, model, year);
             
             if (geminiPrediction) {
+              // Log VIN Gemini prediction search
+              await storage.logSearch({
+                searchType: 'vin',
+                make: make,
+                model: model,
+                year: year,
+                country: getClientCountry(req),
+                ipAddress: getClientIp(req),
+                resultsCount: 0,
+                queryDetails: JSON.stringify({ vin: cleanVin }),
+                userName: userNameStr || null,
+                userEmail: userEmailStr || null,
+                apiKeyId: (req as any).apiKeyId || null,
+                endpoint: '/api/vin/decode',
+                exactMatch: false,
+              });
+              
               // Save Gemini result to pending for admin approval
               await storage.createPendingVehicle({
                 make: normalizedMake || make,
