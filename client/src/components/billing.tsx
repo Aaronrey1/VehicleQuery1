@@ -158,7 +158,7 @@ export default function Billing() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Database ±5 Years</span>
@@ -175,6 +175,20 @@ export default function Billing() {
 
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Google API</span>
+                <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  PAID
+                </Badge>
+              </div>
+              <div className="text-2xl font-bold" data-testid="text-google-count">{stats.googleSearches}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Historical - $0.01 per call
+              </p>
+            </div>
+
+            <div className="border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Gemini AI</span>
                 <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
                   <Sparkles className="h-3 w-3 mr-1" />
@@ -183,7 +197,7 @@ export default function Billing() {
               </div>
               <div className="text-2xl font-bold" data-testid="text-gemini-count">{stats.geminiSearches}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                $0.01 per AI prediction
+                Current - $0.01 per AI prediction
               </p>
             </div>
 
@@ -209,7 +223,7 @@ export default function Billing() {
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
           <strong>Cost Structure:</strong> Database predictions (exact match and ±5 year patterns) are completely free. 
-          Gemini AI predictions cost $0.01 per request and are only used when no database matches are found 
+          Google API (historical) and Gemini AI (current) predictions cost $0.01 per request and are only used when no database matches are found 
           within ±5 years.
         </AlertDescription>
       </Alert>

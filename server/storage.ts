@@ -479,7 +479,12 @@ export class DatabaseStorage implements IStorage {
     const [databaseCount] = await db
       .select({ count: sql<number>`count(*)` })
       .from(aiSearchLogs)
-      .where(sql`${aiSearchLogs.source} != 'gemini_api'`);
+      .where(sql`${aiSearchLogs.source} NOT IN ('google_api', 'gemini_api')`);
+
+    const [googleCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'google_api'));
 
     const [geminiCount] = await db
       .select({ count: sql<number>`count(*)` })
@@ -514,6 +519,7 @@ export class DatabaseStorage implements IStorage {
     return {
       totalSearches: Number(totalCount?.count || 0),
       databaseSearches: Number(databaseCount?.count || 0),
+      googleSearches: Number(googleCount?.count || 0),
       geminiSearches: Number(geminiCount?.count || 0),
       vecoSearches: Number(vecoCount?.count || 0),
       tier1Searches: Number(tier1Count?.count || 0),
