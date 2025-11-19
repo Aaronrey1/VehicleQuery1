@@ -575,15 +575,19 @@ export class DatabaseStorage implements IStorage {
       .where(eq(pendingVehicles.status, 'rejected'));
 
     // Get tier approval breakdown (approved/rejected by source)
+    // Join with ai_search_logs to get the actual tier/source for each prediction
     const tierApprovalResults = await db
       .select({
-        source: pendingVehicles.source,
+        source: sql<string>`COALESCE(${aiSearchLogs.source}, 'unknown')`,
         status: pendingVehicles.status,
         count: sql<number>`count(*)`,
       })
       .from(pendingVehicles)
+      .leftJoin(aiSearchLogs, 
+        sql`${pendingVehicles.make} = ${aiSearchLogs.make} AND ${pendingVehicles.model} = ${aiSearchLogs.model} AND ${pendingVehicles.year} = ${aiSearchLogs.year}`
+      )
       .where(sql`${pendingVehicles.status} IN ('approved', 'rejected')`)
-      .groupBy(pendingVehicles.source, pendingVehicles.status);
+      .groupBy(aiSearchLogs.source, pendingVehicles.status);
 
     // Build tier approval breakdown array
     const tierApprovalMap = new Map<string, { approved: number; rejected: number }>();
