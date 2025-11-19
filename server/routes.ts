@@ -196,30 +196,32 @@ function requireAuth(req: any, res: any, next: any) {
   }
 }
 
-// Middleware to validate API key for external integrations (e.g., Salesforce)
+// Middleware to optionally validate API key for external integrations (e.g., Salesforce)
+// Allows both authenticated users AND unauthenticated public access
+// Only validates API key if one is provided
 async function validateApiKey(req: any, res: any, next: any) {
   try {
     const apiKey = req.headers['x-api-key'];
     
-    if (!apiKey || typeof apiKey !== 'string') {
-      return res.status(401).json({ message: "API key required. Please provide a valid API key in the X-API-Key header." });
+    // If API key is provided, validate it
+    if (apiKey && typeof apiKey === 'string') {
+      const keyRecord = await storage.validateApiKey(apiKey);
+      
+      if (!keyRecord) {
+        return res.status(401).json({ message: "Invalid or revoked API key" });
+      }
+      
+      // Update last used timestamp (non-blocking)
+      storage.updateApiKeyLastUsed(keyRecord.id).catch(err => {
+        console.error("Failed to update API key last used:", err);
+      });
+      
+      // Store key info in request for potential logging
+      req.apiKeyId = keyRecord.id;
+      req.apiKeyName = keyRecord.name;
     }
     
-    const keyRecord = await storage.validateApiKey(apiKey);
-    
-    if (!keyRecord) {
-      return res.status(401).json({ message: "Invalid or revoked API key" });
-    }
-    
-    // Update last used timestamp (non-blocking)
-    storage.updateApiKeyLastUsed(keyRecord.id).catch(err => {
-      console.error("Failed to update API key last used:", err);
-    });
-    
-    // Store key info in request for potential logging
-    req.apiKeyId = keyRecord.id;
-    req.apiKeyName = keyRecord.name;
-    
+    // If no API key provided, allow request to proceed (public access)
     next();
   } catch (error) {
     console.error("API key validation error:", error);
