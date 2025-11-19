@@ -27,6 +27,7 @@ interface VinResult {
 }
 
 export default function VinDecoder() {
+  const [activeTab, setActiveTab] = useState<"single" | "bulk">("single");
   const [singleVin, setSingleVin] = useState("");
   const [bulkVins, setBulkVins] = useState("");
   const [userName, setUserName] = useState("");
@@ -102,7 +103,7 @@ export default function VinDecoder() {
           </Alert>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="single" className="w-full">
+          <Tabs defaultValue="single" className="w-full" value={activeTab} onValueChange={(value) => setActiveTab(value as "single" | "bulk")}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="single" data-testid="tab-single-vin">Single VIN</TabsTrigger>
               <TabsTrigger value="bulk" data-testid="tab-bulk-vin">Bulk VINs</TabsTrigger>
@@ -181,8 +182,8 @@ export default function VinDecoder() {
           </div>
 
           <Button 
-            onClick={singleVin ? handleSingleDecode : handleBulkDecode}
-            disabled={decodeMutation.isPending || (!singleVin.trim() && !bulkVins.trim())}
+            onClick={activeTab === "single" ? handleSingleDecode : handleBulkDecode}
+            disabled={decodeMutation.isPending || (activeTab === "single" ? !singleVin.trim() : !bulkVins.trim())}
             className="w-full"
             data-testid="button-decode-vin"
           >
