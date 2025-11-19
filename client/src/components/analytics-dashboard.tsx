@@ -4,23 +4,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import type { VehicleStats } from "@shared/schema";
 
+type DashboardAnalytics = {
+  totalSearches: number;
+  mostSearchedMake: string;
+  totalVehicles: number;
+  topSearchedVehicles: Array<{
+    make: string;
+    model: string;
+    year: number | null;
+    searches: number;
+  }>;
+};
+
 export default function AnalyticsDashboard() {
   const { data: stats } = useQuery<VehicleStats>({
     queryKey: ["/api/vehicles/stats"],
   });
 
-  // Mock data for analytics - in a real app this would come from the backend
-  const analyticsData = {
-    searches: 12847,
-    avgResponseTime: "0.12s",
-    topMake: "Toyota",
-    coverage: "94.2%",
-    topSearchedVehicles: [
-      { rank: 1, vehicle: "Toyota Camry 2018", deviceTypes: 3, searches: 1247 },
-      { rank: 2, vehicle: "Honda Accord 2019", deviceTypes: 2, searches: 982 },
-      { rank: 3, vehicle: "Ford F-150 2020", deviceTypes: 4, searches: 756 },
-    ]
-  };
+  const { data: analytics, isLoading } = useQuery<DashboardAnalytics>({
+    queryKey: ["/api/analytics/dashboard"],
+  });
 
   return (
     <section>
@@ -42,36 +45,34 @@ export default function AnalyticsDashboard() {
         </CardHeader>
 
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary mb-2" data-testid="analytics-searches">
-                {analyticsData.searches.toLocaleString()}
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading analytics...</div>
+          ) : analytics ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-primary mb-2" data-testid="analytics-searches">
+                    {analytics.totalSearches.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Searches</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-primary mb-2" data-testid="analytics-top-make">
+                    {analytics.mostSearchedMake}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Most Searched Make</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-primary mb-2" data-testid="analytics-vehicles">
+                    {analytics.totalVehicles.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Vehicles</div>
+                </div>
               </div>
-              <div className="text-sm text-muted-foreground">Total Searches</div>
-              <div className="text-xs text-green-600 mt-1">+23% from last month</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary mb-2" data-testid="analytics-response-time">
-                {analyticsData.avgResponseTime}
-              </div>
-              <div className="text-sm text-muted-foreground">Avg Response Time</div>
-              <div className="text-xs text-green-600 mt-1">-15% from last month</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary mb-2" data-testid="analytics-top-make">
-                {analyticsData.topMake}
-              </div>
-              <div className="text-sm text-muted-foreground">Most Searched Make</div>
-              <div className="text-xs text-muted-foreground mt-1">34% of searches</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary mb-2" data-testid="analytics-coverage">
-                {analyticsData.coverage}
-              </div>
-              <div className="text-sm text-muted-foreground">Database Coverage</div>
-              <div className="text-xs text-green-600 mt-1">+2.1% from last month</div>
-            </div>
-          </div>
+            </>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">No analytics data available</div>
+          )}
 
           {/* Database Stats */}
           {stats && (
@@ -104,33 +105,35 @@ export default function AnalyticsDashboard() {
           )}
 
           {/* Top Searched Vehicles */}
-          <div className="border-t border-border pt-6">
-            <h4 className="font-semibold text-foreground mb-4">Most Searched Vehicles</h4>
-            <div className="space-y-3">
-              {analyticsData.topSearchedVehicles.map((vehicle) => (
-                <div
-                  key={vehicle.rank}
-                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                  data-testid={`top-vehicle-${vehicle.rank}`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-primary">{vehicle.rank}</span>
-                    </div>
-                    <div>
-                      <div className="font-medium text-foreground">{vehicle.vehicle}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {vehicle.deviceTypes} device types available
+          {analytics && analytics.topSearchedVehicles.length > 0 && (
+            <div className="border-t border-border pt-6">
+              <h4 className="font-semibold text-foreground mb-4">Most Searched Vehicles</h4>
+              <div className="space-y-3">
+                {analytics.topSearchedVehicles.map((vehicle, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                    data-testid={`top-vehicle-${index + 1}`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-primary">{index + 1}</span>
+                      </div>
+                      <div>
+                        <div className="font-medium text-foreground">
+                          {vehicle.make} {vehicle.model} {vehicle.year || ''}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Search history
+                        </div>
                       </div>
                     </div>
+                    <Badge variant="secondary">{vehicle.searches.toLocaleString()} searches</Badge>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {vehicle.searches.toLocaleString()} searches
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </section>

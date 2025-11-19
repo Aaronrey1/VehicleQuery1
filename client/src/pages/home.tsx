@@ -11,7 +11,8 @@ import Billing from "@/components/billing";
 import VinDecoder from "@/components/vin-decoder";
 import { PendingApprovals } from "@/components/pending-approvals";
 import ApiKeysManagement from "@/components/api-keys";
-import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck, Hash, LineChart, Key, BookOpen } from "lucide-react";
+import ApiCallAnalytics from "@/components/api-call-analytics";
+import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck, Hash, LineChart, Key, BookOpen, Activity } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
@@ -198,6 +199,16 @@ export default function Home() {
                 API Keys
               </button>
               <button
+                onClick={() => setAdminSubTab("api-calls")}
+                className={`transition-colors text-sm ${
+                  adminSubTab === "api-calls" ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="nav-api-calls"
+              >
+                <Activity className="h-3 w-3 inline mr-1" />
+                API Calls
+              </button>
+              <button
                 onClick={() => setAdminSubTab("admin")}
                 className={`transition-colors text-sm ${
                   adminSubTab === "admin" ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
@@ -236,6 +247,7 @@ export default function Home() {
             {adminSubTab === "pending" && <PendingApprovals />}
             {adminSubTab === "analytics" && <SearchAnalytics />}
             {adminSubTab === "api-keys" && <ApiKeysManagement />}
+            {adminSubTab === "api-calls" && <ApiCallAnalytics />}
             {adminSubTab === "admin" && <AdminPanel />}
           </>
         )}

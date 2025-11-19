@@ -765,6 +765,180 @@ export class DatabaseStorage implements IStorage {
       .delete(apiKeys)
       .where(eq(apiKeys.id, id));
   }
+
+  async getDashboardAnalytics(): Promise<{
+    totalSearches: number;
+    mostSearchedMake: string;
+    totalVehicles: number;
+    topSearchedVehicles: Array<{
+      make: string;
+      model: string;
+      year: number | null;
+      searches: number;
+    }>;
+  }> {
+    // Get total searches
+    const [totalResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(searchLogs);
+    const totalSearches = Number(totalResult?.count || 0);
+
+    // Get most searched make
+    const makeResults = await db
+      .select({
+        make: searchLogs.make,
+        count: sql<number>`count(*)`,
+      })
+      .from(searchLogs)
+      .where(sql`${searchLogs.make} IS NOT NULL`)
+      .groupBy(searchLogs.make)
+      .orderBy(desc(sql<number>`count(*)`))
+      .limit(1);
+    const mostSearchedMake = makeResults[0]?.make || 'N/A';
+
+    // Get total vehicles
+    const [vehicleResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(vehicles);
+    const totalVehicles = Number(vehicleResult?.count || 0);
+
+    // Get top searched vehicles (make/model/year combinations)
+    const topVehicleResults = await db
+      .select({
+        make: searchLogs.make,
+        model: searchLogs.model,
+        year: searchLogs.year,
+        count: sql<number>`count(*)`,
+      })
+      .from(searchLogs)
+      .where(and(
+        sql`${searchLogs.make} IS NOT NULL`,
+        sql`${searchLogs.model} IS NOT NULL`
+      ))
+      .groupBy(searchLogs.make, searchLogs.model, searchLogs.year)
+      .orderBy(desc(sql<number>`count(*)`))
+      .limit(5);
+
+    const topSearchedVehicles = topVehicleResults.map((row) => ({
+      make: row.make || '',
+      model: row.model || '',
+      year: row.year,
+      searches: Number(row.count),
+    }));
+
+    return {
+      totalSearches,
+      mostSearchedMake,
+      totalVehicles,
+      topSearchedVehicles,
+    };
+  }
+
+  async getApiCallAnalytics(fromDate?: Date, toDate?: Date): Promise<ApiCallAnalytics> {
+    // Build date filter conditions
+    const conditions = [];
+    if (fromDate) {
+      conditions.push(gte(searchLogs.timestamp, fromDate));
+    }
+    if (toDate) {
+      const endOfDay = new Date(toDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      conditions.push(lte(searchLogs.timestamp, endOfDay));
+    }
+
+    // Only count API calls (where apiKeyId is not null)
+    const apiCallsOnly = sql`${searchLogs.apiKeyId} IS NOT NULL`;
+    const whereClause = conditions.length > 0 
+      ? and(...conditions, apiCallsOnly)
+      : apiCallsOnly;
+
+    // Get total API calls
+    const [totalResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(searchLogs)
+      .where(whereClause);
+
+    const totalCalls = Number(totalResult?.count || 0);
+
+    // Get calls by endpoint
+    const endpointResults = await db
+      .select({
+        endpoint: searchLogs.endpoint,
+        count: sql<number>`count(*)`,
+      })
+      .from(searchLogs)
+      .where(whereClause)
+      .groupBy(searchLogs.endpoint)
+      .orderBy(desc(sql<number>`count(*)`));
+
+    const callsByEndpoint = endpointResults.map((row) => ({
+      endpoint: row.endpoint || 'Unknown',
+      count: Number(row.count),
+    }));
+
+    // Get calls by API key
+    const keyResults = await db
+      .select({
+        apiKeyId: searchLogs.apiKeyId,
+        count: sql<number>`count(*)`,
+      })
+      .from(searchLogs)
+      .where(whereClause)
+      .groupBy(searchLogs.apiKeyId)
+      .orderBy(desc(sql<number>`count(*)`));
+
+    const callsByKey = [];
+    for (const row of keyResults) {
+      if (!row.apiKeyId) continue;
+
+      // Get API key details
+      const [keyDetails] = await db
+        .select()
+        .from(apiKeys)
+        .where(eq(apiKeys.id, row.apiKeyId));
+
+      if (!keyDetails) continue;
+
+      // Get endpoint breakdown for this API key
+      const keyEndpointResults = await db
+        .select({
+          endpoint: searchLogs.endpoint,
+          count: sql<number>`count(*)`,
+        })
+        .from(searchLogs)
+        .where(and(eq(searchLogs.apiKeyId, row.apiKeyId), whereClause))
+        .groupBy(searchLogs.endpoint);
+
+      const callsByEndpointForKey = keyEndpointResults.map((ep) => ({
+        endpoint: ep.endpoint || 'Unknown',
+        count: Number(ep.count),
+      }));
+
+      callsByKey.push({
+        apiKeyId: row.apiKeyId,
+        keyName: keyDetails.name,
+        keyPrefix: keyDetails.keyPrefix,
+        totalCalls: Number(row.count),
+        lastUsed: keyDetails.lastUsedAt,
+        callsByEndpoint: callsByEndpointForKey,
+      });
+    }
+
+    // Get recent logs
+    const recentLogs = await db
+      .select()
+      .from(searchLogs)
+      .where(whereClause)
+      .orderBy(desc(searchLogs.timestamp))
+      .limit(100);
+
+    return {
+      totalCalls,
+      callsByKey,
+      callsByEndpoint,
+      recentLogs,
+    };
+  }
 }
 
 export const storage = new DatabaseStorage();

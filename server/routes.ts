@@ -334,6 +334,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         queryDetails: JSON.stringify({ queryCount: queries.length, oneToOne }),
         userName: null,
         userEmail: null,
+        apiKeyId: (req as any).apiKeyId || null,
+        endpoint: '/api/vehicles/bulk-search',
       });
 
       // Return consistent response shape
@@ -824,6 +826,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         queryDetails: null,
         userName: null,
         userEmail: null,
+        apiKeyId: (req as any).apiKeyId || null,
+        endpoint: '/api/harnesses/search',
       });
       
       res.json(result);
@@ -1031,6 +1035,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         queryDetails: null,
         userName: userNameStr || null,
         userEmail: userEmailStr || null,
+        apiKeyId: (req as any).apiKeyId || null,
+        endpoint: '/api/ai/predict',
       });
       
       // Normalize the make to handle common aliases (Chevy → Chevrolet, VW → Volkswagen, etc.)
@@ -1424,6 +1430,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get dashboard analytics (real data instead of mock)
+  app.get("/api/analytics/dashboard", async (req, res) => {
+    try {
+      const analytics = await storage.getDashboardAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Dashboard analytics error:", error);
+      res.status(500).json({ message: "Failed to get dashboard analytics" });
+    }
+  });
+
+  // Get API call analytics
+  app.get("/api/analytics/api-calls", async (req, res) => {
+    try {
+      const { fromDate, toDate } = req.query;
+      
+      const from = fromDate ? new Date(fromDate as string) : undefined;
+      const to = toDate ? new Date(toDate as string) : undefined;
+      
+      const analytics = await storage.getApiCallAnalytics(from, to);
+      res.json(analytics);
+    } catch (error) {
+      console.error("API call analytics error:", error);
+      res.status(500).json({ message: "Failed to get API call analytics" });
+    }
+  });
+
+  // Export API call analytics as CSV
+  app.get("/api/analytics/api-calls/export/csv", async (req, res) => {
+    try {
+      const { fromDate, toDate } = req.query;
+      
+      const from = fromDate ? new Date(fromDate as string) : undefined;
+      const to = toDate ? new Date(toDate as string) : undefined;
+      
+      const analytics = await storage.getApiCallAnalytics(from, to);
+      
+      // Build CSV
+      const headers = ['Timestamp', 'Endpoint', 'Search Type', 'Country', 'Results Count', 'Make', 'Model', 'Year'];
+      const rows = analytics.recentLogs.map(log => [
+        log.timestamp.toISOString(),
+        log.endpoint || '',
+        log.searchType,
+        log.country || '',
+        log.resultsCount.toString(),
+        log.make || '',
+        log.model || '',
+        log.year?.toString() || ''
+      ]);
+      
+      const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=api-calls-analytics.csv');
+      res.send(csv);
+    } catch (error) {
+      console.error("Export API call analytics CSV error:", error);
+      res.status(500).json({ message: "Failed to export API call analytics" });
+    }
+  });
+
   // Get comprehensive search analytics
   app.get("/api/analytics/search", async (req, res) => {
     try {
@@ -1766,6 +1833,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         queryDetails: JSON.stringify({ vinCount: vins.length }),
         userName: userNameStr || null,
         userEmail: userEmailStr || null,
+        apiKeyId: (req as any).apiKeyId || null,
+        endpoint: '/api/vin/decode',
       });
 
       const results = [];

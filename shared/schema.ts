@@ -224,10 +224,13 @@ export const searchLogs = pgTable("search_logs", {
   queryDetails: text("query_details"), // JSON string with additional search parameters
   userName: text("user_name"), // Optional: user's name who performed the search
   userEmail: text("user_email"), // Optional: user's email who performed the search
+  apiKeyId: varchar("api_key_id"), // Optional: API key used for this search
+  endpoint: text("endpoint"), // API endpoint called (e.g., '/api/ai/predict', '/api/vin/decode')
 }, (table) => ({
   timestampIdx: index("search_logs_timestamp_idx").on(table.timestamp),
   searchTypeIdx: index("search_logs_type_idx").on(table.searchType),
   countryIdx: index("search_logs_country_idx").on(table.country),
+  apiKeyIdIdx: index("search_logs_api_key_id_idx").on(table.apiKeyId),
 }));
 
 export const insertSearchLogSchema = createInsertSchema(searchLogs).omit({
@@ -249,6 +252,26 @@ export type SearchAnalytics = {
   };
   searchesByCountry: Array<{
     country: string;
+    count: number;
+  }>;
+  recentLogs: SearchLog[];
+};
+
+export type ApiCallAnalytics = {
+  totalCalls: number;
+  callsByKey: Array<{
+    apiKeyId: string;
+    keyName: string;
+    keyPrefix: string;
+    totalCalls: number;
+    lastUsed: Date | null;
+    callsByEndpoint: Array<{
+      endpoint: string;
+      count: number;
+    }>;
+  }>;
+  callsByEndpoint: Array<{
+    endpoint: string;
     count: number;
   }>;
   recentLogs: SearchLog[];
