@@ -544,6 +544,16 @@ export class DatabaseStorage implements IStorage {
       .from(aiSearchLogs)
       .where(eq(aiSearchLogs.source, 'database_tier1'));
 
+    const [tier2Count] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'database_tier2'));
+
+    const [googleCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'google_api'));
+
     const [geminiCount] = await db
       .select({ count: sql<number>`count(*)` })
       .from(aiSearchLogs)
@@ -567,6 +577,8 @@ export class DatabaseStorage implements IStorage {
     const searchTierBreakdown = [
       { name: 'Exact Matches', value: Number(exactMatchCount?.count || 0), color: '#10b981' },
       { name: 'Database Pattern (±5 years)', value: Number(tier1Count?.count || 0), color: '#3b82f6' },
+      { name: 'Database Pattern (±10 years)', value: Number(tier2Count?.count || 0), color: '#06b6d4' },
+      { name: 'Google API', value: Number(googleCount?.count || 0), color: '#f59e0b' },
       { name: 'Gemini AI', value: Number(geminiCount?.count || 0), color: '#a855f7' },
     ];
 
