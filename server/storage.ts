@@ -606,49 +606,49 @@ export class DatabaseStorage implements IStorage {
 
     const tierApprovalBreakdown: Array<{ name: string; value: number; color: string }> = [];
     
-    // Database Tier 1 (±5 years)
+    // Database Tier 1 (±5 years) - Blue shades
     const tier1Data = tierApprovalMap.get('database_tier1') || { approved: 0, rejected: 0 };
     if (tier1Data.approved > 0) {
-      tierApprovalBreakdown.push({ name: 'DB ±5yr - Approved', value: tier1Data.approved, color: '#10b981' });
+      tierApprovalBreakdown.push({ name: 'DB ±5yr - Approved', value: tier1Data.approved, color: '#3b82f6' }); // Blue
     }
     if (tier1Data.rejected > 0) {
-      tierApprovalBreakdown.push({ name: 'DB ±5yr - Rejected', value: tier1Data.rejected, color: '#ef4444' });
+      tierApprovalBreakdown.push({ name: 'DB ±5yr - Rejected', value: tier1Data.rejected, color: '#1e40af' }); // Dark blue
     }
 
-    // Database Tier 2 (±10 years)
+    // Database Tier 2 (±10 years) - Cyan shades
     const tier2Data = tierApprovalMap.get('database_tier2') || { approved: 0, rejected: 0 };
     if (tier2Data.approved > 0) {
-      tierApprovalBreakdown.push({ name: 'DB ±10yr - Approved', value: tier2Data.approved, color: '#10b981' });
+      tierApprovalBreakdown.push({ name: 'DB ±10yr - Approved', value: tier2Data.approved, color: '#06b6d4' }); // Cyan
     }
     if (tier2Data.rejected > 0) {
-      tierApprovalBreakdown.push({ name: 'DB ±10yr - Rejected', value: tier2Data.rejected, color: '#ef4444' });
+      tierApprovalBreakdown.push({ name: 'DB ±10yr - Rejected', value: tier2Data.rejected, color: '#0e7490' }); // Dark cyan
     }
 
-    // Google API
+    // Google API - Orange shades
     const googleData = tierApprovalMap.get('google_api') || { approved: 0, rejected: 0 };
     if (googleData.approved > 0) {
-      tierApprovalBreakdown.push({ name: 'Google API - Approved', value: googleData.approved, color: '#10b981' });
+      tierApprovalBreakdown.push({ name: 'Google API - Approved', value: googleData.approved, color: '#f59e0b' }); // Orange
     }
     if (googleData.rejected > 0) {
-      tierApprovalBreakdown.push({ name: 'Google API - Rejected', value: googleData.rejected, color: '#ef4444' });
+      tierApprovalBreakdown.push({ name: 'Google API - Rejected', value: googleData.rejected, color: '#b45309' }); // Dark orange
     }
 
-    // Gemini AI
+    // Gemini AI - Purple shades
     const geminiData = tierApprovalMap.get('gemini_api') || { approved: 0, rejected: 0 };
     if (geminiData.approved > 0) {
-      tierApprovalBreakdown.push({ name: 'Gemini AI - Approved', value: geminiData.approved, color: '#10b981' });
+      tierApprovalBreakdown.push({ name: 'Gemini AI - Approved', value: geminiData.approved, color: '#a855f7' }); // Purple
     }
     if (geminiData.rejected > 0) {
-      tierApprovalBreakdown.push({ name: 'Gemini AI - Rejected', value: geminiData.rejected, color: '#ef4444' });
+      tierApprovalBreakdown.push({ name: 'Gemini AI - Rejected', value: geminiData.rejected, color: '#7e22ce' }); // Dark purple
     }
 
-    // Unknown/Legacy (NULL source)
+    // Unmatched predictions - Gray shades (couldn't match to ai_search_logs)
     const unknownData = tierApprovalMap.get('unknown') || { approved: 0, rejected: 0 };
     if (unknownData.approved > 0) {
-      tierApprovalBreakdown.push({ name: 'Legacy - Approved', value: unknownData.approved, color: '#10b981' });
+      tierApprovalBreakdown.push({ name: 'Unmatched - Approved', value: unknownData.approved, color: '#6b7280' }); // Gray
     }
     if (unknownData.rejected > 0) {
-      tierApprovalBreakdown.push({ name: 'Legacy - Rejected', value: unknownData.rejected, color: '#ef4444' });
+      tierApprovalBreakdown.push({ name: 'Unmatched - Rejected', value: unknownData.rejected, color: '#374151' }); // Dark gray
     }
 
     const searchTierBreakdown = [
