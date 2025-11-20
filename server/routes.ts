@@ -1635,16 +1635,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/pending-vehicles/:id/source", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const { source } = req.body;
       
-      const validSources = ['database_tier1', 'database_tier2', 'google_api', 'gemini_api'];
-      if (!validSources.includes(source)) {
-        return res.status(400).json({ message: "Invalid source value" });
-      }
+      // Validate source with Zod schema
+      const sourceSchema = z.object({
+        source: z.enum(['database_tier1', 'database_tier2', 'google_api', 'gemini_api'])
+      });
       
-      await storage.updatePendingVehicleSource(id, source);
+      const validatedData = sourceSchema.parse(req.body);
+      
+      await storage.updatePendingVehicleSource(id, validatedData.source);
       res.json({ message: "Source updated successfully" });
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid source value", errors: error.errors });
+      }
       console.error("Update pending vehicle source error:", error);
       res.status(500).json({ message: "Failed to update source" });
     }
