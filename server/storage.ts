@@ -604,53 +604,74 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPendingApprovalsAnalytics(): Promise<PendingApprovalsAnalytics> {
-    // Get status breakdown
-    const [pendingCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(pendingVehicles)
-      .where(eq(pendingVehicles.status, 'pending'));
-
-    const [approvedCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(pendingVehicles)
-      .where(eq(pendingVehicles.status, 'approved'));
-
-    const [rejectedCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(pendingVehicles)
-      .where(eq(pendingVehicles.status, 'rejected'));
-
-    // Get source breakdown
-    const sourceResults = await db
+    // Get counts grouped by source and status
+    const results = await db
       .select({
         source: sql<string>`COALESCE(${pendingVehicles.source}, 'unknown')`,
+        status: pendingVehicles.status,
         count: sql<number>`count(*)`,
       })
       .from(pendingVehicles)
-      .groupBy(pendingVehicles.source);
+      .groupBy(pendingVehicles.source, pendingVehicles.status);
 
-    const sourceMap = new Map<string, number>();
-    sourceResults.forEach((row) => {
-      sourceMap.set(row.source || 'unknown', Number(row.count));
+    // Organize data by source
+    const sourceMap = new Map<string, Map<string, number>>();
+    
+    results.forEach((row) => {
+      const source = row.source || 'unknown';
+      const status = row.status || 'pending';
+      const count = Number(row.count);
+      
+      if (!sourceMap.has(source)) {
+        sourceMap.set(source, new Map());
+      }
+      sourceMap.get(source)!.set(status, count);
     });
 
-    const statusBreakdown = [
-      { name: 'Pending', value: Number(pendingCount?.count || 0), color: '#f59e0b' },
-      { name: 'Approved', value: Number(approvedCount?.count || 0), color: '#10b981' },
-      { name: 'Rejected', value: Number(rejectedCount?.count || 0), color: '#ef4444' },
-    ];
+    // Map source codes to display names
+    const sourceNameMap: Record<string, string> = {
+      'database_tier1': 'DB ±5yr',
+      'database_tier2': 'DB ±10yr',
+      'google_api': 'Google API',
+      'gemini_api': 'Gemini AI',
+      'unknown': 'Unknown',
+    };
 
-    const sourceBreakdown = [
-      { name: 'DB ±5yr', value: sourceMap.get('database_tier1') || 0, color: '#3b82f6' },
-      { name: 'DB ±10yr', value: sourceMap.get('database_tier2') || 0, color: '#06b6d4' },
-      { name: 'Google API', value: sourceMap.get('google_api') || 0, color: '#f59e0b' },
-      { name: 'Gemini AI', value: sourceMap.get('gemini_api') || 0, color: '#a855f7' },
-      { name: 'Unknown', value: sourceMap.get('unknown') || 0, color: '#6b7280' },
-    ].filter(item => item.value > 0);
+    // Build source breakdowns
+    const sourceBreakdowns = Array.from(sourceMap.entries()).map(([source, statusCounts]) => {
+      const pending = statusCounts.get('pending') || 0;
+      const approved = statusCounts.get('approved') || 0;
+      const rejected = statusCounts.get('rejected') || 0;
+      const total = pending + approved + rejected;
+
+      return {
+        source: sourceNameMap[source] || source,
+        total,
+        statuses: [
+          {
+            name: 'Pending',
+            value: pending,
+            percentage: total > 0 ? Math.round((pending / total) * 100) : 0,
+            color: '#f59e0b',
+          },
+          {
+            name: 'Approved',
+            value: approved,
+            percentage: total > 0 ? Math.round((approved / total) * 100) : 0,
+            color: '#10b981',
+          },
+          {
+            name: 'Rejected',
+            value: rejected,
+            percentage: total > 0 ? Math.round((rejected / total) * 100) : 0,
+            color: '#ef4444',
+          },
+        ].filter(status => status.value > 0), // Only include statuses with data
+      };
+    });
 
     return {
-      statusBreakdown,
-      sourceBreakdown,
+      sourceBreakdowns,
     };
   }
 
