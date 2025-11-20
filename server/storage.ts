@@ -537,45 +537,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBillingPieCharts(): Promise<BillingPieCharts> {
-    // IMPORTANT: Only count records in ai_search_logs that ALSO exist in pending_vehicles (not deleted)
-    // Exact matches don't need this check since they don't go through pending_vehicles
-    
-    // Get counts by joining ai_search_logs with pending_vehicles to exclude deleted records
-    const tierCountsResult = await db.execute<{
-      source: string;
-      count: number;
-    }>(sql`
-      SELECT 
-        COALESCE(a.source, 'gemini_api') as source,
-        COUNT(*) as count
-      FROM ${aiSearchLogs} a
-      INNER JOIN ${pendingVehicles} p
-        ON a.make = p.make 
-        AND a.model = p.model 
-        AND a.year = p.year
-        AND COALESCE(a.source, 'gemini_api') = COALESCE(p.source, 'gemini_api')
-      WHERE a.source != 'exact'
-      GROUP BY COALESCE(a.source, 'gemini_api')
-    `);
+    // Get counts from ai_search_logs by source (all predictions ever made)
+    const [tier1Count] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'database_tier1'));
 
-    // Build tier counts map from the join result
-    const tierCounts = new Map<string, number>();
-    tierCountsResult.rows.forEach((row: { source: string; count: number }) => {
-      tierCounts.set(row.source || 'gemini_api', Number(row.count));
-    });
+    const [tier2Count] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'database_tier2'));
 
-    const tier1Count = { count: tierCounts.get('database_tier1') || 0 };
-    const tier2Count = { count: tierCounts.get('database_tier2') || 0 };
-    const googleCount = { count: tierCounts.get('google_api') || 0 };
-    const geminiCount = { count: tierCounts.get('gemini_api') || 0 };
+    const [googleCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'google_api'));
 
-    // Exact matches are counted directly from ai_search_logs (they don't go through pending_vehicles)
+    const [geminiCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'gemini_api'));
+
     const [exactMatchCount] = await db
       .select({ count: sql<number>`count(*)` })
       .from(aiSearchLogs)
       .where(eq(aiSearchLogs.source, 'exact'));
 
-    // Get approval analytics from pending_vehicles
+    // Get approval analytics from pending_vehicles (excluding deleted)
     const [pendingCount] = await db
       .select({ count: sql<number>`count(*)` })
       .from(pendingVehicles)
@@ -592,6 +580,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(pendingVehicles.status, 'rejected'));
 
     // Get tier breakdown with pending/approved/rejected for each tier from pending_vehicles
+    // Exclude deleted status from the breakdown
     // Use raw SQL to properly group by the COALESCE'd source column
     const tierBreakdownResults = await db.execute<{
       source: string;
@@ -603,6 +592,7 @@ export class DatabaseStorage implements IStorage {
         status,
         COUNT(*) as count
       FROM ${pendingVehicles}
+      WHERE status != 'deleted'
       GROUP BY COALESCE(source, 'gemini_api'), status
     `);
 
@@ -724,9 +714,11 @@ export class DatabaseStorage implements IStorage {
         .where(eq(pendingVehicles.status, status))
         .orderBy(desc(pendingVehicles.createdAt));
     }
+    // Exclude deleted records from "all" pending vehicles
     return await db
       .select()
       .from(pendingVehicles)
+      .where(ne(pendingVehicles.status, 'deleted'))
       .orderBy(desc(pendingVehicles.createdAt));
   }
 
@@ -764,7 +756,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deletePendingVehicle(id: string): Promise<void> {
-    await db.delete(pendingVehicles).where(eq(pendingVehicles.id, id));
+    // Soft delete: set status to 'deleted' instead of removing the row
+    // This preserves approval history for billing charts
+    await db
+      .update(pendingVehicles)
+      .set({ status: 'deleted' })
+      .where(eq(pendingVehicles.id, id));
   }
 
   async getTodayGeminiSearchCount(): Promise<number> {
