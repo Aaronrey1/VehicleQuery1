@@ -164,82 +164,51 @@ export function PendingApprovals() {
         </AlertDescription>
       </Alert>
 
-      {/* Analytics Pie Charts */}
-      {!analyticsLoading && analytics && (
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Status Breakdown Chart */}
-          {analytics.statusBreakdown.some(item => item.value > 0) && (
-            <Card>
+      {/* Analytics Pie Charts - Status by Source */}
+      {!analyticsLoading && analytics && analytics.sourceBreakdowns.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {analytics.sourceBreakdowns.map((sourceData, idx) => (
+            <Card key={idx} data-testid={`card-source-${idx}`}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <PieChartIcon className="h-5 w-5" />
-                  Approval Status
+                  {sourceData.source}
                 </CardTitle>
                 <CardDescription>
-                  Breakdown of predictions by approval status
+                  Total: {sourceData.total} prediction{sourceData.total !== 1 ? 's' : ''}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={analytics.statusBreakdown}
+                      data={sourceData.statuses}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
+                      label={({ name, value, percentage }) => 
+                        value > 0 ? `${name}: ${value} (${percentage}%)` : ''
+                      }
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {analytics.statusBreakdown.map((entry, index) => (
+                      {sourceData.statuses.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value, name) => [`${value} predictions`, name]} />
+                    <Tooltip 
+                      formatter={(value: number, name: string, props: any) => {
+                        const percentage = props.payload.percentage;
+                        return [`${value} (${percentage}%)`, name];
+                      }} 
+                    />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-          )}
-
-          {/* Source Breakdown Chart */}
-          {analytics.sourceBreakdown.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PieChartIcon className="h-5 w-5" />
-                  Prediction Sources
-                </CardTitle>
-                <CardDescription>
-                  Distribution by prediction source (tier)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={analytics.sourceBreakdown}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {analytics.sourceBreakdown.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value, name) => [`${value} predictions`, name]} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
+          ))}
         </div>
       )}
 
