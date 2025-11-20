@@ -220,17 +220,17 @@ export default function Billing() {
               </p>
             </div>
 
-            <div className="border rounded-lg p-4">
+            <div className="border rounded-lg p-4 bg-green-50 dark:bg-green-950/20">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">VECO API</span>
-                <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
+                <span className="text-sm font-medium">Exact Matches</span>
+                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
                   <Database className="h-3 w-3 mr-1" />
                   FREE
                 </Badge>
               </div>
-              <div className="text-2xl font-bold" data-testid="text-veco-count">{stats.vecoSearches || 0}</div>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-exact-matches-tier">{stats.exactMatches || 0}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                OBD-II compatibility check
+                Instant database lookup
               </p>
             </div>
           </div>
