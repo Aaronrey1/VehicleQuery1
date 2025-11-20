@@ -185,11 +185,10 @@ export type BillingPieCharts = {
   searchTierBreakdown: Array<{ name: string; value: number; color: string }>;
   approvalAnalytics: Array<{ name: string; value: number; color: string }>;
   individualTierCharts: {
-    tier1: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
-    tier2: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
-    googleApi: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
-    geminiAi: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
-    unmatched: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
+    tier1: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number };
+    tier2: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number };
+    googleApi: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number };
+    geminiAi: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number };
   };
   apiCallBreakdown: Array<{ name: string; value: number; color: string }>;
 };

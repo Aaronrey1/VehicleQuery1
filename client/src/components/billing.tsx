@@ -288,7 +288,7 @@ export default function Billing() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-{/* Individual tier charts */}
+{/* Individual tier charts - always show all 4 main tiers */}
             {pieCharts && Object.entries(pieCharts.individualTierCharts).map(([key, tierData]) => {
               if (!tierData) return null;
               return (
@@ -299,37 +299,48 @@ export default function Billing() {
                       {tierData.name}
                     </CardTitle>
                     <CardDescription>
-                      {tierData.total} AI prediction{tierData.total !== 1 ? 's' : ''} awaiting approval or reviewed
+                      {tierData.total > 0 
+                        ? `${tierData.total} AI prediction${tierData.total !== 1 ? 's' : ''} awaiting approval or reviewed`
+                        : 'No AI predictions generated yet'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <PieChart>
-                        <Pie
-                          data={tierData.data}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, value, percent, x, y, cx }) => {
-                            if (value === 0) return '';
-                            return (
-                              <text x={x} y={y} fill="currentColor" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="11px" className="fill-foreground">
-                                {`${name}: ${value} (${(percent * 100).toFixed(1)}%)`}
-                              </text>
-                            );
-                          }}
-                          outerRadius={70}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {tierData.data.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value, name) => [`${value} predictions`, name]} />
-                        <Legend wrapperStyle={{ fontSize: '12px' }} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    {tierData.total > 0 ? (
+                      <ResponsiveContainer width="100%" height={250}>
+                        <PieChart>
+                          <Pie
+                            data={tierData.data}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, value, percent, x, y, cx }) => {
+                              if (value === 0) return '';
+                              return (
+                                <text x={x} y={y} fill="currentColor" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="11px" className="fill-foreground">
+                                  {`${name}: ${value} (${(percent * 100).toFixed(1)}%)`}
+                                </text>
+                              );
+                            }}
+                            outerRadius={70}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {tierData.data.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value, name) => [`${value} predictions`, name]} />
+                          <Legend wrapperStyle={{ fontSize: '12px' }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-[250px] text-muted-foreground">
+                        <div className="text-center">
+                          <PieChartIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No data yet</p>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );

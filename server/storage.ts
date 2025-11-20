@@ -605,8 +605,7 @@ export class DatabaseStorage implements IStorage {
       const data = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
       const total = data.pending + data.approved + data.rejected;
       
-      if (total === 0) return null;
-      
+      // Always return the tier, even if no data (we'll show empty state in UI)
       return {
         name,
         data: [
@@ -623,7 +622,7 @@ export class DatabaseStorage implements IStorage {
       tier2: createTierData('database_tier2', 'Pattern ±10 years', '#06b6d4'),
       googleApi: createTierData('google_api', 'Google API', '#f59e0b'),
       geminiAi: createTierData('gemini_api', 'Gemini AI', '#a855f7'),
-      unmatched: createTierData('unmatched', 'Unmatched', '#6b7280'),
+      // Don't include 'unmatched' in individual tier charts - only show the 4 main tiers
     };
 
     // Search tier breakdown using ai_search_logs (matches the stats)
