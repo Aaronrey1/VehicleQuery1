@@ -30,6 +30,8 @@ All public API endpoints require API key authentication via the `X-API-Key` head
   - Search Tier Breakdown: Shows distribution of predictions across 5 tiers (Exact Matches, Pattern ±5 years, Pattern ±10 years, Google API, Gemini AI). Counts from pending_vehicles.source to ensure accuracy.
   - Approval Analytics: Overall pending/approved/rejected counts.
   - Individual Tier Charts: Separate pie charts for each tier (Pattern ±5 years, Pattern ±10 years, Google API, Gemini AI, Unmatched) showing pending/approved/rejected status distribution with consistent color coding (Pending: orange, Approved: green, Rejected: red). Numbers match Search Tier Breakdown exactly.
+  - API Call Breakdown: Shows external API calls by endpoint (AI Predictions, VIN Decoder, Vehicle Search, Harness Search). Only counts calls made with API keys.
+  - All charts display empty states when no data is available, ensuring charts are visible even in production with no data.
 - **Pending Approvals:** Endpoints for approving, rejecting, and deleting pending predictions, with automated email notifications for approved predictions.
 
 ### Data Storage
