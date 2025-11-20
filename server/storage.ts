@@ -639,15 +639,8 @@ export class DatabaseStorage implements IStorage {
       { name: 'Gemini AI', value: Number(geminiCount?.count || 0), color: '#a855f7' },
     ];
 
-    const approvalAnalytics = [
-      { name: 'Pending', value: Number(pendingCount?.count || 0), color: '#f59e0b' },
-      { name: 'Approved', value: Number(approvedCount?.count || 0), color: '#10b981' },
-      { name: 'Rejected', value: Number(rejectedCount?.count || 0), color: '#ef4444' },
-    ];
-
     return {
       searchTierBreakdown,
-      approvalAnalytics,
       individualTierCharts,
     };
   }
