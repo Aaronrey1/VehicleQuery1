@@ -1,7 +1,7 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertVehicleSchema, updateVehicleSchema, searchVehicleSchema, insertHarnessSchema, searchHarnessSchema, insertApiKeySchema, aiSearchLogs, pendingVehicles } from "@shared/schema";
+import { insertVehicleSchema, updateVehicleSchema, searchVehicleSchema, insertHarnessSchema, searchHarnessSchema, insertApiKeySchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import csv from "csv-parser";
@@ -10,8 +10,6 @@ import axios from "axios";
 import { predictVehicleSpecs, checkIfHeavyVehicle as geminiCheckHeavyVehicle } from "./gemini";
 import { sendApprovalEmail } from "./email";
 import { getClientIp, getClientCountry } from "./geolocation";
-import { db } from "./db";
-import { sql } from "drizzle-orm";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -1113,7 +1111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const matchedVehicle = exactMatch.vehicles[0];
         const isAllModelsFallback = matchedVehicle.model === 'ALL MODELS';
         
-        // Log exact match search to search_logs
+        // Log exact match search
         await storage.logSearch({
           searchType: 'ai',
           make: make as string,
@@ -1128,16 +1126,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           apiKeyId: (req as any).apiKeyId || null,
           endpoint: '/api/ai/predict',
           exactMatch: true,
-        });
-        
-        // Log exact match to ai_search_logs for billing (FREE - no cost, 100% confidence)
-        await storage.logAiSearch({
-          make: normalizedMake || String(make),
-          model: String(model),
-          year: yearNum,
-          source: 'exact',
-          confidence: 100,
-          cost: 0
         });
         
         return res.json({
@@ -1543,56 +1531,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export approval analytics as CSV (protected - admin only)
-  app.get("/api/analytics/export/approvals", requireAuth, async (req, res) => {
-    try {
-      const { status } = req.query;
-      const filterStatus = status === 'pending' || status === 'approved' || status === 'rejected' 
-        ? status 
-        : undefined;
-      
-      const allPending = await storage.getAllPendingVehicles(filterStatus);
-      
-      // Build CSV
-      const headers = [
-        'Date Created',
-        'Status',
-        'Make',
-        'Model',
-        'Year',
-        'Device Type',
-        'Port Type',
-        'Confidence',
-        'Source',
-        'User Name',
-        'User Email'
-      ];
-      
-      const rows = allPending.map(record => [
-        record.createdAt ? new Date(record.createdAt).toISOString() : '',
-        record.status || '',
-        record.make || '',
-        record.model || '',
-        record.year?.toString() || '',
-        record.deviceType || '',
-        record.portType || '',
-        record.confidence?.toString() || '',
-        record.source || '',
-        record.userName || '',
-        record.userEmail || ''
-      ]);
-      
-      const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-      
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename=approval-analytics${filterStatus ? `-${filterStatus}` : ''}.csv`);
-      res.send(csv);
-    } catch (error) {
-      console.error("Export approval analytics CSV error:", error);
-      res.status(500).json({ message: "Failed to export approval analytics" });
-    }
-  });
-
   // Get pending vehicles (protected - admin only)
   app.get("/api/pending-vehicles", requireAuth, async (req, res) => {
     try {
@@ -1715,135 +1653,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Delete API key error:", error);
       res.status(500).json({ message: "Failed to delete API key" });
-    }
-  });
-
-  // Fix NULL sources by matching with ai_search_logs (protected - admin only)
-  app.post("/api/admin/fix-null-sources", requireAuth, async (req, res) => {
-    try {
-      // Update NULL source values by matching with ai_search_logs
-      const updateResult = await db.execute(sql`
-        UPDATE ${pendingVehicles} p
-        SET source = subquery.source
-        FROM (
-          SELECT DISTINCT ON (p2.id)
-            p2.id,
-            COALESCE(a.source, 'gemini_api') as source
-          FROM ${pendingVehicles} p2
-          INNER JOIN ${aiSearchLogs} a
-            ON UPPER(TRIM(p2.make)) = UPPER(TRIM(a.make))
-            AND UPPER(TRIM(p2.model)) = UPPER(TRIM(a.model))
-            AND p2.year = a.year
-            AND a.source != 'exact'
-          WHERE p2.source IS NULL
-            AND p2.status IN ('pending', 'approved', 'rejected')
-          ORDER BY p2.id, a.timestamp DESC
-        ) subquery
-        WHERE p.id = subquery.id
-      `);
-
-      // Get updated counts
-      const afterCounts = await db.execute<{ source: string; status: string; count: number }>(sql`
-        SELECT 
-          COALESCE(source, 'NULL') as source,
-          status,
-          COUNT(*) as count
-        FROM ${pendingVehicles}
-        WHERE status IN ('pending', 'approved', 'rejected')
-        GROUP BY COALESCE(source, 'NULL'), status
-        ORDER BY source, status
-      `);
-
-      res.json({
-        message: "NULL sources fixed successfully",
-        rowsUpdated: updateResult.rowCount || 0,
-        currentStatus: afterCounts.rows,
-      });
-    } catch (error) {
-      console.error("Fix NULL sources error:", error);
-      res.status(500).json({ 
-        message: "Failed to fix NULL sources",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  // Backfill deleted predictions (protected - admin only)
-  app.post("/api/admin/backfill-deleted-predictions", requireAuth, async (req, res) => {
-    try {
-      // Get counts BEFORE backfill
-      const beforeCounts = await db.execute<{ source: string; status: string; count: number }>(sql`
-        SELECT 
-          COALESCE(source, 'gemini_api') as source,
-          status,
-          COUNT(*) as count
-        FROM ${pendingVehicles}
-        GROUP BY COALESCE(source, 'gemini_api'), status
-        ORDER BY source, status
-      `);
-
-      // Get ai_search_logs totals
-      const aiSearchTotals = await db.execute<{ source: string; count: number }>(sql`
-        SELECT 
-          COALESCE(source, 'gemini_api') as source,
-          COUNT(*) as count
-        FROM ${aiSearchLogs}
-        WHERE source != 'exact'
-        GROUP BY COALESCE(source, 'gemini_api')
-        ORDER BY source
-      `);
-
-      // Use LEFT JOIN to find all ai_search_logs that DON'T have matches
-      // This is more reliable than NOT EXISTS for finding missing records
-      const backfillResult = await db.execute(sql`
-        INSERT INTO ${pendingVehicles} (
-          make, model, year, device_type, port_type, confidence, 
-          google_search_results, source, status, created_at
-        )
-        SELECT DISTINCT
-          a.make, a.model, a.year,
-          'UNKNOWN' as device_type,
-          'UNKNOWN' as port_type,
-          a.confidence,
-          '{"note": "Backfilled from ai_search_logs"}' as google_search_results,
-          COALESCE(a.source, 'gemini_api') as source,
-          'deleted' as status,
-          a.timestamp as created_at
-        FROM ${aiSearchLogs} a
-        LEFT JOIN ${pendingVehicles} p
-          ON UPPER(TRIM(a.make)) = UPPER(TRIM(p.make))
-          AND UPPER(TRIM(a.model)) = UPPER(TRIM(p.model))
-          AND a.year = p.year
-          AND COALESCE(a.source, 'gemini_api') = COALESCE(p.source, 'gemini_api')
-        WHERE a.source != 'exact'
-          AND p.id IS NULL
-        ON CONFLICT DO NOTHING
-      `);
-
-      // Get counts AFTER backfill
-      const afterCounts = await db.execute<{ source: string; status: string; count: number }>(sql`
-        SELECT 
-          COALESCE(source, 'gemini_api') as source,
-          status,
-          COUNT(*) as count
-        FROM ${pendingVehicles}
-        GROUP BY COALESCE(source, 'gemini_api'), status
-        ORDER BY source, status
-      `);
-
-      res.json({
-        message: "Backfill completed successfully",
-        rowsInserted: backfillResult.rowCount || 0,
-        aiSearchLogsTotals: aiSearchTotals.rows,
-        beforeBackfill: beforeCounts.rows,
-        afterBackfill: afterCounts.rows,
-      });
-    } catch (error) {
-      console.error("Backfill deleted predictions error:", error);
-      res.status(500).json({ 
-        message: "Failed to backfill deleted predictions",
-        error: error instanceof Error ? error.message : String(error)
-      });
     }
   });
 

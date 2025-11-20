@@ -507,11 +507,6 @@ export class DatabaseStorage implements IStorage {
       .from(aiSearchLogs)
       .where(eq(aiSearchLogs.source, 'veco'));
 
-    const [exactMatchCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(aiSearchLogs)
-      .where(eq(aiSearchLogs.source, 'exact'));
-
     const [costSum] = await db
       .select({ sum: sql<number>`coalesce(sum(${aiSearchLogs.cost}), 0)` })
       .from(aiSearchLogs);
@@ -528,7 +523,6 @@ export class DatabaseStorage implements IStorage {
       googleSearches: Number(googleCount?.count || 0),
       geminiSearches: Number(geminiCount?.count || 0),
       vecoSearches: Number(vecoCount?.count || 0),
-      exactMatches: Number(exactMatchCount?.count || 0),
       tier1Searches: Number(tier1Count?.count || 0),
       tier2Searches: Number(tier2Count?.count || 0),
       totalCostCents: Number(costSum?.sum || 0),
@@ -537,7 +531,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBillingPieCharts(): Promise<BillingPieCharts> {
-    // Get counts from ai_search_logs by source (all predictions ever made)
+    const [exactMatchCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(searchLogs)
+      .where(and(
+        sql`${searchLogs.searchType} IN ('ai', 'vin')`,
+        eq(searchLogs.exactMatch, true)
+      ));
+
     const [tier1Count] = await db
       .select({ count: sql<number>`count(*)` })
       .from(aiSearchLogs)
@@ -558,12 +559,6 @@ export class DatabaseStorage implements IStorage {
       .from(aiSearchLogs)
       .where(eq(aiSearchLogs.source, 'gemini_api'));
 
-    const [exactMatchCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(aiSearchLogs)
-      .where(eq(aiSearchLogs.source, 'exact'));
-
-    // Get approval analytics from pending_vehicles (excluding deleted)
     const [pendingCount] = await db
       .select({ count: sql<number>`count(*)` })
       .from(pendingVehicles)
@@ -579,133 +574,81 @@ export class DatabaseStorage implements IStorage {
       .from(pendingVehicles)
       .where(eq(pendingVehicles.status, 'rejected'));
 
-    // WORKAROUND: Since historical records have NULL source after approval/rejection,
-    // we cannot reliably match them back to tiers. Instead, we'll use the Search Tier Breakdown
-    // totals and show "Not available" for individual tier charts until source tracking is fixed.
-    // This is honest and prevents showing misleading data.
-    
-    // Count records with valid source vs NULL source
-    const recordsWithSourceResult = await db.execute<{ count: number }>(sql`
-      SELECT COUNT(*) as count
-      FROM ${pendingVehicles}
-      WHERE status IN ('pending', 'approved', 'rejected')
-        AND source IS NOT NULL
-    `);
+    // Get tier breakdown with pending/approved/rejected for each tier
+    // Join with ai_search_logs to get the actual tier/source for each prediction
+    const tierBreakdownResults = await db
+      .select({
+        source: sql<string>`COALESCE(${aiSearchLogs.source}, 'unmatched')`,
+        status: pendingVehicles.status,
+        count: sql<number>`count(*)`,
+      })
+      .from(pendingVehicles)
+      .leftJoin(aiSearchLogs, 
+        sql`${pendingVehicles.make} = ${aiSearchLogs.make} AND ${pendingVehicles.model} = ${aiSearchLogs.model} AND ${pendingVehicles.year} = ${aiSearchLogs.year}`
+      )
+      .groupBy(aiSearchLogs.source, pendingVehicles.status);
 
-    const hasReliableSourceData = Number(recordsWithSourceResult.rows[0]?.count || 0) > 0;
-
-    // Build tier map - only if we have reliable source data
+    // Build tier map with pending/approved/rejected counts
     const tierMap = new Map<string, { pending: number; approved: number; rejected: number }>();
-    
-    if (hasReliableSourceData) {
-      // Get tier breakdown from records that have source populated
-      const tierBreakdownResults = await db.execute<{
-        source: string;
-        status: string;
-        count: number;
-      }>(sql`
-        SELECT 
-          COALESCE(source, 'gemini_api') as source,
-          status,
-          COUNT(*) as count
-        FROM ${pendingVehicles}
-        WHERE status IN ('pending', 'approved', 'rejected')
-          AND source IS NOT NULL
-        GROUP BY COALESCE(source, 'gemini_api'), status
-      `);
+    tierBreakdownResults.forEach((row) => {
+      const source = row.source || 'unmatched';
+      if (!tierMap.has(source)) {
+        tierMap.set(source, { pending: 0, approved: 0, rejected: 0 });
+      }
+      const counts = tierMap.get(source)!;
+      if (row.status === 'pending') {
+        counts.pending = Number(row.count);
+      } else if (row.status === 'approved') {
+        counts.approved = Number(row.count);
+      } else if (row.status === 'rejected') {
+        counts.rejected = Number(row.count);
+      }
+    });
 
-      tierBreakdownResults.rows.forEach((row: { source: string; status: string; count: number }) => {
-        const source = row.source || 'gemini_api';
-        if (!tierMap.has(source)) {
-          tierMap.set(source, { pending: 0, approved: 0, rejected: 0 });
-        }
-        const counts = tierMap.get(source)!;
-        if (row.status === 'pending') {
-          counts.pending += Number(row.count);
-        } else if (row.status === 'approved') {
-          counts.approved += Number(row.count);
-        } else if (row.status === 'rejected') {
-          counts.rejected += Number(row.count);
-        }
-      });
-    }
-
-    // Helper function to create tier data - shows only pending/approved/rejected (excludes deleted)
-    // Deleted records are excluded as they're not chargeable approval decisions
+    // Helper function to create tier data
     const createTierData = (source: string, name: string, baseColor: string) => {
-      const approvalData = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
+      const data = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
+      const total = data.pending + data.approved + data.rejected;
       
-      // Calculate total from pending + approved + rejected only (deleted excluded)
-      const total = approvalData.pending + approvalData.approved + approvalData.rejected;
+      if (total === 0) return null;
       
       return {
         name,
         data: [
-          { name: 'Pending', value: approvalData.pending, color: '#f59e0b' },
-          { name: 'Approved', value: approvalData.approved, color: '#10b981' },
-          { name: 'Rejected', value: approvalData.rejected, color: '#ef4444' },
+          { name: 'Pending', value: data.pending, color: '#f59e0b' },
+          { name: 'Approved', value: data.approved, color: '#10b981' },
+          { name: 'Rejected', value: data.rejected, color: '#ef4444' },
         ].filter(item => item.value > 0),
-        total, // Total = pending + approved + rejected (deleted excluded)
+        total,
       };
     };
 
     const individualTierCharts = {
-      tier1: createTierData('database_tier1', 'Pattern ±5 years', '#3b82f6'),
-      tier2: createTierData('database_tier2', 'Pattern ±10 years', '#06b6d4'),
+      tier1: createTierData('database_tier1', 'DB ±5yr', '#3b82f6'),
+      tier2: createTierData('database_tier2', 'DB ±10yr', '#06b6d4'),
       googleApi: createTierData('google_api', 'Google API', '#f59e0b'),
       geminiAi: createTierData('gemini_api', 'Gemini AI', '#a855f7'),
-      // Don't include 'unmatched' in individual tier charts - only show the 4 main tiers
+      unmatched: createTierData('unmatched', 'Unmatched', '#6b7280'),
     };
 
-    // Search tier breakdown using ai_search_logs (matches the stats)
     const searchTierBreakdown = [
       { name: 'Exact Matches', value: Number(exactMatchCount?.count || 0), color: '#10b981' },
-      { name: 'Pattern ±5 years', value: Number(tier1Count?.count || 0), color: '#3b82f6' },
-      { name: 'Pattern ±10 years', value: Number(tier2Count?.count || 0), color: '#06b6d4' },
+      { name: 'Database Pattern (±5 years)', value: Number(tier1Count?.count || 0), color: '#3b82f6' },
+      { name: 'Database Pattern (±10 years)', value: Number(tier2Count?.count || 0), color: '#06b6d4' },
       { name: 'Google API', value: Number(googleCount?.count || 0), color: '#f59e0b' },
       { name: 'Gemini AI', value: Number(geminiCount?.count || 0), color: '#a855f7' },
-    ].filter(item => item.value > 0);
+    ];
 
     const approvalAnalytics = [
       { name: 'Pending', value: Number(pendingCount?.count || 0), color: '#f59e0b' },
       { name: 'Approved', value: Number(approvedCount?.count || 0), color: '#10b981' },
       { name: 'Rejected', value: Number(rejectedCount?.count || 0), color: '#ef4444' },
-    ].filter(item => item.value > 0);
-
-    // Get API call breakdown by endpoint (only API calls with apiKeyId)
-    const apiCallResults = await db
-      .select({
-        endpoint: searchLogs.endpoint,
-        count: sql<number>`count(*)`,
-      })
-      .from(searchLogs)
-      .where(sql`${searchLogs.apiKeyId} IS NOT NULL`)
-      .groupBy(searchLogs.endpoint)
-      .orderBy(desc(sql<number>`count(*)`));
-
-    // Map endpoints to friendly names with colors
-    const endpointColorMap: Record<string, { name: string; color: string }> = {
-      '/api/ai/predict': { name: 'AI Predictions', color: '#8b5cf6' },
-      '/api/vin/decode': { name: 'VIN Decoder', color: '#3b82f6' },
-      '/api/vehicles/search': { name: 'Vehicle Search', color: '#10b981' },
-      '/api/harnesses/search': { name: 'Harness Search', color: '#f59e0b' },
-    };
-
-    const apiCallBreakdown = apiCallResults.map((row) => {
-      const endpoint = row.endpoint || 'Unknown';
-      const mappedData = endpointColorMap[endpoint] || { name: endpoint, color: '#6b7280' };
-      return {
-        name: mappedData.name,
-        value: Number(row.count),
-        color: mappedData.color,
-      };
-    });
+    ];
 
     return {
       searchTierBreakdown,
       approvalAnalytics,
       individualTierCharts,
-      apiCallBreakdown,
     };
   }
 
@@ -733,11 +676,9 @@ export class DatabaseStorage implements IStorage {
         .where(eq(pendingVehicles.status, status))
         .orderBy(desc(pendingVehicles.createdAt));
     }
-    // Exclude deleted records from "all" pending vehicles
     return await db
       .select()
       .from(pendingVehicles)
-      .where(ne(pendingVehicles.status, 'deleted'))
       .orderBy(desc(pendingVehicles.createdAt));
   }
 
@@ -760,44 +701,22 @@ export class DatabaseStorage implements IStorage {
       portType: pending.portType,
     });
 
-    // Update status to approved, explicitly preserving source
+    // Update status to approved
     await db
       .update(pendingVehicles)
-      .set({ 
-        status: 'approved',
-        source: pending.source // Explicitly preserve source field
-      })
+      .set({ status: 'approved' })
       .where(eq(pendingVehicles.id, id));
   }
 
   async rejectPendingVehicle(id: string): Promise<void> {
-    // Fetch the pending vehicle to preserve source
-    const [pending] = await db
-      .select()
-      .from(pendingVehicles)
-      .where(eq(pendingVehicles.id, id));
-
-    if (!pending) {
-      throw new Error('Pending vehicle not found');
-    }
-
-    // Update status to rejected, explicitly preserving source
     await db
       .update(pendingVehicles)
-      .set({ 
-        status: 'rejected',
-        source: pending.source // Explicitly preserve source field
-      })
+      .set({ status: 'rejected' })
       .where(eq(pendingVehicles.id, id));
   }
 
   async deletePendingVehicle(id: string): Promise<void> {
-    // Soft delete: set status to 'deleted' instead of removing the row
-    // This preserves approval history for billing charts
-    await db
-      .update(pendingVehicles)
-      .set({ status: 'deleted' })
-      .where(eq(pendingVehicles.id, id));
+    await db.delete(pendingVehicles).where(eq(pendingVehicles.id, id));
   }
 
   async getTodayGeminiSearchCount(): Promise<number> {

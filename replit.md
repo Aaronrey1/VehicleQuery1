@@ -27,13 +27,10 @@ All public API endpoints require API key authentication via the `X-API-Key` head
 - **API Call Analytics:** `/api/analytics/api-calls` provides detailed API key usage analytics (total calls, calls by endpoint/key, recent logs) with filtering and export.
 - **Dashboard Analytics:** `/api/analytics/dashboard` provides real-time analytics for total searches, most searched make, total vehicles, and top searched vehicles.
 - **Billing:** `/api/billing/stats` for AI Search usage and cost analytics (Gemini AI costs approx. $0.01/request). Includes endpoints for billing pie charts. The `/api/billing/pie-charts` endpoint provides:
-  - Search Tier Breakdown: Shows distribution of searches across 5 tiers (Exact Matches, Pattern ±5 years, Pattern ±10 years, Google API, Gemini AI) from `ai_search_logs` table. Exact matches are logged with source='exact' and don't require approval.
-  - Approval Analytics: Overall pending/approved/rejected counts across all non-exact tiers.
-  - Individual Tier Charts: Shows 4 separate pie charts (Pattern ±5 years, Pattern ±10 years, Google API, Gemini AI) displaying approval status breakdown. Total count per tier matches Search Tier Breakdown (from `ai_search_logs`), with approval status split (pending/approved/rejected) from `pending_vehicles`. Color coding: Pending (orange), Approved (green), Rejected (red). Note: Exact matches don't appear in individual charts as they don't require approval.
-  - API Call Breakdown: Shows external API calls by endpoint (AI Predictions, VIN Decoder, Vehicle Search, Harness Search). Only counts calls made with API keys.
-  - All charts display empty states when no data is available, ensuring charts are visible even in production with no data.
+  - Search Tier Breakdown: Shows distribution of all searches across 5 tiers (Exact Matches, DB ±5yr, DB ±10yr, Google API, Gemini AI).
+  - Approval Analytics: Overall pending/approved/rejected counts.
+  - Individual Tier Charts: Separate pie charts for each tier (DB ±5yr, DB ±10yr, Google API, Gemini AI, Unmatched) showing pending/approved/rejected status distribution with consistent color coding (Pending: orange, Approved: green, Rejected: red).
 - **Pending Approvals:** Endpoints for approving, rejecting, and deleting pending predictions, with automated email notifications for approved predictions.
-- **Admin Tools:** `/api/admin/fix-null-sources` permanently fixes NULL source values in `pending_vehicles` by matching with `ai_search_logs`. This is needed because historical approved/rejected records lost their source field, making tier attribution impossible for billing charts. Run this button once in production after deploying to backfill all historical data.
 
 ### Data Storage
 PostgreSQL is used as the database, accessed via the Neon serverless driver. Drizzle ORM provides type-safe operations, with schema defined in `shared/schema.ts` and Zod for runtime validation.

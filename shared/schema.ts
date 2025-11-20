@@ -175,7 +175,6 @@ export type BillingStats = {
   googleSearches: number; // Paid - Historical Google API calls
   geminiSearches: number; // Paid - Current Gemini AI calls
   vecoSearches: number; // Free
-  exactMatches: number; // Free - Instant database matches
   totalCostCents: number; // in tenths of a cent (divide by 1000 for dollars)
   tier1Searches: number;
   tier2Searches: number;
@@ -186,12 +185,12 @@ export type BillingPieCharts = {
   searchTierBreakdown: Array<{ name: string; value: number; color: string }>;
   approvalAnalytics: Array<{ name: string; value: number; color: string }>;
   individualTierCharts: {
-    tier1: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number };
-    tier2: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number };
-    googleApi: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number };
-    geminiAi: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number };
+    tier1: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
+    tier2: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
+    googleApi: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
+    geminiAi: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
+    unmatched: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
   };
-  apiCallBreakdown: Array<{ name: string; value: number; color: string }>;
 };
 
 // Pending vehicles from Google API awaiting admin approval
@@ -205,7 +204,7 @@ export const pendingVehicles = pgTable("pending_vehicles", {
   confidence: integer("confidence").notNull(),
   googleSearchResults: text("google_search_results"), // JSON string of Google results
   source: text("source"), // AI prediction source: 'google_api', 'gemini_api', 'database_tier1', etc.
-  status: text("status").notNull().default("pending"), // 'pending', 'approved', 'rejected', 'deleted'
+  status: text("status").notNull().default("pending"), // 'pending', 'approved', 'rejected'
   userName: text("user_name"), // Optional: user's name for email notification
   userEmail: text("user_email"), // Optional: user's email for approval notification
   createdAt: timestamp("created_at").notNull().defaultNow(),

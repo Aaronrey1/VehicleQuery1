@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, Search, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertVehicleSchema, type Vehicle, type InsertVehicle } from "@shared/schema";
 import { z } from "zod";
@@ -191,53 +191,6 @@ export default function AdminPanel() {
     },
   });
 
-  // Backfill deleted predictions mutation
-  const fixSourcesMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/admin/fix-null-sources", undefined);
-      return response;
-    },
-    onSuccess: (data: any) => {
-      queryClient.refetchQueries({ queryKey: ["/api/billing/pie-charts"] });
-      queryClient.refetchQueries({ queryKey: ["/api/billing/stats"] });
-      toast({
-        title: "Sources Fixed",
-        description: `${data.rowsUpdated || 0} records updated with correct source values`,
-      });
-      console.log("Fix sources results:", data);
-    },
-    onError: (error) => {
-      toast({
-        title: "Fix Failed",
-        description: error instanceof Error ? error.message : "Failed to fix source values",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const backfillMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/admin/backfill-deleted-predictions", undefined);
-      return response;
-    },
-    onSuccess: (data: any) => {
-      queryClient.refetchQueries({ queryKey: ["/api/billing/pie-charts"] });
-      queryClient.refetchQueries({ queryKey: ["/api/billing/stats"] });
-      toast({
-        title: "Backfill Completed",
-        description: `${data.rowsInserted || 0} deleted predictions restored to billing charts`,
-      });
-      console.log("Backfill results:", data);
-    },
-    onError: (error) => {
-      toast({
-        title: "Backfill Failed",
-        description: error instanceof Error ? error.message : "Failed to backfill deleted predictions",
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleSubmit = (data: z.infer<typeof formSchema>) => {
     // Validate year fields
     const hasYear = data.year !== undefined && data.year !== null;
@@ -354,24 +307,14 @@ export default function AdminPanel() {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <CardTitle className="text-2xl">Vehicle Management</CardTitle>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                onClick={() => fixSourcesMutation.mutate()}
-                disabled={fixSourcesMutation.isPending}
-                data-testid="button-fix-sources"
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${fixSourcesMutation.isPending ? 'animate-spin' : ''}`} />
-                {fixSourcesMutation.isPending ? 'Fixing...' : 'Fix Billing Charts'}
-              </Button>
-              <Dialog open={isCreateDialogOpen || !!editingVehicle} onOpenChange={(open) => !open && handleCloseDialog()}>
-                <DialogTrigger asChild>
-                  <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-add-vehicle">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Vehicle
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md" data-testid="dialog-vehicle-form">
+            <Dialog open={isCreateDialogOpen || !!editingVehicle} onOpenChange={(open) => !open && handleCloseDialog()}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-add-vehicle">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Vehicle
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md" data-testid="dialog-vehicle-form">
                 <DialogHeader>
                   <DialogTitle>{editingVehicle ? "Edit Vehicle" : "Add New Vehicle"}</DialogTitle>
                 </DialogHeader>
@@ -545,7 +488,6 @@ export default function AdminPanel() {
                 </Form>
               </DialogContent>
             </Dialog>
-            </div>
           </div>
           
           {/* Filter Section */}

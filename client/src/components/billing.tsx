@@ -163,21 +163,7 @@ export default function Billing() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <div className="border rounded-lg p-4 bg-green-50 dark:bg-green-950/20">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Exact Matches</span>
-                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                  <Database className="h-3 w-3 mr-1" />
-                  FREE
-                </Badge>
-              </div>
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-exact-matches">{stats.exactMatches || 0}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Instant database matches
-              </p>
-            </div>
-
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Database Searches</span>
@@ -220,17 +206,17 @@ export default function Billing() {
               </p>
             </div>
 
-            <div className="border rounded-lg p-4 bg-green-50 dark:bg-green-950/20">
+            <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Exact Matches</span>
-                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                <span className="text-sm font-medium">VECO API</span>
+                <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
                   <Database className="h-3 w-3 mr-1" />
                   FREE
                 </Badge>
               </div>
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-exact-matches-tier">{stats.exactMatches || 0}</div>
+              <div className="text-2xl font-bold" data-testid="text-veco-count">{stats.vecoSearches || 0}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                Instant database lookup
+                OBD-II compatibility check
               </p>
             </div>
           </div>
@@ -238,7 +224,7 @@ export default function Billing() {
       </Card>
 
       {/* Pie Charts Section */}
-      {!pieChartsLoading && (
+      {!pieChartsLoading && pieCharts && (
         <>
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
@@ -248,62 +234,35 @@ export default function Billing() {
                   Search Tier Breakdown
                 </CardTitle>
                 <CardDescription>
-                  Total searches performed across all tiers (shows how often each search method was used)
+                  Distribution of searches by tier (exact, database pattern, AI)
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {pieCharts && pieCharts.searchTierBreakdown.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={pieCharts.searchTierBreakdown}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, value, percent, x, y, cx }) => {
-                          if (value === 0) return '';
-                          return (
-                            <text x={x} y={y} fill="currentColor" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="11px" className="fill-foreground">
-                              {`${name}: ${value} (${(percent * 100).toFixed(1)}%)`}
-                            </text>
-                          );
-                        }}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {pieCharts.searchTierBreakdown.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                    <div className="text-center">
-                      <PieChartIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>No prediction data available yet</p>
-                    </div>
-                  </div>
-                )}
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={pieCharts.searchTierBreakdown}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {pieCharts.searchTierBreakdown.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Section Header for Individual Tier Charts */}
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-1">Approval Outcomes by Tier</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              These charts show AI prediction approval status (pending, approved, rejected) for each search tier. 
-              Note: Not all searches generate predictions - only those without exact matches require AI predictions.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-{/* Individual tier charts - always show all 4 main tiers */}
-            {pieCharts && Object.entries(pieCharts.individualTierCharts).map(([key, tierData]) => {
+{/* Individual tier charts */}
+            {Object.entries(pieCharts.individualTierCharts).map(([key, tierData]) => {
               if (!tierData) return null;
               return (
                 <Card key={key}>
@@ -313,48 +272,30 @@ export default function Billing() {
                       {tierData.name}
                     </CardTitle>
                     <CardDescription>
-                      {tierData.total > 0 
-                        ? `${tierData.total} AI prediction${tierData.total !== 1 ? 's' : ''} awaiting approval or reviewed`
-                        : 'No AI predictions generated yet'}
+                      {tierData.total} total predictions
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {tierData.total > 0 ? (
-                      <ResponsiveContainer width="100%" height={250}>
-                        <PieChart>
-                          <Pie
-                            data={tierData.data}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, value, percent, x, y, cx }) => {
-                              if (value === 0) return '';
-                              return (
-                                <text x={x} y={y} fill="currentColor" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="11px" className="fill-foreground">
-                                  {`${name}: ${value} (${(percent * 100).toFixed(1)}%)`}
-                                </text>
-                              );
-                            }}
-                            outerRadius={70}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {tierData.data.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(value, name) => [`${value} predictions`, name]} />
-                          <Legend wrapperStyle={{ fontSize: '12px' }} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex items-center justify-center h-[250px] text-muted-foreground">
-                        <div className="text-center">
-                          <PieChartIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">No data yet</p>
-                        </div>
-                      </div>
-                    )}
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={tierData.data}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
+                          outerRadius={70}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {tierData.data.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value, name) => [`${value} predictions`, name]} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </CardContent>
                 </Card>
               );
@@ -372,93 +313,26 @@ export default function Billing() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {pieCharts && pieCharts.approvalAnalytics.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={pieCharts.approvalAnalytics}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, value, percent, x, y, cx }) => {
-                        if (value === 0) return '';
-                        return (
-                          <text x={x} y={y} fill="currentColor" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="11px" className="fill-foreground">
-                            {`${name}: ${value} (${(percent * 100).toFixed(1)}%)`}
-                          </text>
-                        );
-                      }}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {pieCharts.approvalAnalytics.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                  <div className="text-center">
-                    <PieChartIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>No approval data available yet</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* API Call Breakdown */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PieChartIcon className="h-5 w-5" />
-                API Call Breakdown
-              </CardTitle>
-              <CardDescription>
-                External API calls by endpoint (via API keys)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {pieCharts && pieCharts.apiCallBreakdown.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={pieCharts.apiCallBreakdown}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, value, percent, x, y, cx }) => {
-                        if (value === 0) return '';
-                        return (
-                          <text x={x} y={y} fill="currentColor" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="11px" className="fill-foreground">
-                            {`${name}: ${value} (${(percent * 100).toFixed(1)}%)`}
-                          </text>
-                        );
-                      }}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {pieCharts.apiCallBreakdown.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                  <div className="text-center">
-                    <PieChartIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>No API call data available yet</p>
-                  </div>
-                </div>
-              )}
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={pieCharts.approvalAnalytics}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {pieCharts.approvalAnalytics.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </>
