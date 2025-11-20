@@ -186,8 +186,16 @@ export type BillingPieCharts = {
 };
 
 export type PendingApprovalsAnalytics = {
-  statusBreakdown: Array<{ name: string; value: number; color: string }>;
-  sourceBreakdown: Array<{ name: string; value: number; color: string }>;
+  sourceBreakdowns: Array<{
+    source: string;
+    total: number;
+    statuses: Array<{
+      name: string;
+      value: number;
+      percentage: number;
+      color: string;
+    }>;
+  }>;
 };
 
 // Pending vehicles from Google API awaiting admin approval
