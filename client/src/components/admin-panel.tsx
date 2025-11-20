@@ -192,6 +192,29 @@ export default function AdminPanel() {
   });
 
   // Backfill deleted predictions mutation
+  const fixSourcesMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/fix-null-sources", undefined);
+      return response;
+    },
+    onSuccess: (data: any) => {
+      queryClient.refetchQueries({ queryKey: ["/api/billing/pie-charts"] });
+      queryClient.refetchQueries({ queryKey: ["/api/billing/stats"] });
+      toast({
+        title: "Sources Fixed",
+        description: `${data.rowsUpdated || 0} records updated with correct source values`,
+      });
+      console.log("Fix sources results:", data);
+    },
+    onError: (error) => {
+      toast({
+        title: "Fix Failed",
+        description: error instanceof Error ? error.message : "Failed to fix source values",
+        variant: "destructive",
+      });
+    },
+  });
+
   const backfillMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/admin/backfill-deleted-predictions", undefined);
@@ -334,12 +357,12 @@ export default function AdminPanel() {
             <div className="flex gap-2">
               <Button 
                 variant="outline"
-                onClick={() => backfillMutation.mutate()}
-                disabled={backfillMutation.isPending}
-                data-testid="button-backfill-predictions"
+                onClick={() => fixSourcesMutation.mutate()}
+                disabled={fixSourcesMutation.isPending}
+                data-testid="button-fix-sources"
               >
-                <RefreshCw className={`mr-2 h-4 w-4 ${backfillMutation.isPending ? 'animate-spin' : ''}`} />
-                {backfillMutation.isPending ? 'Backfilling...' : 'Fix Billing Charts'}
+                <RefreshCw className={`mr-2 h-4 w-4 ${fixSourcesMutation.isPending ? 'animate-spin' : ''}`} />
+                {fixSourcesMutation.isPending ? 'Fixing...' : 'Fix Billing Charts'}
               </Button>
               <Dialog open={isCreateDialogOpen || !!editingVehicle} onOpenChange={(open) => !open && handleCloseDialog()}>
                 <DialogTrigger asChild>

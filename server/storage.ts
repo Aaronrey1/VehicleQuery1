@@ -579,51 +579,56 @@ export class DatabaseStorage implements IStorage {
       .from(pendingVehicles)
       .where(eq(pendingVehicles.status, 'rejected'));
 
-    // Get tier breakdown by backfilling NULL sources from ai_search_logs
-    // Use DISTINCT ON to ensure each pending_vehicles record is counted only ONCE
-    // even if it matches multiple ai_search_logs entries
-    const tierBreakdownResults = await db.execute<{
-      source: string;
-      status: string;
-      count: number;
-    }>(sql`
-      SELECT 
-        source,
-        status,
-        COUNT(*) as count
-      FROM (
-        SELECT DISTINCT ON (p.id)
-          p.id,
-          COALESCE(a.source, p.source, 'gemini_api') as source,
-          p.status
-        FROM ${pendingVehicles} p
-        LEFT JOIN ${aiSearchLogs} a
-          ON UPPER(TRIM(p.make)) = UPPER(TRIM(a.make))
-          AND UPPER(TRIM(p.model)) = UPPER(TRIM(a.model))
-          AND p.year = a.year
-          AND a.source != 'exact'
-        WHERE p.status IN ('pending', 'approved', 'rejected')
-        ORDER BY p.id, a.timestamp DESC
-      ) subquery
-      GROUP BY source, status
+    // WORKAROUND: Since historical records have NULL source after approval/rejection,
+    // we cannot reliably match them back to tiers. Instead, we'll use the Search Tier Breakdown
+    // totals and show "Not available" for individual tier charts until source tracking is fixed.
+    // This is honest and prevents showing misleading data.
+    
+    // Count records with valid source vs NULL source
+    const recordsWithSourceResult = await db.execute<{ count: number }>(sql`
+      SELECT COUNT(*) as count
+      FROM ${pendingVehicles}
+      WHERE status IN ('pending', 'approved', 'rejected')
+        AND source IS NOT NULL
     `);
 
-    // Build tier map with pending/approved/rejected counts (excluding deleted)
+    const hasReliableSourceData = Number(recordsWithSourceResult.rows[0]?.count || 0) > 0;
+
+    // Build tier map - only if we have reliable source data
     const tierMap = new Map<string, { pending: number; approved: number; rejected: number }>();
-    tierBreakdownResults.rows.forEach((row: { source: string; status: string; count: number }) => {
-      const source = row.source || 'gemini_api';
-      if (!tierMap.has(source)) {
-        tierMap.set(source, { pending: 0, approved: 0, rejected: 0 });
-      }
-      const counts = tierMap.get(source)!;
-      if (row.status === 'pending') {
-        counts.pending += Number(row.count);
-      } else if (row.status === 'approved') {
-        counts.approved += Number(row.count);
-      } else if (row.status === 'rejected') {
-        counts.rejected += Number(row.count);
-      }
-    });
+    
+    if (hasReliableSourceData) {
+      // Get tier breakdown from records that have source populated
+      const tierBreakdownResults = await db.execute<{
+        source: string;
+        status: string;
+        count: number;
+      }>(sql`
+        SELECT 
+          COALESCE(source, 'gemini_api') as source,
+          status,
+          COUNT(*) as count
+        FROM ${pendingVehicles}
+        WHERE status IN ('pending', 'approved', 'rejected')
+          AND source IS NOT NULL
+        GROUP BY COALESCE(source, 'gemini_api'), status
+      `);
+
+      tierBreakdownResults.rows.forEach((row: { source: string; status: string; count: number }) => {
+        const source = row.source || 'gemini_api';
+        if (!tierMap.has(source)) {
+          tierMap.set(source, { pending: 0, approved: 0, rejected: 0 });
+        }
+        const counts = tierMap.get(source)!;
+        if (row.status === 'pending') {
+          counts.pending += Number(row.count);
+        } else if (row.status === 'approved') {
+          counts.approved += Number(row.count);
+        } else if (row.status === 'rejected') {
+          counts.rejected += Number(row.count);
+        }
+      });
+    }
 
     // Helper function to create tier data - shows only pending/approved/rejected (excludes deleted)
     // Deleted records are excluded as they're not chargeable approval decisions

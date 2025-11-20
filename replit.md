@@ -33,6 +33,7 @@ All public API endpoints require API key authentication via the `X-API-Key` head
   - API Call Breakdown: Shows external API calls by endpoint (AI Predictions, VIN Decoder, Vehicle Search, Harness Search). Only counts calls made with API keys.
   - All charts display empty states when no data is available, ensuring charts are visible even in production with no data.
 - **Pending Approvals:** Endpoints for approving, rejecting, and deleting pending predictions, with automated email notifications for approved predictions.
+- **Admin Tools:** `/api/admin/fix-null-sources` permanently fixes NULL source values in `pending_vehicles` by matching with `ai_search_logs`. This is needed because historical approved/rejected records lost their source field, making tier attribution impossible for billing charts. Run this button once in production after deploying to backfill all historical data.
 
 ### Data Storage
 PostgreSQL is used as the database, accessed via the Neon serverless driver. Drizzle ORM provides type-safe operations, with schema defined in `shared/schema.ts` and Zod for runtime validation.

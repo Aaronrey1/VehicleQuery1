@@ -1668,6 +1668,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Fix NULL sources by matching with ai_search_logs (protected - admin only)
+  app.post("/api/admin/fix-null-sources", requireAuth, async (req, res) => {
+    try {
+      // Update NULL source values by matching with ai_search_logs
+      const updateResult = await db.execute(sql`
+        UPDATE ${pendingVehicles} p
+        SET source = subquery.source
+        FROM (
+          SELECT DISTINCT ON (p2.id)
+            p2.id,
+            COALESCE(a.source, 'gemini_api') as source
+          FROM ${pendingVehicles} p2
+          INNER JOIN ${aiSearchLogs} a
+            ON UPPER(TRIM(p2.make)) = UPPER(TRIM(a.make))
+            AND UPPER(TRIM(p2.model)) = UPPER(TRIM(a.model))
+            AND p2.year = a.year
+            AND a.source != 'exact'
+          WHERE p2.source IS NULL
+            AND p2.status IN ('pending', 'approved', 'rejected')
+          ORDER BY p2.id, a.timestamp DESC
+        ) subquery
+        WHERE p.id = subquery.id
+      `);
+
+      // Get updated counts
+      const afterCounts = await db.execute<{ source: string; status: string; count: number }>(sql`
+        SELECT 
+          COALESCE(source, 'NULL') as source,
+          status,
+          COUNT(*) as count
+        FROM ${pendingVehicles}
+        WHERE status IN ('pending', 'approved', 'rejected')
+        GROUP BY COALESCE(source, 'NULL'), status
+        ORDER BY source, status
+      `);
+
+      res.json({
+        message: "NULL sources fixed successfully",
+        rowsUpdated: updateResult.rowCount || 0,
+        currentStatus: afterCounts.rows,
+      });
+    } catch (error) {
+      console.error("Fix NULL sources error:", error);
+      res.status(500).json({ 
+        message: "Failed to fix NULL sources",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Backfill deleted predictions (protected - admin only)
   app.post("/api/admin/backfill-deleted-predictions", requireAuth, async (req, res) => {
     try {
