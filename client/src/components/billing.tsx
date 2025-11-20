@@ -301,40 +301,6 @@ export default function Billing() {
               );
             })}
           </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PieChartIcon className="h-5 w-5" />
-                Approval Analytics
-              </CardTitle>
-              <CardDescription>
-                Status of AI predictions (pending, approved, rejected)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={pieCharts.approvalAnalytics}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {pieCharts.approvalAnalytics.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
         </>
       )}
 
