@@ -537,27 +537,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBillingPieCharts(): Promise<BillingPieCharts> {
-    // Get counts from ai_search_logs by source (matching the billing stats)
-    const [tier1Count] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(aiSearchLogs)
-      .where(eq(aiSearchLogs.source, 'database_tier1'));
+    // IMPORTANT: Only count records in ai_search_logs that ALSO exist in pending_vehicles (not deleted)
+    // Exact matches don't need this check since they don't go through pending_vehicles
+    
+    // Get counts by joining ai_search_logs with pending_vehicles to exclude deleted records
+    const tierCountsResult = await db.execute<{
+      source: string;
+      count: number;
+    }>(sql`
+      SELECT 
+        COALESCE(a.source, 'gemini_api') as source,
+        COUNT(*) as count
+      FROM ${aiSearchLogs} a
+      INNER JOIN ${pendingVehicles} p
+        ON a.make = p.make 
+        AND a.model = p.model 
+        AND a.year = p.year
+        AND COALESCE(a.source, 'gemini_api') = COALESCE(p.source, 'gemini_api')
+      WHERE a.source != 'exact'
+      GROUP BY COALESCE(a.source, 'gemini_api')
+    `);
 
-    const [tier2Count] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(aiSearchLogs)
-      .where(eq(aiSearchLogs.source, 'database_tier2'));
+    // Build tier counts map from the join result
+    const tierCounts = new Map<string, number>();
+    tierCountsResult.rows.forEach((row: { source: string; count: number }) => {
+      tierCounts.set(row.source || 'gemini_api', Number(row.count));
+    });
 
-    const [googleCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(aiSearchLogs)
-      .where(eq(aiSearchLogs.source, 'google_api'));
+    const tier1Count = { count: tierCounts.get('database_tier1') || 0 };
+    const tier2Count = { count: tierCounts.get('database_tier2') || 0 };
+    const googleCount = { count: tierCounts.get('google_api') || 0 };
+    const geminiCount = { count: tierCounts.get('gemini_api') || 0 };
 
-    const [geminiCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(aiSearchLogs)
-      .where(eq(aiSearchLogs.source, 'gemini_api'));
-
+    // Exact matches are counted directly from ai_search_logs (they don't go through pending_vehicles)
     const [exactMatchCount] = await db
       .select({ count: sql<number>`count(*)` })
       .from(aiSearchLogs)
