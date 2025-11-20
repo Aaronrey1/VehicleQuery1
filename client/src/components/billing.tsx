@@ -353,6 +353,50 @@ export default function Billing() {
               )}
             </CardContent>
           </Card>
+
+          {/* API Call Breakdown */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieChartIcon className="h-5 w-5" />
+                API Call Breakdown
+              </CardTitle>
+              <CardDescription>
+                External API calls by endpoint (via API keys)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {pieCharts && pieCharts.apiCallBreakdown.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={pieCharts.apiCallBreakdown}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {pieCharts.apiCallBreakdown.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                  <div className="text-center">
+                    <PieChartIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No API call data available yet</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
 
