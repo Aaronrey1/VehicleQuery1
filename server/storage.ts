@@ -579,24 +579,32 @@ export class DatabaseStorage implements IStorage {
       .from(pendingVehicles)
       .where(eq(pendingVehicles.status, 'rejected'));
 
-    // Get tier breakdown with pending/approved/rejected for each tier from pending_vehicles
-    // Exclude deleted status from the breakdown
-    // Use raw SQL to properly group by the COALESCE'd source column
+    // Get tier breakdown with pending/approved/rejected for each tier
+    // Join ai_search_logs with pending_vehicles to ensure we count ALL predictions
+    // Use ai_search_logs as the source of truth for totals, pending_vehicles for approval status
     const tierBreakdownResults = await db.execute<{
       source: string;
       status: string;
       count: number;
     }>(sql`
       SELECT 
-        COALESCE(source, 'gemini_api') as source,
-        status,
+        COALESCE(a.source, 'gemini_api') as source,
+        COALESCE(p.status, 'deleted') as status,
         COUNT(*) as count
-      FROM ${pendingVehicles}
-      WHERE status != 'deleted'
-      GROUP BY COALESCE(source, 'gemini_api'), status
+      FROM ${aiSearchLogs} a
+      LEFT JOIN ${pendingVehicles} p
+        ON UPPER(TRIM(a.make)) = UPPER(TRIM(p.make))
+        AND UPPER(TRIM(a.model)) = UPPER(TRIM(p.model))
+        AND a.year = p.year
+        AND COALESCE(a.source, 'gemini_api') = COALESCE(p.source, 'gemini_api')
+        AND p.status != 'deleted'
+      WHERE a.source != 'exact'
+      GROUP BY COALESCE(a.source, 'gemini_api'), COALESCE(p.status, 'deleted')
     `);
 
     // Build tier map with pending/approved/rejected counts
+    // Note: 'deleted' status means the record exists in ai_search_logs but not in pending_vehicles
+    // We'll count these as 'pending' since they haven't been reviewed yet
     const tierMap = new Map<string, { pending: number; approved: number; rejected: number }>();
     tierBreakdownResults.rows.forEach((row: { source: string; status: string; count: number }) => {
       const source = row.source || 'gemini_api';
@@ -604,8 +612,9 @@ export class DatabaseStorage implements IStorage {
         tierMap.set(source, { pending: 0, approved: 0, rejected: 0 });
       }
       const counts = tierMap.get(source)!;
-      if (row.status === 'pending') {
-        counts.pending = Number(row.count);
+      if (row.status === 'pending' || row.status === 'deleted') {
+        // Count both 'pending' and 'deleted' as pending (not yet reviewed)
+        counts.pending += Number(row.count);
       } else if (row.status === 'approved') {
         counts.approved = Number(row.count);
       } else if (row.status === 'rejected') {
