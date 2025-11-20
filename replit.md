@@ -27,9 +27,9 @@ All public API endpoints require API key authentication via the `X-API-Key` head
 - **API Call Analytics:** `/api/analytics/api-calls` provides detailed API key usage analytics (total calls, calls by endpoint/key, recent logs) with filtering and export.
 - **Dashboard Analytics:** `/api/analytics/dashboard` provides real-time analytics for total searches, most searched make, total vehicles, and top searched vehicles.
 - **Billing:** `/api/billing/stats` for AI Search usage and cost analytics (Gemini AI costs approx. $0.01/request). Includes endpoints for billing pie charts. The `/api/billing/pie-charts` endpoint provides:
-  - Search Tier Breakdown: Shows distribution of all searches across 5 tiers (Exact Matches, DB ±5yr, DB ±10yr, Google API, Gemini AI).
+  - Search Tier Breakdown: Shows distribution of predictions across 5 tiers (Exact Matches, Pattern ±5 years, Pattern ±10 years, Google API, Gemini AI). Counts from pending_vehicles.source to ensure accuracy.
   - Approval Analytics: Overall pending/approved/rejected counts.
-  - Individual Tier Charts: Separate pie charts for each tier (DB ±5yr, DB ±10yr, Google API, Gemini AI, Unmatched) showing pending/approved/rejected status distribution with consistent color coding (Pending: orange, Approved: green, Rejected: red).
+  - Individual Tier Charts: Separate pie charts for each tier (Pattern ±5 years, Pattern ±10 years, Google API, Gemini AI, Unmatched) showing pending/approved/rejected status distribution with consistent color coding (Pending: orange, Approved: green, Rejected: red). Numbers match Search Tier Breakdown exactly.
 - **Pending Approvals:** Endpoints for approving, rejecting, and deleting pending predictions, with automated email notifications for approved predictions.
 
 ### Data Storage
