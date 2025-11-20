@@ -328,3 +328,46 @@ export type ApiKey = typeof apiKeys.$inferSelect;
 
 // Type for API key with plaintext key (only returned at creation)
 export type ApiKeyWithPlaintext = ApiKey & { key: string };
+
+// Data Overrides table - allows manual editing of any displayed number
+export const dataOverrides = pgTable("data_overrides", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  metricKey: text("metric_key").notNull().unique(), // e.g., "dashboard.totalSearches", "billing.totalCost"
+  displayName: text("display_name").notNull(), // Human-readable name for admin UI
+  originalValue: text("original_value"), // Store original computed value for reference
+  overrideValue: text("override_value").notNull(), // The manual override value
+  category: text("category").notNull(), // e.g., "dashboard", "billing", "analytics"
+  isActive: boolean("is_active").notNull().default(true), // Enable/disable override
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertDataOverrideSchema = createInsertSchema(dataOverrides).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type InsertDataOverride = z.infer<typeof insertDataOverrideSchema>;
+export type DataOverride = typeof dataOverrides.$inferSelect;
+
+// Custom Charts table - allows adding custom pie charts/graphs to pages
+export const customCharts = pgTable("custom_charts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  page: text("page").notNull(), // e.g., "dashboard", "billing", "analytics"
+  chartType: text("chart_type").notNull(), // "pie", "bar", "line"
+  chartData: text("chart_data").notNull(), // JSON string with chart data
+  position: integer("position").notNull().default(0), // Order on page
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertCustomChartSchema = createInsertSchema(customCharts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCustomChart = z.infer<typeof insertCustomChartSchema>;
+export type CustomChart = typeof customCharts.$inferSelect;

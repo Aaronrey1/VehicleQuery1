@@ -1,4 +1,4 @@
-import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type BillingPieCharts, type PendingApprovalsAnalytics, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiCallAnalytics, type ApiKey, type InsertApiKey, type ApiKeyWithPlaintext } from "@shared/schema";
+import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, dataOverrides, customCharts, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type BillingPieCharts, type PendingApprovalsAnalytics, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiCallAnalytics, type ApiKey, type InsertApiKey, type ApiKeyWithPlaintext, type DataOverride, type InsertDataOverride, type CustomChart, type InsertCustomChart } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, sql, ilike, desc, asc, gte, lte, ne } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -71,6 +71,19 @@ export interface IStorage {
   updateApiKeyLastUsed(id: string): Promise<void>;
   revokeApiKey(id: string): Promise<void>;
   deleteApiKey(id: string): Promise<void>;
+
+  // Data Override methods
+  getDataOverrides(): Promise<DataOverride[]>;
+  getDataOverride(metricKey: string): Promise<DataOverride | undefined>;
+  createDataOverride(override: InsertDataOverride): Promise<DataOverride>;
+  updateDataOverride(id: string, override: Partial<InsertDataOverride>): Promise<void>;
+  deleteDataOverride(id: string): Promise<void>;
+
+  // Custom Chart methods
+  getCustomCharts(page?: string): Promise<CustomChart[]>;
+  createCustomChart(chart: InsertCustomChart): Promise<CustomChart>;
+  updateCustomChart(id: string, chart: Partial<InsertCustomChart>): Promise<void>;
+  deleteCustomChart(id: string): Promise<void>;
 }
 
 // Helper function to map snake_case database columns to camelCase TypeScript properties
@@ -1116,6 +1129,61 @@ export class DatabaseStorage implements IStorage {
       callsByEndpoint,
       recentLogs,
     };
+  }
+
+  // Data Override methods implementation
+  async getDataOverrides(): Promise<DataOverride[]> {
+    return await db.select().from(dataOverrides).orderBy(desc(dataOverrides.category));
+  }
+
+  async getDataOverride(metricKey: string): Promise<DataOverride | undefined> {
+    const [override] = await db.select().from(dataOverrides).where(eq(dataOverrides.metricKey, metricKey));
+    return override || undefined;
+  }
+
+  async createDataOverride(override: InsertDataOverride): Promise<DataOverride> {
+    const [created] = await db.insert(dataOverrides).values(override).returning();
+    return created;
+  }
+
+  async updateDataOverride(id: string, override: Partial<InsertDataOverride>): Promise<void> {
+    await db
+      .update(dataOverrides)
+      .set({ ...override, updatedAt: new Date() })
+      .where(eq(dataOverrides.id, id));
+  }
+
+  async deleteDataOverride(id: string): Promise<void> {
+    await db.delete(dataOverrides).where(eq(dataOverrides.id, id));
+  }
+
+  // Custom Chart methods implementation
+  async getCustomCharts(page?: string): Promise<CustomChart[]> {
+    const conditions = [];
+    if (page) {
+      conditions.push(eq(customCharts.page, page));
+    }
+    const query = conditions.length > 0
+      ? db.select().from(customCharts).where(and(...conditions)).orderBy(asc(customCharts.position))
+      : db.select().from(customCharts).orderBy(asc(customCharts.position));
+    
+    return await query;
+  }
+
+  async createCustomChart(chart: InsertCustomChart): Promise<CustomChart> {
+    const [created] = await db.insert(customCharts).values(chart).returning();
+    return created;
+  }
+
+  async updateCustomChart(id: string, chart: Partial<InsertCustomChart>): Promise<void> {
+    await db
+      .update(customCharts)
+      .set({ ...chart, updatedAt: new Date() })
+      .where(eq(customCharts.id, id));
+  }
+
+  async deleteCustomChart(id: string): Promise<void> {
+    await db.delete(customCharts).where(eq(customCharts.id, id));
   }
 }
 
