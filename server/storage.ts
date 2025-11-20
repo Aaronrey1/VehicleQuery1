@@ -600,28 +600,28 @@ export class DatabaseStorage implements IStorage {
       }
     });
 
-    // Helper function to create tier data from pending_vehicles (approval status breakdown)
-    const createTierData = (source: string, name: string, baseColor: string) => {
-      const data = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
-      const total = data.pending + data.approved + data.rejected;
+    // Helper function to create tier data - uses ai_search_logs count with approval status from pending_vehicles
+    const createTierData = (source: string, name: string, totalCount: number, baseColor: string) => {
+      const approvalData = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
       
-      // Always return the tier, even if no data (we'll show empty state in UI)
+      // Total from ai_search_logs, approval breakdown from pending_vehicles
+      // All searches from this tier need approval (except 'exact' which is excluded)
       return {
         name,
         data: [
-          { name: 'Pending', value: data.pending, color: '#f59e0b' },
-          { name: 'Approved', value: data.approved, color: '#10b981' },
-          { name: 'Rejected', value: data.rejected, color: '#ef4444' },
+          { name: 'Pending', value: approvalData.pending, color: '#f59e0b' },
+          { name: 'Approved', value: approvalData.approved, color: '#10b981' },
+          { name: 'Rejected', value: approvalData.rejected, color: '#ef4444' },
         ].filter(item => item.value > 0),
-        total,
+        total: totalCount, // Use the count from ai_search_logs
       };
     };
 
     const individualTierCharts = {
-      tier1: createTierData('database_tier1', 'Pattern ±5 years', '#3b82f6'),
-      tier2: createTierData('database_tier2', 'Pattern ±10 years', '#06b6d4'),
-      googleApi: createTierData('google_api', 'Google API', '#f59e0b'),
-      geminiAi: createTierData('gemini_api', 'Gemini AI', '#a855f7'),
+      tier1: createTierData('database_tier1', 'Pattern ±5 years', Number(tier1Count?.count || 0), '#3b82f6'),
+      tier2: createTierData('database_tier2', 'Pattern ±10 years', Number(tier2Count?.count || 0), '#06b6d4'),
+      googleApi: createTierData('google_api', 'Google API', Number(googleCount?.count || 0), '#f59e0b'),
+      geminiAi: createTierData('gemini_api', 'Gemini AI', Number(geminiCount?.count || 0), '#a855f7'),
       // Don't include 'unmatched' in individual tier charts - only show the 4 main tiers
     };
 

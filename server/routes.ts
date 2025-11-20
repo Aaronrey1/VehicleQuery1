@@ -1111,7 +1111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const matchedVehicle = exactMatch.vehicles[0];
         const isAllModelsFallback = matchedVehicle.model === 'ALL MODELS';
         
-        // Log exact match search
+        // Log exact match search to search_logs
         await storage.logSearch({
           searchType: 'ai',
           make: make as string,
@@ -1126,6 +1126,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           apiKeyId: (req as any).apiKeyId || null,
           endpoint: '/api/ai/predict',
           exactMatch: true,
+        });
+        
+        // Log exact match to ai_search_logs for billing (FREE - no cost, 100% confidence)
+        await storage.logAiSearch({
+          make: normalizedMake || String(make),
+          model: String(model),
+          year: yearNum,
+          source: 'exact',
+          confidence: 100,
+          cost: 0
         });
         
         return res.json({
