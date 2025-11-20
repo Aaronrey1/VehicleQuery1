@@ -628,10 +628,40 @@ export class DatabaseStorage implements IStorage {
       { name: 'Rejected', value: Number(rejectedCount?.count || 0), color: '#ef4444' },
     ];
 
+    // Get API call breakdown by endpoint (only API calls with apiKeyId)
+    const apiCallResults = await db
+      .select({
+        endpoint: searchLogs.endpoint,
+        count: sql<number>`count(*)`,
+      })
+      .from(searchLogs)
+      .where(sql`${searchLogs.apiKeyId} IS NOT NULL`)
+      .groupBy(searchLogs.endpoint)
+      .orderBy(desc(sql<number>`count(*)`));
+
+    // Map endpoints to friendly names with colors
+    const endpointColorMap: Record<string, { name: string; color: string }> = {
+      '/api/ai/predict': { name: 'AI Predictions', color: '#8b5cf6' },
+      '/api/vin/decode': { name: 'VIN Decoder', color: '#3b82f6' },
+      '/api/vehicles/search': { name: 'Vehicle Search', color: '#10b981' },
+      '/api/harnesses/search': { name: 'Harness Search', color: '#f59e0b' },
+    };
+
+    const apiCallBreakdown = apiCallResults.map((row) => {
+      const endpoint = row.endpoint || 'Unknown';
+      const mappedData = endpointColorMap[endpoint] || { name: endpoint, color: '#6b7280' };
+      return {
+        name: mappedData.name,
+        value: Number(row.count),
+        color: mappedData.color,
+      };
+    });
+
     return {
       searchTierBreakdown,
       approvalAnalytics,
       individualTierCharts,
+      apiCallBreakdown,
     };
   }
 

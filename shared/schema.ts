@@ -191,6 +191,7 @@ export type BillingPieCharts = {
     geminiAi: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
     unmatched: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
   };
+  apiCallBreakdown: Array<{ name: string; value: number; color: string }>;
 };
 
 // Pending vehicles from Google API awaiting admin approval
