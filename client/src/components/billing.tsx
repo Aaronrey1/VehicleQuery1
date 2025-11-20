@@ -234,7 +234,7 @@ export default function Billing() {
                   Search Tier Breakdown
                 </CardTitle>
                 <CardDescription>
-                  Distribution of searches by tier (exact, database pattern, AI)
+                  Total searches performed across all tiers (shows how often each search method was used)
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -276,7 +276,18 @@ export default function Billing() {
                 )}
               </CardContent>
             </Card>
+          </div>
 
+          {/* Section Header for Individual Tier Charts */}
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-1">Approval Outcomes by Tier</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              These charts show AI prediction approval status (pending, approved, rejected) for each search tier. 
+              Note: Not all searches generate predictions - only those without exact matches require AI predictions.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
 {/* Individual tier charts */}
             {pieCharts && Object.entries(pieCharts.individualTierCharts).map(([key, tierData]) => {
               if (!tierData) return null;
@@ -288,7 +299,7 @@ export default function Billing() {
                       {tierData.name}
                     </CardTitle>
                     <CardDescription>
-                      {tierData.total} total predictions
+                      {tierData.total} AI prediction{tierData.total !== 1 ? 's' : ''} awaiting approval or reviewed
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

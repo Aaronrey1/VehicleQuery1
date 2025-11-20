@@ -600,7 +600,7 @@ export class DatabaseStorage implements IStorage {
       }
     });
 
-    // Helper function to create tier data from pending_vehicles
+    // Helper function to create tier data from pending_vehicles (approval status breakdown)
     const createTierData = (source: string, name: string, baseColor: string) => {
       const data = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
       const total = data.pending + data.approved + data.rejected;
