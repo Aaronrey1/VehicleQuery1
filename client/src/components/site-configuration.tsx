@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,12 +14,31 @@ import { Settings, Plus, Trash2, Edit, Save, BarChart, PieChart, LineChart } fro
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { DataOverride, CustomChart } from "@shared/schema";
+import { OVERRIDE_METRICS, getMetricsByCategory, getCategoryLabel, getMetricByKey } from "@shared/override-config";
+
+// Broadcast channel for real-time updates across tabs
+const overridesBroadcast = typeof BroadcastChannel !== 'undefined' 
+  ? new BroadcastChannel('overrides-updated') 
+  : null;
 
 export function SiteConfiguration() {
   const { toast } = useToast();
   const [editingOverride, setEditingOverride] = useState<DataOverride | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isChartDialogOpen, setIsChartDialogOpen] = useState(false);
+  const [selectedMetricKey, setSelectedMetricKey] = useState<string>("");
+  
+  // Listen for override updates from other tabs/components
+  useEffect(() => {
+    if (!overridesBroadcast) return;
+    
+    const handleUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/data-overrides"] });
+    };
+    
+    overridesBroadcast.addEventListener('message', handleUpdate);
+    return () => overridesBroadcast.removeEventListener('message', handleUpdate);
+  }, []);
 
   // Fetch data overrides
   const { data: overrides = [] } = useQuery<DataOverride[]>({
@@ -31,13 +50,20 @@ export function SiteConfiguration() {
     queryKey: ["/api/custom-charts"],
   });
 
+  // Broadcast override update to all tabs/pages
+  const broadcastOverrideUpdate = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/data-overrides"] });
+    overridesBroadcast?.postMessage('updated');
+  };
+
   // Create override mutation
   const createOverrideMutation = useMutation({
     mutationFn: async (data: any) => apiRequest("POST", "/api/data-overrides", data),
     onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["/api/data-overrides"] });
+      broadcastOverrideUpdate();
       toast({ title: "Override Created", description: "Data override created successfully" });
       setIsDialogOpen(false);
+      setSelectedMetricKey("");
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to create override", variant: "destructive" });
@@ -49,7 +75,7 @@ export function SiteConfiguration() {
     mutationFn: async ({ id, data }: { id: string; data: any }) => 
       apiRequest("PATCH", `/api/data-overrides/${id}`, data),
     onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["/api/data-overrides"] });
+      broadcastOverrideUpdate();
       toast({ title: "Override Updated", description: "Data override updated successfully" });
       setEditingOverride(null);
     },
@@ -62,7 +88,7 @@ export function SiteConfiguration() {
   const deleteOverrideMutation = useMutation({
     mutationFn: async (id: string) => apiRequest("DELETE", `/api/data-overrides/${id}`),
     onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["/api/data-overrides"] });
+      broadcastOverrideUpdate();
       toast({ title: "Override Deleted", description: "Data override deleted successfully" });
     },
     onError: () => {
@@ -97,14 +123,51 @@ export function SiteConfiguration() {
 
   const handleCreateOverride = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    // Validate metric selection
+    if (!selectedMetricKey) {
+      toast({ 
+        title: "Error", 
+        description: "Please select a data point to override", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
+    const metric = getMetricByKey(selectedMetricKey);
+    if (!metric) {
+      toast({ 
+        title: "Error", 
+        description: "Selected metric not found in configuration", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     const formData = new FormData(e.currentTarget);
+    const overrideValue = formData.get("overrideValue") as string;
+    
+    if (!overrideValue) {
+      toast({ 
+        title: "Error", 
+        description: "Please enter an override value", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     createOverrideMutation.mutate({
-      metricKey: formData.get("metricKey"),
-      displayName: formData.get("displayName"),
-      overrideValue: formData.get("overrideValue"),
-      category: formData.get("category"),
+      metricKey: selectedMetricKey,
+      displayName: metric.label,
+      overrideValue: overrideValue,
+      category: metric.category,
       isActive: true,
     });
+  };
+  
+  // Handle metric selection from dropdown
+  const handleMetricSelect = (value: string) => {
+    setSelectedMetricKey(value);
   };
 
   const handleCreateChart = (e: React.FormEvent<HTMLFormElement>) => {
@@ -168,51 +231,66 @@ export function SiteConfiguration() {
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Create Data Override</DialogTitle>
+                      <CardDescription>
+                        Select a data point to override and set a custom value
+                      </CardDescription>
                     </DialogHeader>
                     <form onSubmit={handleCreateOverride} className="space-y-4">
                       <div>
-                        <Label htmlFor="metricKey">Metric Key</Label>
-                        <Input
-                          id="metricKey"
-                          name="metricKey"
-                          placeholder="e.g., dashboard.totalSearches"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="displayName">Display Name</Label>
-                        <Input
-                          id="displayName"
-                          name="displayName"
-                          placeholder="e.g., Total Searches"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="category">Category</Label>
-                        <Select name="category" required>
+                        <Label htmlFor="metricKey">Select Data Point</Label>
+                        <Select value={selectedMetricKey} onValueChange={handleMetricSelect} required>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
+                            <SelectValue placeholder="Choose a metric to override..." />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="dashboard">Dashboard</SelectItem>
-                            <SelectItem value="billing">Billing</SelectItem>
-                            <SelectItem value="analytics">Analytics</SelectItem>
-                            <SelectItem value="pending_approvals">Pending Approvals</SelectItem>
+                          <SelectContent className="max-h-[400px]">
+                            {Object.entries(getMetricsByCategory()).map(([category, metrics]) => (
+                              <div key={category}>
+                                <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground bg-muted/50">
+                                  {getCategoryLabel(category)}
+                                </div>
+                                {metrics.map((metric) => (
+                                  <SelectItem 
+                                    key={metric.key} 
+                                    value={metric.key}
+                                    className="pl-6"
+                                  >
+                                    {metric.label}
+                                    {metric.description && (
+                                      <span className="block text-xs text-muted-foreground mt-0.5">
+                                        {metric.description}
+                                      </span>
+                                    )}
+                                  </SelectItem>
+                                ))}
+                              </div>
+                            ))}
                           </SelectContent>
                         </Select>
+                        {selectedMetricKey && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Key: <code className="bg-muted px-1 py-0.5 rounded">{selectedMetricKey}</code>
+                          </p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="overrideValue">Override Value</Label>
                         <Input
                           id="overrideValue"
                           name="overrideValue"
-                          placeholder="e.g., 1500"
+                          placeholder={selectedMetricKey ? `Enter new value for ${getMetricByKey(selectedMetricKey)?.label}` : "e.g., 1500"}
                           required
                         />
+                        {selectedMetricKey && getMetricByKey(selectedMetricKey)?.dataType === 'number' && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            💡 This is a number field - enter numeric values only
+                          </p>
+                        )}
                       </div>
                       <DialogFooter>
-                        <Button type="submit" disabled={createOverrideMutation.isPending}>
+                        <Button 
+                          type="submit" 
+                          disabled={createOverrideMutation.isPending || !selectedMetricKey}
+                        >
                           Create Override
                         </Button>
                       </DialogFooter>
@@ -331,6 +409,9 @@ export function SiteConfiguration() {
                   <DialogContent className="max-w-2xl">
                     <DialogHeader>
                       <DialogTitle>Create Custom Chart</DialogTitle>
+                      <CardDescription>
+                        Add a custom chart with your own data to any page
+                      </CardDescription>
                     </DialogHeader>
                     <form onSubmit={handleCreateChart} className="space-y-4">
                       <div>

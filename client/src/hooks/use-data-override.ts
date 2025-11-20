@@ -1,5 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { queryClient } from "@/lib/queryClient";
 import type { DataOverride } from "@shared/schema";
+
+// Broadcast channel for real-time updates
+const overridesBroadcast = typeof BroadcastChannel !== 'undefined' 
+  ? new BroadcastChannel('overrides-updated') 
+  : null;
 
 /**
  * Hook to apply data overrides to displayed values
@@ -9,8 +16,20 @@ import type { DataOverride } from "@shared/schema";
 export function useDataOverride(metricKey: string, actualValue: string | number): string | number {
   const { data: overrides = [] } = useQuery<DataOverride[]>({
     queryKey: ["/api/data-overrides"],
-    staleTime: 30000, // Cache for 30 seconds to avoid excessive requests
+    staleTime: 5000, // Reduced to 5 seconds for faster updates
   });
+  
+  // Listen for override updates
+  useEffect(() => {
+    if (!overridesBroadcast) return;
+    
+    const handleUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/data-overrides"] });
+    };
+    
+    overridesBroadcast.addEventListener('message', handleUpdate);
+    return () => overridesBroadcast.removeEventListener('message', handleUpdate);
+  }, []);
 
   const override = overrides.find(
     (o) => o.metricKey === metricKey && o.isActive
@@ -36,8 +55,20 @@ export function useDataOverride(metricKey: string, actualValue: string | number)
 export function useDataOverrides() {
   const { data: overrides = [] } = useQuery<DataOverride[]>({
     queryKey: ["/api/data-overrides"],
-    staleTime: 30000,
+    staleTime: 5000, // Reduced to 5 seconds for faster updates
   });
+  
+  // Listen for override updates
+  useEffect(() => {
+    if (!overridesBroadcast) return;
+    
+    const handleUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/data-overrides"] });
+    };
+    
+    overridesBroadcast.addEventListener('message', handleUpdate);
+    return () => overridesBroadcast.removeEventListener('message', handleUpdate);
+  }, []);
 
   return (metricKey: string, actualValue: string | number): string | number => {
     const override = overrides.find(
