@@ -246,7 +246,14 @@ export default function Billing() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
+                        label={({ name, value, percent, x, y, cx }) => {
+                          if (value === 0) return '';
+                          return (
+                            <text x={x} y={y} fill="currentColor" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="11px" className="fill-foreground">
+                              {`${name}: ${value} (${(percent * 100).toFixed(1)}%)`}
+                            </text>
+                          );
+                        }}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
@@ -256,7 +263,7 @@ export default function Billing() {
                         ))}
                       </Pie>
                       <Tooltip />
-                      <Legend />
+                      <Legend wrapperStyle={{ fontSize: '12px' }} />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
@@ -292,7 +299,14 @@ export default function Billing() {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
+                          label={({ name, value, percent, x, y, cx }) => {
+                            if (value === 0) return '';
+                            return (
+                              <text x={x} y={y} fill="currentColor" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="11px" className="fill-foreground">
+                                {`${name}: ${value} (${(percent * 100).toFixed(1)}%)`}
+                              </text>
+                            );
+                          }}
                           outerRadius={70}
                           fill="#8884d8"
                           dataKey="value"
@@ -302,7 +316,7 @@ export default function Billing() {
                           ))}
                         </Pie>
                         <Tooltip formatter={(value, name) => [`${value} predictions`, name]} />
-                        <Legend />
+                        <Legend wrapperStyle={{ fontSize: '12px' }} />
                       </PieChart>
                     </ResponsiveContainer>
                   </CardContent>
@@ -330,7 +344,14 @@ export default function Billing() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
+                      label={({ name, value, percent, x, y, cx }) => {
+                        if (value === 0) return '';
+                        return (
+                          <text x={x} y={y} fill="currentColor" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="11px" className="fill-foreground">
+                            {`${name}: ${value} (${(percent * 100).toFixed(1)}%)`}
+                          </text>
+                        );
+                      }}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
@@ -340,7 +361,7 @@ export default function Billing() {
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -374,7 +395,14 @@ export default function Billing() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
+                      label={({ name, value, percent, x, y, cx }) => {
+                        if (value === 0) return '';
+                        return (
+                          <text x={x} y={y} fill="currentColor" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="11px" className="fill-foreground">
+                            {`${name}: ${value} (${(percent * 100).toFixed(1)}%)`}
+                          </text>
+                        );
+                      }}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
@@ -384,7 +412,7 @@ export default function Billing() {
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
