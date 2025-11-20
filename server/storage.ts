@@ -580,31 +580,23 @@ export class DatabaseStorage implements IStorage {
       .where(eq(pendingVehicles.status, 'rejected'));
 
     // Get tier breakdown with pending/approved/rejected for each tier
-    // Join ai_search_logs with pending_vehicles to ensure we count ALL predictions
-    // Use ai_search_logs as the source of truth for totals, pending_vehicles for approval status
+    // Use pending_vehicles directly (excluding deleted) to count UNIQUE PREDICTIONS per tier
+    // This matches the Approval Analytics tab and avoids duplicate counting
     const tierBreakdownResults = await db.execute<{
       source: string;
       status: string;
       count: number;
     }>(sql`
       SELECT 
-        COALESCE(a.source, 'gemini_api') as source,
-        COALESCE(p.status, 'deleted') as status,
+        COALESCE(source, 'gemini_api') as source,
+        status,
         COUNT(*) as count
-      FROM ${aiSearchLogs} a
-      LEFT JOIN ${pendingVehicles} p
-        ON UPPER(TRIM(a.make)) = UPPER(TRIM(p.make))
-        AND UPPER(TRIM(a.model)) = UPPER(TRIM(p.model))
-        AND a.year = p.year
-        AND COALESCE(a.source, 'gemini_api') = COALESCE(p.source, 'gemini_api')
-        AND p.status != 'deleted'
-      WHERE a.source != 'exact'
-      GROUP BY COALESCE(a.source, 'gemini_api'), COALESCE(p.status, 'deleted')
+      FROM ${pendingVehicles}
+      WHERE status != 'deleted'
+      GROUP BY COALESCE(source, 'gemini_api'), status
     `);
 
     // Build tier map with pending/approved/rejected counts
-    // Note: 'deleted' status means the record exists in ai_search_logs but not in pending_vehicles
-    // We'll count these as 'pending' since they haven't been reviewed yet
     const tierMap = new Map<string, { pending: number; approved: number; rejected: number }>();
     tierBreakdownResults.rows.forEach((row: { source: string; status: string; count: number }) => {
       const source = row.source || 'gemini_api';
@@ -612,9 +604,8 @@ export class DatabaseStorage implements IStorage {
         tierMap.set(source, { pending: 0, approved: 0, rejected: 0 });
       }
       const counts = tierMap.get(source)!;
-      if (row.status === 'pending' || row.status === 'deleted') {
-        // Count both 'pending' and 'deleted' as pending (not yet reviewed)
-        counts.pending += Number(row.count);
+      if (row.status === 'pending') {
+        counts.pending = Number(row.count);
       } else if (row.status === 'approved') {
         counts.approved = Number(row.count);
       } else if (row.status === 'rejected') {
@@ -622,12 +613,14 @@ export class DatabaseStorage implements IStorage {
       }
     });
 
-    // Helper function to create tier data - uses ai_search_logs count with approval status from pending_vehicles
-    const createTierData = (source: string, name: string, totalCount: number, baseColor: string) => {
+    // Helper function to create tier data - uses pending_vehicles for both total and breakdown
+    // This ensures: Total = Pending + Approved + Rejected (no mismatch)
+    const createTierData = (source: string, name: string, baseColor: string) => {
       const approvalData = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
       
-      // Total from ai_search_logs, approval breakdown from pending_vehicles
-      // All searches from this tier need approval (except 'exact' which is excluded)
+      // Calculate total from the sum of pending + approved + rejected
+      const total = approvalData.pending + approvalData.approved + approvalData.rejected;
+      
       return {
         name,
         data: [
@@ -635,15 +628,15 @@ export class DatabaseStorage implements IStorage {
           { name: 'Approved', value: approvalData.approved, color: '#10b981' },
           { name: 'Rejected', value: approvalData.rejected, color: '#ef4444' },
         ].filter(item => item.value > 0),
-        total: totalCount, // Use the count from ai_search_logs
+        total, // Total = sum of all statuses for this tier
       };
     };
 
     const individualTierCharts = {
-      tier1: createTierData('database_tier1', 'Pattern ±5 years', Number(tier1Count?.count || 0), '#3b82f6'),
-      tier2: createTierData('database_tier2', 'Pattern ±10 years', Number(tier2Count?.count || 0), '#06b6d4'),
-      googleApi: createTierData('google_api', 'Google API', Number(googleCount?.count || 0), '#f59e0b'),
-      geminiAi: createTierData('gemini_api', 'Gemini AI', Number(geminiCount?.count || 0), '#a855f7'),
+      tier1: createTierData('database_tier1', 'Pattern ±5 years', '#3b82f6'),
+      tier2: createTierData('database_tier2', 'Pattern ±10 years', '#06b6d4'),
+      googleApi: createTierData('google_api', 'Google API', '#f59e0b'),
+      geminiAi: createTierData('gemini_api', 'Gemini AI', '#a855f7'),
       // Don't include 'unmatched' in individual tier charts - only show the 4 main tiers
     };
 
