@@ -1,7 +1,7 @@
 # VehicleDB Pro
 
 ## Overview
-VehicleDB Pro is a comprehensive, full-stack vehicle database management system for searching, managing, and analyzing vehicle compatibility data. It provides intelligent search capabilities, including a multi-tiered AI Search feature, alongside robust data management tools. The system supports data import, analytics, and a specialized Geometris system for harness type searches. The project aims to streamline vehicle data workflows and enhance data accuracy through an admin approval process for AI predictions, ultimately offering a robust solution for vehicle data management with significant market potential.
+VehicleDB Pro is a comprehensive, full-stack vehicle database management system for searching, managing, and analyzing vehicle compatibility data. It provides intelligent search capabilities, including a multi-tiered AI Search feature, alongside robust data management tools. The system supports data import, analytics, a specialized Geometris system for harness type searches, and a powerful Site Configuration system allowing admins to manually override displayed metrics and create custom charts. The project aims to streamline vehicle data workflows and enhance data accuracy through an admin approval process for AI predictions, ultimately offering a robust solution for vehicle data management with significant market potential.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -9,7 +9,10 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend Architecture
-The frontend is built with React 18+, TypeScript, and Vite. It utilizes Radix UI primitives and Shadcn/ui components styled with Tailwind CSS, employing a neutral color scheme and CSS variables for theming. State management uses TanStack Query for server state. Key components include AISearch (featuring a 3-tiered prediction system with confidence scoring, smart validation, and optional email notifications), BulkSearch, VinDecoder (with NHTSA integration and AI predictions), Geometris for harness search, DataImport, SearchAnalytics (in Admin section, with geolocation, filtering, and export), ApiCallAnalytics, AnalyticsDashboard (real-time stats), Billing, and an AdminPanel. Display layer uses Title Case, while data in the database remains uppercase.
+The frontend is built with React 18+, TypeScript, and Vite. It utilizes Radix UI primitives and Shadcn/ui components styled with Tailwind CSS, employing a neutral color scheme and CSS variables for theming. State management uses TanStack Query for server state. Key components include AISearch (featuring a 3-tiered prediction system with confidence scoring, smart validation, and optional email notifications), BulkSearch, VinDecoder (with NHTSA integration and AI predictions), Geometris for harness search, DataImport, SearchAnalytics (in Admin section, with geolocation, filtering, and export), ApiCallAnalytics, AnalyticsDashboard (real-time stats), Billing, SiteConfiguration (for data overrides and custom charts), and an AdminPanel. Display layer uses Title Case, while data in the database remains uppercase.
+
+**Site Configuration System:**
+The application features a comprehensive data override and custom chart system accessible through the Admin > Site Config tab. The `useDataOverrides()` hook enables dynamic value replacement throughout the UI - admins can override any displayed metric (e.g., dashboard.totalSearches, billing.totalCost) using the Site Configuration interface. All display components (AnalyticsDashboard, Billing, etc.) integrate this hook to check for active overrides before rendering values. This allows complete control over displayed numbers for demos, testing, or presentation purposes without modifying actual data.
 
 ### Backend Architecture
 The backend is an Express.js server developed with TypeScript and an ESM module system, providing a RESTful API under `/api`. It uses custom middleware for logging and a storage layer abstraction via `IStorage`. All search inputs are normalized to uppercase and support manufacturer aliases. Special characters are normalized for flexible matching in all search operations. Database search uses Drizzle's `sql` template for raw SQL execution with automatic parameterization to ensure reliable `LIKE` matching and SQL injection protection.
@@ -40,6 +43,8 @@ PostgreSQL is used as the database, accessed via the Neon serverless driver. Dri
 - `pending_vehicles`: Stores AI predictions awaiting admin approval, with user contact info for notifications.
 - `api_keys`: Stores secure (bcrypt-hashed) API keys for external integrations, with usage tracking.
 - `users`: For authentication.
+- `data_overrides`: Stores admin-configured overrides for any displayed metric. Each override has a unique metric_key (e.g., 'dashboard.totalSearches'), display_name, override_value, category, and is_active flag. Enables dynamic control of displayed numbers site-wide.
+- `custom_charts`: Stores admin-created custom charts with configurable data. Supports pie, bar, and line chart types with JSON data format. Charts can be assigned to specific pages (dashboard, billing, analytics, pending_approvals) with positioning and active status control.
 
 ## External Dependencies
 - **Database Driver & ORM:** `@neondatabase/serverless`, `drizzle-orm`

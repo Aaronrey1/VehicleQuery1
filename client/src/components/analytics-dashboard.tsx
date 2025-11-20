@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import type { VehicleStats } from "@shared/schema";
+import { useDataOverrides } from "@/hooks/use-data-override";
 
 type DashboardAnalytics = {
   totalSearches: number;
@@ -17,6 +18,8 @@ type DashboardAnalytics = {
 };
 
 export default function AnalyticsDashboard() {
+  const getDisplayValue = useDataOverrides();
+  
   const { data: stats } = useQuery<VehicleStats>({
     queryKey: ["/api/vehicles/stats"],
   });
@@ -52,19 +55,19 @@ export default function AnalyticsDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 <div className="text-center">
                   <div className="text-3xl font-bold text-primary mb-2" data-testid="analytics-searches">
-                    {analytics.totalSearches.toLocaleString()}
+                    {getDisplayValue('dashboard.totalSearches', analytics.totalSearches).toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">Total Searches</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-primary mb-2" data-testid="analytics-top-make">
-                    {analytics.mostSearchedMake}
+                    {getDisplayValue('dashboard.mostSearchedMake', analytics.mostSearchedMake)}
                   </div>
                   <div className="text-sm text-muted-foreground">Most Searched Make</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-primary mb-2" data-testid="analytics-vehicles">
-                    {analytics.totalVehicles.toLocaleString()}
+                    {getDisplayValue('dashboard.totalVehicles', analytics.totalVehicles).toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">Total Vehicles</div>
                 </div>
@@ -79,25 +82,25 @@ export default function AnalyticsDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <div className="text-center">
                 <div className="text-2xl font-bold text-secondary mb-2" data-testid="db-vehicles">
-                  {stats.totalVehicles.toLocaleString()}
+                  {getDisplayValue('database.totalVehicles', stats.totalVehicles).toLocaleString()}
                 </div>
                 <div className="text-sm text-muted-foreground">Database Records</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-secondary mb-2" data-testid="db-makes">
-                  {stats.totalMakes}
+                  {getDisplayValue('database.totalMakes', stats.totalMakes)}
                 </div>
                 <div className="text-sm text-muted-foreground">Vehicle Makes</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-secondary mb-2" data-testid="db-models">
-                  {stats.totalModels}
+                  {getDisplayValue('database.totalModels', stats.totalModels)}
                 </div>
                 <div className="text-sm text-muted-foreground">Vehicle Models</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-secondary mb-2" data-testid="db-device-types">
-                  {stats.deviceTypes}
+                  {getDisplayValue('database.deviceTypes', stats.deviceTypes)}
                 </div>
                 <div className="text-sm text-muted-foreground">Device Types</div>
               </div>

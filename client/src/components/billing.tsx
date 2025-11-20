@@ -12,8 +12,10 @@ import type { BillingStats, BillingPieCharts } from "@shared/schema";
 import { formatDistanceToNow, format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { useDataOverrides } from "@/hooks/use-data-override";
 
 export default function Billing() {
+  const getDisplayValue = useDataOverrides();
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
@@ -100,10 +102,10 @@ export default function Billing() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-total-cost">
-              ${totalCostDollars}
+              ${getDisplayValue('billing.totalCost', totalCostDollars)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats.totalSearches} total searches
+              {getDisplayValue('billing.totalSearches', stats.totalSearches)} total searches
             </p>
           </CardContent>
         </Card>
@@ -114,10 +116,10 @@ export default function Billing() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-free-searches">
-              {stats.databaseSearches}
+              {getDisplayValue('billing.databaseSearches', stats.databaseSearches)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {freeSearchPercentage}% of total
+              {getDisplayValue('billing.freeSearchPercentage', freeSearchPercentage)}% of total
             </p>
           </CardContent>
         </Card>
