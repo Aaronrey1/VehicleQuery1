@@ -580,24 +580,32 @@ export class DatabaseStorage implements IStorage {
       .where(eq(pendingVehicles.status, 'rejected'));
 
     // Get tier breakdown by backfilling NULL sources from ai_search_logs
-    // This matches pending_vehicles to ai_search_logs to recover the lost source values
+    // Use DISTINCT ON to ensure each pending_vehicles record is counted only ONCE
+    // even if it matches multiple ai_search_logs entries
     const tierBreakdownResults = await db.execute<{
       source: string;
       status: string;
       count: number;
     }>(sql`
       SELECT 
-        COALESCE(a.source, p.source, 'gemini_api') as source,
-        p.status,
+        source,
+        status,
         COUNT(*) as count
-      FROM ${pendingVehicles} p
-      LEFT JOIN ${aiSearchLogs} a
-        ON UPPER(TRIM(p.make)) = UPPER(TRIM(a.make))
-        AND UPPER(TRIM(p.model)) = UPPER(TRIM(a.model))
-        AND p.year = a.year
-        AND a.source != 'exact'
-      WHERE p.status IN ('pending', 'approved', 'rejected')
-      GROUP BY COALESCE(a.source, p.source, 'gemini_api'), p.status
+      FROM (
+        SELECT DISTINCT ON (p.id)
+          p.id,
+          COALESCE(a.source, p.source, 'gemini_api') as source,
+          p.status
+        FROM ${pendingVehicles} p
+        LEFT JOIN ${aiSearchLogs} a
+          ON UPPER(TRIM(p.make)) = UPPER(TRIM(a.make))
+          AND UPPER(TRIM(p.model)) = UPPER(TRIM(a.model))
+          AND p.year = a.year
+          AND a.source != 'exact'
+        WHERE p.status IN ('pending', 'approved', 'rejected')
+        ORDER BY p.id, a.timestamp DESC
+      ) subquery
+      GROUP BY source, status
     `);
 
     // Build tier map with pending/approved/rejected counts (excluding deleted)
