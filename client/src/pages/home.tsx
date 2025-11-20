@@ -13,8 +13,8 @@ import { PendingApprovals } from "@/components/pending-approvals";
 import ApiKeysManagement from "@/components/api-keys";
 import ApiCallAnalytics from "@/components/api-call-analytics";
 import { SiteConfiguration } from "@/components/site-configuration";
-import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck, Hash, LineChart, Key, BookOpen, Activity, Cog } from "lucide-react";
-import { useState } from "react";
+import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck, Hash, LineChart, Key, BookOpen, Activity, Cog, Eye, EyeOff } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation, Link } from "wouter";
@@ -26,6 +26,12 @@ export default function Home() {
   const [searchParams, setSearchParams] = useState<{ make?: string; model?: string; year?: number; deviceType?: string; portType?: string }>({});
   const { isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
+  
+  // Site Configuration visibility toggle (hidden by default, toggle with Ctrl+Shift+C)
+  const [showSiteConfig, setShowSiteConfig] = useState(() => {
+    const stored = localStorage.getItem('showSiteConfig');
+    return stored === 'true';
+  });
 
   const handleProtectedSection = (section: string) => {
     if (section === "admin") {
@@ -36,6 +42,27 @@ export default function Home() {
     }
     setActiveSection(section);
   };
+
+  // Toggle Site Config visibility and persist to localStorage
+  const toggleSiteConfig = () => {
+    setShowSiteConfig(prev => {
+      const newValue = !prev;
+      localStorage.setItem('showSiteConfig', String(newValue));
+      return newValue;
+    });
+  };
+
+  // Keyboard shortcut: Ctrl+Shift+C to toggle Site Config
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        toggleSiteConfig();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -209,16 +236,18 @@ export default function Home() {
                 <Activity className="h-3 w-3 inline mr-1" />
                 API Calls
               </button>
-              <button
-                onClick={() => setAdminSubTab("config")}
-                className={`transition-colors text-sm ${
-                  adminSubTab === "config" ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
-                }`}
-                data-testid="nav-site-config"
-              >
-                <Cog className="h-3 w-3 inline mr-1" />
-                Site Config
-              </button>
+              {showSiteConfig && (
+                <button
+                  onClick={() => setAdminSubTab("config")}
+                  className={`transition-colors text-sm ${
+                    adminSubTab === "config" ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  data-testid="nav-site-config"
+                >
+                  <Cog className="h-3 w-3 inline mr-1" />
+                  Site Config
+                </button>
+              )}
               <button
                 onClick={() => setAdminSubTab("admin")}
                 className={`transition-colors text-sm ${
@@ -228,6 +257,14 @@ export default function Home() {
               >
                 <Settings className="h-3 w-3 inline mr-1" />
                 Admin Panel
+              </button>
+              <button
+                onClick={toggleSiteConfig}
+                className="transition-colors text-sm text-muted-foreground hover:text-foreground ml-2"
+                data-testid="button-toggle-site-config"
+                title={showSiteConfig ? "Hide Site Config (Ctrl+Shift+C)" : "Show Site Config (Ctrl+Shift+C)"}
+              >
+                {showSiteConfig ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
               </button>
             </nav>
           </div>
