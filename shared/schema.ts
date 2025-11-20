@@ -183,13 +183,6 @@ export type BillingStats = {
 
 export type BillingPieCharts = {
   searchTierBreakdown: Array<{ name: string; value: number; color: string }>;
-  individualTierCharts: {
-    tier1: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
-    tier2: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
-    googleApi: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
-    geminiAi: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
-    unmatched: { name: string; data: Array<{ name: string; value: number; color: string }>; total: number } | null;
-  };
 };
 
 // Pending vehicles from Google API awaiting admin approval

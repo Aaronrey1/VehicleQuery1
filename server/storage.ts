@@ -559,78 +559,6 @@ export class DatabaseStorage implements IStorage {
       .from(aiSearchLogs)
       .where(eq(aiSearchLogs.source, 'gemini_api'));
 
-    const [pendingCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(pendingVehicles)
-      .where(eq(pendingVehicles.status, 'pending'));
-
-    const [approvedCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(pendingVehicles)
-      .where(eq(pendingVehicles.status, 'approved'));
-
-    const [rejectedCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(pendingVehicles)
-      .where(eq(pendingVehicles.status, 'rejected'));
-
-    // Get tier breakdown with pending/approved/rejected for each tier
-    // Join with ai_search_logs to get the actual tier/source for each prediction
-    const tierBreakdownResults = await db
-      .select({
-        source: sql<string>`COALESCE(${aiSearchLogs.source}, 'unmatched')`,
-        status: pendingVehicles.status,
-        count: sql<number>`count(*)`,
-      })
-      .from(pendingVehicles)
-      .leftJoin(aiSearchLogs, 
-        sql`${pendingVehicles.make} = ${aiSearchLogs.make} AND ${pendingVehicles.model} = ${aiSearchLogs.model} AND ${pendingVehicles.year} = ${aiSearchLogs.year}`
-      )
-      .groupBy(aiSearchLogs.source, pendingVehicles.status);
-
-    // Build tier map with pending/approved/rejected counts
-    const tierMap = new Map<string, { pending: number; approved: number; rejected: number }>();
-    tierBreakdownResults.forEach((row) => {
-      const source = row.source || 'unmatched';
-      if (!tierMap.has(source)) {
-        tierMap.set(source, { pending: 0, approved: 0, rejected: 0 });
-      }
-      const counts = tierMap.get(source)!;
-      if (row.status === 'pending') {
-        counts.pending = Number(row.count);
-      } else if (row.status === 'approved') {
-        counts.approved = Number(row.count);
-      } else if (row.status === 'rejected') {
-        counts.rejected = Number(row.count);
-      }
-    });
-
-    // Helper function to create tier data
-    const createTierData = (source: string, name: string, baseColor: string) => {
-      const data = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
-      const total = data.pending + data.approved + data.rejected;
-      
-      if (total === 0) return null;
-      
-      return {
-        name,
-        data: [
-          { name: 'Pending', value: data.pending, color: '#f59e0b' },
-          { name: 'Approved', value: data.approved, color: '#10b981' },
-          { name: 'Rejected', value: data.rejected, color: '#ef4444' },
-        ].filter(item => item.value > 0),
-        total,
-      };
-    };
-
-    const individualTierCharts = {
-      tier1: createTierData('database_tier1', 'DB ±5yr', '#3b82f6'),
-      tier2: createTierData('database_tier2', 'DB ±10yr', '#06b6d4'),
-      googleApi: createTierData('google_api', 'Google API', '#f59e0b'),
-      geminiAi: createTierData('gemini_api', 'Gemini AI', '#a855f7'),
-      unmatched: createTierData('unmatched', 'Unmatched', '#6b7280'),
-    };
-
     const searchTierBreakdown = [
       { name: 'Exact Matches', value: Number(exactMatchCount?.count || 0), color: '#10b981' },
       { name: 'Database Pattern (±5 years)', value: Number(tier1Count?.count || 0), color: '#3b82f6' },
@@ -641,7 +569,6 @@ export class DatabaseStorage implements IStorage {
 
     return {
       searchTierBreakdown,
-      individualTierCharts,
     };
   }
 
