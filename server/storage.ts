@@ -539,26 +539,6 @@ export class DatabaseStorage implements IStorage {
         eq(searchLogs.exactMatch, true)
       ));
 
-    const [tier1Count] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(aiSearchLogs)
-      .where(eq(aiSearchLogs.source, 'database_tier1'));
-
-    const [tier2Count] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(aiSearchLogs)
-      .where(eq(aiSearchLogs.source, 'database_tier2'));
-
-    const [googleCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(aiSearchLogs)
-      .where(eq(aiSearchLogs.source, 'google_api'));
-
-    const [geminiCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(aiSearchLogs)
-      .where(eq(aiSearchLogs.source, 'gemini_api'));
-
     const [pendingCount] = await db
       .select({ count: sql<number>`count(*)` })
       .from(pendingVehicles)
@@ -605,6 +585,12 @@ export class DatabaseStorage implements IStorage {
       }
     });
 
+    // Helper function to get total for a tier
+    const getTierTotal = (source: string) => {
+      const data = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
+      return data.pending + data.approved + data.rejected;
+    };
+
     // Helper function to create tier data
     const createTierData = (source: string, name: string, baseColor: string) => {
       const data = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
@@ -624,8 +610,8 @@ export class DatabaseStorage implements IStorage {
     };
 
     const individualTierCharts = {
-      tier1: createTierData('database_tier1', 'DB ±5yr', '#3b82f6'),
-      tier2: createTierData('database_tier2', 'DB ±10yr', '#06b6d4'),
+      tier1: createTierData('database_tier1', 'Pattern ±5yr', '#3b82f6'),
+      tier2: createTierData('database_tier2', 'Pattern ±10yr', '#06b6d4'),
       googleApi: createTierData('google_api', 'Google API', '#f59e0b'),
       geminiAi: createTierData('gemini_api', 'Gemini AI', '#a855f7'),
       unmatched: createTierData('unmatched', 'Unmatched', '#6b7280'),
@@ -633,10 +619,10 @@ export class DatabaseStorage implements IStorage {
 
     const searchTierBreakdown = [
       { name: 'Exact Matches', value: Number(exactMatchCount?.count || 0), color: '#10b981' },
-      { name: 'Database Pattern (±5 years)', value: Number(tier1Count?.count || 0), color: '#3b82f6' },
-      { name: 'Database Pattern (±10 years)', value: Number(tier2Count?.count || 0), color: '#06b6d4' },
-      { name: 'Google API', value: Number(googleCount?.count || 0), color: '#f59e0b' },
-      { name: 'Gemini AI', value: Number(geminiCount?.count || 0), color: '#a855f7' },
+      { name: 'Pattern ±5 years', value: getTierTotal('database_tier1'), color: '#3b82f6' },
+      { name: 'Pattern ±10 years', value: getTierTotal('database_tier2'), color: '#06b6d4' },
+      { name: 'Google API', value: getTierTotal('google_api'), color: '#f59e0b' },
+      { name: 'Gemini AI', value: getTierTotal('gemini_api'), color: '#a855f7' },
     ];
 
     const approvalAnalytics = [
