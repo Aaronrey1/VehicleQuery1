@@ -580,8 +580,8 @@ export class DatabaseStorage implements IStorage {
       .where(eq(pendingVehicles.status, 'rejected'));
 
     // Get tier breakdown with pending/approved/rejected for each tier
-    // Use pending_vehicles directly (excluding deleted) to count UNIQUE PREDICTIONS per tier
-    // This matches the Approval Analytics tab and avoids duplicate counting
+    // INCLUDE deleted records because they have the correct source values
+    // Non-deleted records often have NULL source, so we need deleted records to see proper distribution
     const tierBreakdownResults = await db.execute<{
       source: string;
       status: string;
@@ -592,16 +592,15 @@ export class DatabaseStorage implements IStorage {
         status,
         COUNT(*) as count
       FROM ${pendingVehicles}
-      WHERE status != 'deleted'
       GROUP BY COALESCE(source, 'gemini_api'), status
     `);
 
-    // Build tier map with pending/approved/rejected counts
-    const tierMap = new Map<string, { pending: number; approved: number; rejected: number }>();
+    // Build tier map with pending/approved/rejected/deleted counts
+    const tierMap = new Map<string, { pending: number; approved: number; rejected: number; deleted: number }>();
     tierBreakdownResults.rows.forEach((row: { source: string; status: string; count: number }) => {
       const source = row.source || 'gemini_api';
       if (!tierMap.has(source)) {
-        tierMap.set(source, { pending: 0, approved: 0, rejected: 0 });
+        tierMap.set(source, { pending: 0, approved: 0, rejected: 0, deleted: 0 });
       }
       const counts = tierMap.get(source)!;
       if (row.status === 'pending') {
@@ -610,16 +609,18 @@ export class DatabaseStorage implements IStorage {
         counts.approved = Number(row.count);
       } else if (row.status === 'rejected') {
         counts.rejected = Number(row.count);
+      } else if (row.status === 'deleted') {
+        counts.deleted = Number(row.count);
       }
     });
 
     // Helper function to create tier data - uses pending_vehicles for both total and breakdown
-    // This ensures: Total = Pending + Approved + Rejected (no mismatch)
+    // Includes deleted records to show the full picture and match ai_search_logs totals
     const createTierData = (source: string, name: string, baseColor: string) => {
-      const approvalData = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
+      const approvalData = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0, deleted: 0 };
       
-      // Calculate total from the sum of pending + approved + rejected
-      const total = approvalData.pending + approvalData.approved + approvalData.rejected;
+      // Calculate total from the sum of all statuses (including deleted)
+      const total = approvalData.pending + approvalData.approved + approvalData.rejected + approvalData.deleted;
       
       return {
         name,
@@ -627,8 +628,9 @@ export class DatabaseStorage implements IStorage {
           { name: 'Pending', value: approvalData.pending, color: '#f59e0b' },
           { name: 'Approved', value: approvalData.approved, color: '#10b981' },
           { name: 'Rejected', value: approvalData.rejected, color: '#ef4444' },
+          { name: 'Deleted', value: approvalData.deleted, color: '#6b7280' },
         ].filter(item => item.value > 0),
-        total, // Total = sum of all statuses for this tier
+        total, // Total = pending + approved + rejected + deleted
       };
     };
 
