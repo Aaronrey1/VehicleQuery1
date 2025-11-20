@@ -579,48 +579,51 @@ export class DatabaseStorage implements IStorage {
       .from(pendingVehicles)
       .where(eq(pendingVehicles.status, 'rejected'));
 
-    // Get tier breakdown with pending/approved/rejected for each tier
-    // INCLUDE deleted records because they have the correct source values
-    // Non-deleted records often have NULL source, so we need deleted records to see proper distribution
+    // Get tier breakdown by backfilling NULL sources from ai_search_logs
+    // This matches pending_vehicles to ai_search_logs to recover the lost source values
     const tierBreakdownResults = await db.execute<{
       source: string;
       status: string;
       count: number;
     }>(sql`
       SELECT 
-        COALESCE(source, 'gemini_api') as source,
-        status,
+        COALESCE(a.source, p.source, 'gemini_api') as source,
+        p.status,
         COUNT(*) as count
-      FROM ${pendingVehicles}
-      GROUP BY COALESCE(source, 'gemini_api'), status
+      FROM ${pendingVehicles} p
+      LEFT JOIN ${aiSearchLogs} a
+        ON UPPER(TRIM(p.make)) = UPPER(TRIM(a.make))
+        AND UPPER(TRIM(p.model)) = UPPER(TRIM(a.model))
+        AND p.year = a.year
+        AND a.source != 'exact'
+      WHERE p.status IN ('pending', 'approved', 'rejected')
+      GROUP BY COALESCE(a.source, p.source, 'gemini_api'), p.status
     `);
 
-    // Build tier map with pending/approved/rejected/deleted counts
-    const tierMap = new Map<string, { pending: number; approved: number; rejected: number; deleted: number }>();
+    // Build tier map with pending/approved/rejected counts (excluding deleted)
+    const tierMap = new Map<string, { pending: number; approved: number; rejected: number }>();
     tierBreakdownResults.rows.forEach((row: { source: string; status: string; count: number }) => {
       const source = row.source || 'gemini_api';
       if (!tierMap.has(source)) {
-        tierMap.set(source, { pending: 0, approved: 0, rejected: 0, deleted: 0 });
+        tierMap.set(source, { pending: 0, approved: 0, rejected: 0 });
       }
       const counts = tierMap.get(source)!;
       if (row.status === 'pending') {
-        counts.pending = Number(row.count);
+        counts.pending += Number(row.count);
       } else if (row.status === 'approved') {
-        counts.approved = Number(row.count);
+        counts.approved += Number(row.count);
       } else if (row.status === 'rejected') {
-        counts.rejected = Number(row.count);
-      } else if (row.status === 'deleted') {
-        counts.deleted = Number(row.count);
+        counts.rejected += Number(row.count);
       }
     });
 
-    // Helper function to create tier data - uses pending_vehicles for both total and breakdown
-    // Includes deleted records to show the full picture and match ai_search_logs totals
+    // Helper function to create tier data - shows only pending/approved/rejected (excludes deleted)
+    // Deleted records are excluded as they're not chargeable approval decisions
     const createTierData = (source: string, name: string, baseColor: string) => {
-      const approvalData = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0, deleted: 0 };
+      const approvalData = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
       
-      // Calculate total from the sum of all statuses (including deleted)
-      const total = approvalData.pending + approvalData.approved + approvalData.rejected + approvalData.deleted;
+      // Calculate total from pending + approved + rejected only (deleted excluded)
+      const total = approvalData.pending + approvalData.approved + approvalData.rejected;
       
       return {
         name,
@@ -628,9 +631,8 @@ export class DatabaseStorage implements IStorage {
           { name: 'Pending', value: approvalData.pending, color: '#f59e0b' },
           { name: 'Approved', value: approvalData.approved, color: '#10b981' },
           { name: 'Rejected', value: approvalData.rejected, color: '#ef4444' },
-          { name: 'Deleted', value: approvalData.deleted, color: '#6b7280' },
         ].filter(item => item.value > 0),
-        total, // Total = pending + approved + rejected + deleted
+        total, // Total = pending + approved + rejected (deleted excluded)
       };
     };
 
