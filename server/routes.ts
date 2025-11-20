@@ -1701,6 +1701,156 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Data Override Routes (protected - admin only)
+  app.get("/api/data-overrides", requireAuth, async (req, res) => {
+    try {
+      const overrides = await storage.getDataOverrides();
+      res.json(overrides);
+    } catch (error) {
+      console.error("Get data overrides error:", error);
+      res.status(500).json({ message: "Failed to retrieve data overrides" });
+    }
+  });
+
+  app.get("/api/data-overrides/:metricKey", requireAuth, async (req, res) => {
+    try {
+      const { metricKey } = req.params;
+      const override = await storage.getDataOverride(metricKey);
+      if (!override) {
+        return res.status(404).json({ message: "Override not found" });
+      }
+      res.json(override);
+    } catch (error) {
+      console.error("Get data override error:", error);
+      res.status(500).json({ message: "Failed to retrieve data override" });
+    }
+  });
+
+  app.post("/api/data-overrides", requireAuth, async (req, res) => {
+    try {
+      const validatedData = z.object({
+        metricKey: z.string(),
+        displayName: z.string(),
+        originalValue: z.string().optional(),
+        overrideValue: z.string(),
+        category: z.string(),
+        isActive: z.boolean().default(true),
+      }).parse(req.body);
+
+      const override = await storage.createDataOverride(validatedData);
+      res.status(201).json(override);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Create data override error:", error);
+      res.status(500).json({ message: "Failed to create data override" });
+    }
+  });
+
+  app.patch("/api/data-overrides/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = z.object({
+        displayName: z.string().optional(),
+        originalValue: z.string().optional(),
+        overrideValue: z.string().optional(),
+        category: z.string().optional(),
+        isActive: z.boolean().optional(),
+      }).parse(req.body);
+
+      await storage.updateDataOverride(id, validatedData);
+      res.json({ message: "Override updated successfully" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Update data override error:", error);
+      res.status(500).json({ message: "Failed to update override" });
+    }
+  });
+
+  app.delete("/api/data-overrides/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteDataOverride(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Delete data override error:", error);
+      res.status(500).json({ message: "Failed to delete override" });
+    }
+  });
+
+  // Custom Chart Routes (protected - admin only)
+  app.get("/api/custom-charts", requireAuth, async (req, res) => {
+    try {
+      const { page } = req.query;
+      const charts = await storage.getCustomCharts(page as string | undefined);
+      res.json(charts);
+    } catch (error) {
+      console.error("Get custom charts error:", error);
+      res.status(500).json({ message: "Failed to retrieve custom charts" });
+    }
+  });
+
+  app.post("/api/custom-charts", requireAuth, async (req, res) => {
+    try {
+      const validatedData = z.object({
+        title: z.string(),
+        description: z.string().optional(),
+        page: z.string(),
+        chartType: z.enum(['pie', 'bar', 'line']),
+        chartData: z.string(),
+        position: z.number().default(0),
+        isActive: z.boolean().default(true),
+      }).parse(req.body);
+
+      const chart = await storage.createCustomChart(validatedData);
+      res.status(201).json(chart);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Create custom chart error:", error);
+      res.status(500).json({ message: "Failed to create custom chart" });
+    }
+  });
+
+  app.patch("/api/custom-charts/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = z.object({
+        title: z.string().optional(),
+        description: z.string().optional(),
+        page: z.string().optional(),
+        chartType: z.enum(['pie', 'bar', 'line']).optional(),
+        chartData: z.string().optional(),
+        position: z.number().optional(),
+        isActive: z.boolean().optional(),
+      }).parse(req.body);
+
+      await storage.updateCustomChart(id, validatedData);
+      res.json({ message: "Chart updated successfully" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Update custom chart error:", error);
+      res.status(500).json({ message: "Failed to update chart" });
+    }
+  });
+
+  app.delete("/api/custom-charts/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteCustomChart(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Delete custom chart error:", error);
+      res.status(500).json({ message: "Failed to delete chart" });
+    }
+  });
+
   // Import from Pentaho JBusPortFinder report (protected - admin only)
   app.post("/api/import/pentaho", requireAuth, async (req, res) => {
     try {

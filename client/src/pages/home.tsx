@@ -12,7 +12,8 @@ import VinDecoder from "@/components/vin-decoder";
 import { PendingApprovals } from "@/components/pending-approvals";
 import ApiKeysManagement from "@/components/api-keys";
 import ApiCallAnalytics from "@/components/api-call-analytics";
-import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck, Hash, LineChart, Key, BookOpen, Activity } from "lucide-react";
+import { SiteConfiguration } from "@/components/site-configuration";
+import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck, Hash, LineChart, Key, BookOpen, Activity, Cog } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
@@ -209,6 +210,16 @@ export default function Home() {
                 API Calls
               </button>
               <button
+                onClick={() => setAdminSubTab("config")}
+                className={`transition-colors text-sm ${
+                  adminSubTab === "config" ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="nav-site-config"
+              >
+                <Cog className="h-3 w-3 inline mr-1" />
+                Site Config
+              </button>
+              <button
                 onClick={() => setAdminSubTab("admin")}
                 className={`transition-colors text-sm ${
                   adminSubTab === "admin" ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
@@ -248,6 +259,7 @@ export default function Home() {
             {adminSubTab === "analytics" && <SearchAnalytics />}
             {adminSubTab === "api-keys" && <ApiKeysManagement />}
             {adminSubTab === "api-calls" && <ApiCallAnalytics />}
+            {adminSubTab === "config" && <SiteConfiguration />}
             {adminSubTab === "admin" && <AdminPanel />}
           </>
         )}
