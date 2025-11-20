@@ -1693,28 +1693,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ORDER BY source
       `);
 
-      // Backfill: Insert missing predictions from ai_search_logs as 'deleted'
+      // Use LEFT JOIN to find all ai_search_logs that DON'T have matches
+      // This is more reliable than NOT EXISTS for finding missing records
       const backfillResult = await db.execute(sql`
         INSERT INTO ${pendingVehicles} (
           make, model, year, device_type, port_type, confidence, 
           google_search_results, source, status, created_at
         )
-        SELECT 
+        SELECT DISTINCT
           a.make, a.model, a.year,
           'UNKNOWN' as device_type,
           'UNKNOWN' as port_type,
           a.confidence,
-          '{"note": "Backfilled from ai_search_logs - original deleted"}' as google_search_results,
+          '{"note": "Backfilled from ai_search_logs"}' as google_search_results,
           COALESCE(a.source, 'gemini_api') as source,
           'deleted' as status,
           a.timestamp as created_at
         FROM ${aiSearchLogs} a
+        LEFT JOIN ${pendingVehicles} p
+          ON UPPER(TRIM(a.make)) = UPPER(TRIM(p.make))
+          AND UPPER(TRIM(a.model)) = UPPER(TRIM(p.model))
+          AND a.year = p.year
+          AND COALESCE(a.source, 'gemini_api') = COALESCE(p.source, 'gemini_api')
         WHERE a.source != 'exact'
-          AND NOT EXISTS (
-            SELECT 1 FROM ${pendingVehicles} p 
-            WHERE p.make = a.make AND p.model = a.model AND p.year = a.year
-              AND COALESCE(p.source, 'gemini_api') = COALESCE(a.source, 'gemini_api')
-          )
+          AND p.id IS NULL
+        ON CONFLICT DO NOTHING
       `);
 
       // Get counts AFTER backfill
