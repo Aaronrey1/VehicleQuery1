@@ -58,6 +58,7 @@ export interface IStorage {
   approvePendingVehicle(id: string): Promise<void>;
   rejectPendingVehicle(id: string): Promise<void>;
   deletePendingVehicle(id: string): Promise<void>;
+  updatePendingVehicleSource(id: string, source: string): Promise<void>;
 
   // Search logging methods
   logSearch(log: InsertSearchLog): Promise<void>;
@@ -710,6 +711,13 @@ export class DatabaseStorage implements IStorage {
 
   async deletePendingVehicle(id: string): Promise<void> {
     await db.delete(pendingVehicles).where(eq(pendingVehicles.id, id));
+  }
+
+  async updatePendingVehicleSource(id: string, source: string): Promise<void> {
+    await db
+      .update(pendingVehicles)
+      .set({ source })
+      .where(eq(pendingVehicles.id, id));
   }
 
   async getTodayGeminiSearchCount(): Promise<number> {

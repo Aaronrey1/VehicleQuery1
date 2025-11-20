@@ -1553,6 +1553,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get ALL pending vehicles regardless of status (protected - admin only)
+  app.get("/api/pending-vehicles/all", requireAuth, async (req, res) => {
+    try {
+      const vehicles = await storage.getAllPendingVehicles();
+      res.json(vehicles);
+    } catch (error) {
+      console.error("Get all pending vehicles error:", error);
+      res.status(500).json({ message: "Failed to retrieve all pending vehicles" });
+    }
+  });
+
   // Approve pending vehicle (protected - admin only)
   app.post("/api/pending-vehicles/:id/approve", requireAuth, async (req, res) => {
     try {
@@ -1617,6 +1628,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Delete pending vehicle error:", error);
       res.status(500).json({ message: "Failed to delete pending vehicle" });
+    }
+  });
+
+  // Update pending vehicle source (protected - admin only)
+  app.patch("/api/pending-vehicles/:id/source", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { source } = req.body;
+      
+      const validSources = ['database_tier1', 'database_tier2', 'google_api', 'gemini_api'];
+      if (!validSources.includes(source)) {
+        return res.status(400).json({ message: "Invalid source value" });
+      }
+      
+      await storage.updatePendingVehicleSource(id, source);
+      res.json({ message: "Source updated successfully" });
+    } catch (error) {
+      console.error("Update pending vehicle source error:", error);
+      res.status(500).json({ message: "Failed to update source" });
     }
   });
 
