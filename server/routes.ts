@@ -1,7 +1,7 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertVehicleSchema, updateVehicleSchema, searchVehicleSchema, insertHarnessSchema, searchHarnessSchema, insertApiKeySchema } from "@shared/schema";
+import { insertVehicleSchema, updateVehicleSchema, searchVehicleSchema, insertHarnessSchema, searchHarnessSchema, insertApiKeySchema, aiSearchLogs, pendingVehicles } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import csv from "csv-parser";
@@ -10,6 +10,8 @@ import axios from "axios";
 import { predictVehicleSpecs, checkIfHeavyVehicle as geminiCheckHeavyVehicle } from "./gemini";
 import { sendApprovalEmail } from "./email";
 import { getClientIp, getClientCountry } from "./geolocation";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -1663,6 +1665,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Delete API key error:", error);
       res.status(500).json({ message: "Failed to delete API key" });
+    }
+  });
+
+  // Backfill deleted predictions (protected - admin only)
+  app.post("/api/admin/backfill-deleted-predictions", requireAuth, async (req, res) => {
+    try {
+      // Get counts BEFORE backfill
+      const beforeCounts = await db.execute<{ source: string; status: string; count: number }>(sql`
+        SELECT 
+          COALESCE(source, 'gemini_api') as source,
+          status,
+          COUNT(*) as count
+        FROM ${pendingVehicles}
+        GROUP BY COALESCE(source, 'gemini_api'), status
+        ORDER BY source, status
+      `);
+
+      // Get ai_search_logs totals
+      const aiSearchTotals = await db.execute<{ source: string; count: number }>(sql`
+        SELECT 
+          COALESCE(source, 'gemini_api') as source,
+          COUNT(*) as count
+        FROM ${aiSearchLogs}
+        WHERE source != 'exact'
+        GROUP BY COALESCE(source, 'gemini_api')
+        ORDER BY source
+      `);
+
+      // Backfill: Insert missing predictions from ai_search_logs as 'deleted'
+      const backfillResult = await db.execute(sql`
+        INSERT INTO ${pendingVehicles} (
+          make, model, year, device_type, port_type, confidence, 
+          google_search_results, source, status, created_at
+        )
+        SELECT 
+          a.make, a.model, a.year,
+          'UNKNOWN' as device_type,
+          'UNKNOWN' as port_type,
+          a.confidence,
+          '{"note": "Backfilled from ai_search_logs - original deleted"}' as google_search_results,
+          COALESCE(a.source, 'gemini_api') as source,
+          'deleted' as status,
+          a.timestamp as created_at
+        FROM ${aiSearchLogs} a
+        WHERE a.source != 'exact'
+          AND NOT EXISTS (
+            SELECT 1 FROM ${pendingVehicles} p 
+            WHERE p.make = a.make AND p.model = a.model AND p.year = a.year
+              AND COALESCE(p.source, 'gemini_api') = COALESCE(a.source, 'gemini_api')
+          )
+      `);
+
+      // Get counts AFTER backfill
+      const afterCounts = await db.execute<{ source: string; status: string; count: number }>(sql`
+        SELECT 
+          COALESCE(source, 'gemini_api') as source,
+          status,
+          COUNT(*) as count
+        FROM ${pendingVehicles}
+        GROUP BY COALESCE(source, 'gemini_api'), status
+        ORDER BY source, status
+      `);
+
+      res.json({
+        message: "Backfill completed successfully",
+        rowsInserted: backfillResult.rowCount || 0,
+        aiSearchLogsTotals: aiSearchTotals.rows,
+        beforeBackfill: beforeCounts.rows,
+        afterBackfill: afterCounts.rows,
+      });
+    } catch (error) {
+      console.error("Backfill deleted predictions error:", error);
+      res.status(500).json({ 
+        message: "Failed to backfill deleted predictions",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
