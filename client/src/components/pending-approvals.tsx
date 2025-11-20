@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, XCircle, Trash2, Clock, AlertCircle, ExternalLink, Lock, PieChart as PieChartIcon, Edit } from "lucide-react";
+import { CheckCircle, XCircle, Trash2, Clock, AlertCircle, ExternalLink, Lock, PieChart as PieChartIcon } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -24,10 +23,6 @@ export function PendingApprovals() {
     queryKey: ["/api/pending-vehicles"],
   });
 
-  // Fetch ALL pending vehicles (for source management)
-  const { data: allVehicles } = useQuery<PendingVehicle[]>({
-    queryKey: ["/api/pending-vehicles/all"],
-  });
 
   // Fetch analytics data for pie charts
   const { data: analytics, isLoading: analyticsLoading } = useQuery<PendingApprovalsAnalytics>({
@@ -116,27 +111,6 @@ export function PendingApprovals() {
     },
   });
 
-  // Update source mutation
-  const updateSourceMutation = useMutation({
-    mutationFn: async ({ id, source }: { id: string; source: string }) => {
-      return apiRequest("PATCH", `/api/pending-vehicles/${id}/source`, { source });
-    },
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles/all"] });
-      queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles/analytics"] });
-      toast({
-        title: "Source Updated",
-        description: "The prediction source has been updated.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Update Failed",
-        description: "Failed to update source. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
 
   const getConfidenceBadge = (confidence: number) => {
     if (confidence >= 80) {
@@ -241,95 +215,6 @@ export function PendingApprovals() {
         </div>
       )}
 
-      {/* Source Management - Edit Sources */}
-      {allVehicles && allVehicles.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Edit className="h-5 w-5" />
-              Manage Prediction Sources
-            </CardTitle>
-            <CardDescription>
-              Edit the source tier for each prediction to update analytics charts
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Vehicle</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Current Source</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {allVehicles.map((vehicle) => {
-                  const getSourceLabel = (source: string | null) => {
-                    if (!source) return "Unknown";
-                    const map: Record<string, string> = {
-                      'database_tier1': 'DB ±5yr',
-                      'database_tier2': 'DB ±10yr',
-                      'google_api': 'Google API',
-                      'gemini_api': 'Gemini AI',
-                    };
-                    return map[source] || source;
-                  };
-
-                  const getStatusBadge = (status: string) => {
-                    if (status === 'pending') {
-                      return <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">Pending</Badge>;
-                    } else if (status === 'approved') {
-                      return <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Approved</Badge>;
-                    } else {
-                      return <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">Rejected</Badge>;
-                    }
-                  };
-
-                  return (
-                    <TableRow key={vehicle.id} data-testid={`row-source-${vehicle.id}`}>
-                      <TableCell className="font-medium">
-                        {formatYearDisplay(vehicle)} {vehicle.make} {vehicle.model}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(vehicle.status)}</TableCell>
-                      <TableCell>
-                        <Select
-                          value={vehicle.source || ""}
-                          onValueChange={(value) => updateSourceMutation.mutate({ id: vehicle.id, source: value })}
-                          disabled={updateSourceMutation.isPending}
-                        >
-                          <SelectTrigger className="w-[180px]" data-testid={`select-source-${vehicle.id}`}>
-                            <SelectValue placeholder="Select source">
-                              {getSourceLabel(vehicle.source)}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="database_tier1">DB ±5yr</SelectItem>
-                            <SelectItem value="database_tier2">DB ±10yr</SelectItem>
-                            <SelectItem value="google_api">Google API</SelectItem>
-                            <SelectItem value="gemini_api">Gemini AI</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => deleteMutation.mutate(vehicle.id)}
-                          disabled={deleteMutation.isPending}
-                          data-testid={`button-delete-source-${vehicle.id}`}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
 
       <Card>
         <CardHeader>
