@@ -1372,6 +1372,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get pending approvals analytics
+  app.get("/api/pending-vehicles/analytics", async (req, res) => {
+    try {
+      const analytics = await storage.getPendingApprovalsAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Pending approvals analytics error:", error);
+      res.status(500).json({ message: "Failed to get pending approvals analytics" });
+    }
+  });
+
   // Get dashboard analytics (real data instead of mock)
   app.get("/api/analytics/dashboard", async (req, res) => {
     try {

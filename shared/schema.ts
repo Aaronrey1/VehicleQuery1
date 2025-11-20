@@ -185,6 +185,11 @@ export type BillingPieCharts = {
   searchTierBreakdown: Array<{ name: string; value: number; color: string }>;
 };
 
+export type PendingApprovalsAnalytics = {
+  statusBreakdown: Array<{ name: string; value: number; color: string }>;
+  sourceBreakdown: Array<{ name: string; value: number; color: string }>;
+};
+
 // Pending vehicles from Google API awaiting admin approval
 export const pendingVehicles = pgTable("pending_vehicles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

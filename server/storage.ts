@@ -1,4 +1,4 @@
-import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type BillingPieCharts, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiCallAnalytics, type ApiKey, type InsertApiKey, type ApiKeyWithPlaintext } from "@shared/schema";
+import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type BillingPieCharts, type PendingApprovalsAnalytics, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiCallAnalytics, type ApiKey, type InsertApiKey, type ApiKeyWithPlaintext } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, sql, ilike, desc, asc, gte, lte, ne } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -54,6 +54,7 @@ export interface IStorage {
   createPendingVehicle(vehicle: InsertPendingVehicle): Promise<PendingVehicle>;
   getPendingVehicles(): Promise<PendingVehicle[]>;
   getAllPendingVehicles(status?: 'pending' | 'approved' | 'rejected'): Promise<PendingVehicle[]>;
+  getPendingApprovalsAnalytics(): Promise<PendingApprovalsAnalytics>;
   approvePendingVehicle(id: string): Promise<void>;
   rejectPendingVehicle(id: string): Promise<void>;
   deletePendingVehicle(id: string): Promise<void>;
@@ -600,6 +601,57 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(pendingVehicles)
       .orderBy(desc(pendingVehicles.createdAt));
+  }
+
+  async getPendingApprovalsAnalytics(): Promise<PendingApprovalsAnalytics> {
+    // Get status breakdown
+    const [pendingCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(pendingVehicles)
+      .where(eq(pendingVehicles.status, 'pending'));
+
+    const [approvedCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(pendingVehicles)
+      .where(eq(pendingVehicles.status, 'approved'));
+
+    const [rejectedCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(pendingVehicles)
+      .where(eq(pendingVehicles.status, 'rejected'));
+
+    // Get source breakdown
+    const sourceResults = await db
+      .select({
+        source: sql<string>`COALESCE(${pendingVehicles.source}, 'unknown')`,
+        count: sql<number>`count(*)`,
+      })
+      .from(pendingVehicles)
+      .groupBy(pendingVehicles.source);
+
+    const sourceMap = new Map<string, number>();
+    sourceResults.forEach((row) => {
+      sourceMap.set(row.source || 'unknown', Number(row.count));
+    });
+
+    const statusBreakdown = [
+      { name: 'Pending', value: Number(pendingCount?.count || 0), color: '#f59e0b' },
+      { name: 'Approved', value: Number(approvedCount?.count || 0), color: '#10b981' },
+      { name: 'Rejected', value: Number(rejectedCount?.count || 0), color: '#ef4444' },
+    ];
+
+    const sourceBreakdown = [
+      { name: 'DB ±5yr', value: sourceMap.get('database_tier1') || 0, color: '#3b82f6' },
+      { name: 'DB ±10yr', value: sourceMap.get('database_tier2') || 0, color: '#06b6d4' },
+      { name: 'Google API', value: sourceMap.get('google_api') || 0, color: '#f59e0b' },
+      { name: 'Gemini AI', value: sourceMap.get('gemini_api') || 0, color: '#a855f7' },
+      { name: 'Unknown', value: sourceMap.get('unknown') || 0, color: '#6b7280' },
+    ].filter(item => item.value > 0);
+
+    return {
+      statusBreakdown,
+      sourceBreakdown,
+    };
   }
 
   async approvePendingVehicle(id: string): Promise<void> {

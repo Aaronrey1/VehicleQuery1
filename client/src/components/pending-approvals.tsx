@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, XCircle, Trash2, Clock, AlertCircle, ExternalLink, Lock } from "lucide-react";
+import { CheckCircle, XCircle, Trash2, Clock, AlertCircle, ExternalLink, Lock, PieChart as PieChartIcon } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { PendingVehicle } from "@shared/schema";
+import { PendingVehicle, PendingApprovalsAnalytics } from "@shared/schema";
 import { formatYearDisplay } from "@/lib/utils";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 export function PendingApprovals() {
   const { toast } = useToast();
@@ -20,6 +21,11 @@ export function PendingApprovals() {
   // Fetch pending vehicles
   const { data: pendingVehicles, isLoading, isError, error } = useQuery<PendingVehicle[]>({
     queryKey: ["/api/pending-vehicles"],
+  });
+
+  // Fetch analytics data for pie charts
+  const { data: analytics, isLoading: analyticsLoading } = useQuery<PendingApprovalsAnalytics>({
+    queryKey: ["/api/pending-vehicles/analytics"],
   });
 
   // Handle authentication errors
@@ -44,6 +50,7 @@ export function PendingApprovals() {
     },
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles"] });
+      queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles/analytics"] });
       toast({
         title: "Vehicle Approved",
         description: "The vehicle has been added to the database.",
@@ -65,6 +72,7 @@ export function PendingApprovals() {
     },
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles"] });
+      queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles/analytics"] });
       toast({
         title: "Vehicle Rejected",
         description: "The vehicle has been marked as rejected.",
@@ -86,6 +94,7 @@ export function PendingApprovals() {
     },
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles"] });
+      queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles/analytics"] });
       toast({
         title: "Vehicle Deleted",
         description: "The pending vehicle has been removed.",
@@ -154,6 +163,85 @@ export function PendingApprovals() {
           Those predictions appear here for your review before being added to the main database.
         </AlertDescription>
       </Alert>
+
+      {/* Analytics Pie Charts */}
+      {!analyticsLoading && analytics && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Status Breakdown Chart */}
+          {analytics.statusBreakdown.some(item => item.value > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChartIcon className="h-5 w-5" />
+                  Approval Status
+                </CardTitle>
+                <CardDescription>
+                  Breakdown of predictions by approval status
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={analytics.statusBreakdown}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {analytics.statusBreakdown.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value, name) => [`${value} predictions`, name]} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Source Breakdown Chart */}
+          {analytics.sourceBreakdown.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChartIcon className="h-5 w-5" />
+                  Prediction Sources
+                </CardTitle>
+                <CardDescription>
+                  Distribution by prediction source (tier)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={analytics.sourceBreakdown}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value, percent }) => value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(1)}%)` : ''}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {analytics.sourceBreakdown.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value, name) => [`${value} predictions`, name]} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
