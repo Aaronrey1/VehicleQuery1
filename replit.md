@@ -27,9 +27,7 @@ All public API endpoints require API key authentication via the `X-API-Key` head
 - **API Call Analytics:** `/api/analytics/api-calls` provides detailed API key usage analytics (total calls, calls by endpoint/key, recent logs) with filtering and export.
 - **Dashboard Analytics:** `/api/analytics/dashboard` provides real-time analytics for total searches, most searched make, total vehicles, and top searched vehicles.
 - **Billing:** `/api/billing/stats` for AI Search usage and cost analytics (Gemini AI costs approx. $0.01/request). The `/api/billing/pie-charts` endpoint provides Search Tier Breakdown showing distribution of all searches across 5 tiers (Exact Matches, DB ±5yr, DB ±10yr, Google API, Gemini AI).
-- **Pending Approvals:** Endpoints for approving, rejecting, and deleting pending predictions, with automated email notifications for approved predictions. The `/api/pending-vehicles/analytics` endpoint provides two analytics pie charts:
-  - Approval Status Breakdown: Shows distribution of all predictions by status (Pending: orange, Approved: green, Rejected: red).
-  - Prediction Sources Breakdown: Shows distribution by prediction source/tier (Gemini AI: purple, Unknown: gray). Charts auto-refresh when vehicles are approved, rejected, or deleted.
+- **Pending Approvals:** Endpoints for approving, rejecting, and deleting pending predictions, with automated email notifications for approved predictions. The `/api/pending-vehicles/analytics` endpoint provides analytics pie charts showing approval/rejection breakdown by prediction source. For each source (Gemini AI, Unknown, etc.), displays a separate pie chart with pending/approved/rejected distribution, counts, and percentages. Charts auto-refresh when vehicles are approved, rejected, or deleted.
 
 ### Data Storage
 PostgreSQL is used as the database, accessed via the Neon serverless driver. Drizzle ORM provides type-safe operations, with schema defined in `shared/schema.ts` and Zod for runtime validation.
