@@ -210,15 +210,15 @@ export default function Billing() {
 
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">VECO API</span>
+                <span className="text-sm font-medium">Exact Match</span>
                 <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
                   <Database className="h-3 w-3 mr-1" />
                   FREE
                 </Badge>
               </div>
-              <div className="text-2xl font-bold" data-testid="text-veco-count">{stats.vecoSearches || 0}</div>
+              <div className="text-2xl font-bold" data-testid="text-exact-match-count">{stats.exactMatchSearches || 0}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                OBD-II compatibility check
+                Direct database matches
               </p>
             </div>
           </div>
@@ -361,9 +361,9 @@ export default function Billing() {
                             Gemini AI
                           </Badge>
                         )}
-                        {log.source === 'veco' && (
+                        {log.source === 'exact_match' && (
                           <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
-                            VECO API
+                            Exact Match
                           </Badge>
                         )}
                       </TableCell>

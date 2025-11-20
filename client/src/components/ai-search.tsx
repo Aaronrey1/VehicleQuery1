@@ -359,11 +359,11 @@ export default function AISearch() {
                       Note: This prediction is based on external search data and has lower confidence. Consider adding this vehicle to your database for accurate future predictions.
                     </AlertDescription>
                   </Alert>
-                ) : prediction.predictions.source === 'veco' ? (
+                ) : prediction.predictions.source === 'exact_match' ? (
                   <Alert className="border-indigo-500 bg-indigo-50 dark:bg-indigo-950">
                     <AlertCircle className="h-4 w-4 text-indigo-600" />
                     <AlertDescription className="text-xs text-indigo-800 dark:text-indigo-200">
-                      Note: This prediction comes from the VECO compatibility service. The data will be added to your database once approved by an admin.
+                      Note: This prediction comes from an exact match in the database. The data will be added once approved by an admin.
                     </AlertDescription>
                   </Alert>
                 ) : prediction.predictions.similarVehicles && prediction.predictions.similarVehicles.length > 0 ? (
