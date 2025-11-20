@@ -760,17 +760,34 @@ export class DatabaseStorage implements IStorage {
       portType: pending.portType,
     });
 
-    // Update status to approved
+    // Update status to approved, explicitly preserving source
     await db
       .update(pendingVehicles)
-      .set({ status: 'approved' })
+      .set({ 
+        status: 'approved',
+        source: pending.source // Explicitly preserve source field
+      })
       .where(eq(pendingVehicles.id, id));
   }
 
   async rejectPendingVehicle(id: string): Promise<void> {
+    // Fetch the pending vehicle to preserve source
+    const [pending] = await db
+      .select()
+      .from(pendingVehicles)
+      .where(eq(pendingVehicles.id, id));
+
+    if (!pending) {
+      throw new Error('Pending vehicle not found');
+    }
+
+    // Update status to rejected, explicitly preserving source
     await db
       .update(pendingVehicles)
-      .set({ status: 'rejected' })
+      .set({ 
+        status: 'rejected',
+        source: pending.source // Explicitly preserve source field
+      })
       .where(eq(pendingVehicles.id, id));
   }
 
