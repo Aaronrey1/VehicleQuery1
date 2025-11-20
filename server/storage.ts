@@ -574,19 +574,24 @@ export class DatabaseStorage implements IStorage {
       .where(eq(pendingVehicles.status, 'rejected'));
 
     // Get tier breakdown with pending/approved/rejected for each tier from pending_vehicles
-    const tierBreakdownResults = await db
-      .select({
-        source: sql<string>`COALESCE(${pendingVehicles.source}, 'unmatched')`,
-        status: pendingVehicles.status,
-        count: sql<number>`count(*)`,
-      })
-      .from(pendingVehicles)
-      .groupBy(pendingVehicles.source, pendingVehicles.status);
+    // Use raw SQL to properly group by the COALESCE'd source column
+    const tierBreakdownResults = await db.execute<{
+      source: string;
+      status: string;
+      count: number;
+    }>(sql`
+      SELECT 
+        COALESCE(source, 'gemini_api') as source,
+        status,
+        COUNT(*) as count
+      FROM ${pendingVehicles}
+      GROUP BY COALESCE(source, 'gemini_api'), status
+    `);
 
     // Build tier map with pending/approved/rejected counts
     const tierMap = new Map<string, { pending: number; approved: number; rejected: number }>();
-    tierBreakdownResults.forEach((row) => {
-      const source = row.source || 'unmatched';
+    tierBreakdownResults.rows.forEach((row: { source: string; status: string; count: number }) => {
+      const source = row.source || 'gemini_api';
       if (!tierMap.has(source)) {
         tierMap.set(source, { pending: 0, approved: 0, rejected: 0 });
       }
