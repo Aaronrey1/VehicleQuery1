@@ -555,18 +555,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(pendingVehicles.status, 'rejected'));
 
     // Get tier breakdown with pending/approved/rejected for each tier
-    // Join with ai_search_logs to get the actual tier/source for each prediction
+    // Use the source field directly from pending_vehicles to avoid overcounting from join
     const tierBreakdownResults = await db
       .select({
-        source: sql<string>`COALESCE(${aiSearchLogs.source}, 'unmatched')`,
+        source: sql<string>`COALESCE(${pendingVehicles.source}, 'unmatched')`,
         status: pendingVehicles.status,
         count: sql<number>`count(*)`,
       })
       .from(pendingVehicles)
-      .leftJoin(aiSearchLogs, 
-        sql`${pendingVehicles.make} = ${aiSearchLogs.make} AND ${pendingVehicles.model} = ${aiSearchLogs.model} AND ${pendingVehicles.year} = ${aiSearchLogs.year}`
-      )
-      .groupBy(aiSearchLogs.source, pendingVehicles.status);
+      .groupBy(pendingVehicles.source, pendingVehicles.status);
 
     // Build tier map with pending/approved/rejected counts
     const tierMap = new Map<string, { pending: number; approved: number; rejected: number }>();
@@ -610,8 +607,8 @@ export class DatabaseStorage implements IStorage {
     };
 
     const individualTierCharts = {
-      tier1: createTierData('database_tier1', 'Pattern ±5yr', '#3b82f6'),
-      tier2: createTierData('database_tier2', 'Pattern ±10yr', '#06b6d4'),
+      tier1: createTierData('database_tier1', 'Pattern ±5 years', '#3b82f6'),
+      tier2: createTierData('database_tier2', 'Pattern ±10 years', '#06b6d4'),
       googleApi: createTierData('google_api', 'Google API', '#f59e0b'),
       geminiAi: createTierData('gemini_api', 'Gemini AI', '#a855f7'),
       unmatched: createTierData('unmatched', 'Unmatched', '#6b7280'),
