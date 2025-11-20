@@ -507,6 +507,11 @@ export class DatabaseStorage implements IStorage {
       .from(aiSearchLogs)
       .where(eq(aiSearchLogs.source, 'veco'));
 
+    const [exactMatchCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'exact'));
+
     const [costSum] = await db
       .select({ sum: sql<number>`coalesce(sum(${aiSearchLogs.cost}), 0)` })
       .from(aiSearchLogs);
@@ -523,6 +528,7 @@ export class DatabaseStorage implements IStorage {
       googleSearches: Number(googleCount?.count || 0),
       geminiSearches: Number(geminiCount?.count || 0),
       vecoSearches: Number(vecoCount?.count || 0),
+      exactMatches: Number(exactMatchCount?.count || 0),
       tier1Searches: Number(tier1Count?.count || 0),
       tier2Searches: Number(tier2Count?.count || 0),
       totalCostCents: Number(costSum?.sum || 0),

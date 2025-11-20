@@ -175,6 +175,7 @@ export type BillingStats = {
   googleSearches: number; // Paid - Historical Google API calls
   geminiSearches: number; // Paid - Current Gemini AI calls
   vecoSearches: number; // Free
+  exactMatches: number; // Free - Instant database matches
   totalCostCents: number; // in tenths of a cent (divide by 1000 for dollars)
   tier1Searches: number;
   tier2Searches: number;
