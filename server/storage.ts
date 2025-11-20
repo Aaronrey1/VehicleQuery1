@@ -531,14 +531,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBillingPieCharts(): Promise<BillingPieCharts> {
+    // Get counts from ai_search_logs by source (matching the billing stats)
+    const [tier1Count] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'database_tier1'));
+
+    const [tier2Count] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'database_tier2'));
+
+    const [googleCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'google_api'));
+
+    const [geminiCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'gemini_api'));
+
     const [exactMatchCount] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(searchLogs)
-      .where(and(
-        sql`${searchLogs.searchType} IN ('ai', 'vin')`,
-        eq(searchLogs.exactMatch, true)
-      ));
+      .from(aiSearchLogs)
+      .where(eq(aiSearchLogs.source, 'exact'));
 
+    // Get approval analytics from pending_vehicles
     const [pendingCount] = await db
       .select({ count: sql<number>`count(*)` })
       .from(pendingVehicles)
@@ -554,8 +573,7 @@ export class DatabaseStorage implements IStorage {
       .from(pendingVehicles)
       .where(eq(pendingVehicles.status, 'rejected'));
 
-    // Get tier breakdown with pending/approved/rejected for each tier
-    // Use the source field directly from pending_vehicles to avoid overcounting from join
+    // Get tier breakdown with pending/approved/rejected for each tier from pending_vehicles
     const tierBreakdownResults = await db
       .select({
         source: sql<string>`COALESCE(${pendingVehicles.source}, 'unmatched')`,
@@ -582,13 +600,7 @@ export class DatabaseStorage implements IStorage {
       }
     });
 
-    // Helper function to get total for a tier
-    const getTierTotal = (source: string) => {
-      const data = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
-      return data.pending + data.approved + data.rejected;
-    };
-
-    // Helper function to create tier data
+    // Helper function to create tier data from pending_vehicles
     const createTierData = (source: string, name: string, baseColor: string) => {
       const data = tierMap.get(source) || { pending: 0, approved: 0, rejected: 0 };
       const total = data.pending + data.approved + data.rejected;
@@ -614,19 +626,20 @@ export class DatabaseStorage implements IStorage {
       unmatched: createTierData('unmatched', 'Unmatched', '#6b7280'),
     };
 
+    // Search tier breakdown using ai_search_logs (matches the stats)
     const searchTierBreakdown = [
       { name: 'Exact Matches', value: Number(exactMatchCount?.count || 0), color: '#10b981' },
-      { name: 'Pattern ±5 years', value: getTierTotal('database_tier1'), color: '#3b82f6' },
-      { name: 'Pattern ±10 years', value: getTierTotal('database_tier2'), color: '#06b6d4' },
-      { name: 'Google API', value: getTierTotal('google_api'), color: '#f59e0b' },
-      { name: 'Gemini AI', value: getTierTotal('gemini_api'), color: '#a855f7' },
-    ];
+      { name: 'Pattern ±5 years', value: Number(tier1Count?.count || 0), color: '#3b82f6' },
+      { name: 'Pattern ±10 years', value: Number(tier2Count?.count || 0), color: '#06b6d4' },
+      { name: 'Google API', value: Number(googleCount?.count || 0), color: '#f59e0b' },
+      { name: 'Gemini AI', value: Number(geminiCount?.count || 0), color: '#a855f7' },
+    ].filter(item => item.value > 0);
 
     const approvalAnalytics = [
       { name: 'Pending', value: Number(pendingCount?.count || 0), color: '#f59e0b' },
       { name: 'Approved', value: Number(approvedCount?.count || 0), color: '#10b981' },
       { name: 'Rejected', value: Number(rejectedCount?.count || 0), color: '#ef4444' },
-    ];
+    ].filter(item => item.value > 0);
 
     // Get API call breakdown by endpoint (only API calls with apiKeyId)
     const apiCallResults = await db
