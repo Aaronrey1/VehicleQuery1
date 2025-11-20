@@ -72,6 +72,13 @@ export default function SearchAnalyticsComponent() {
     setToDate(undefined);
   };
 
+  const handleExportApprovals = () => {
+    const params = new URLSearchParams();
+    if (statusFilter !== 'all') params.set('status', statusFilter);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    window.location.href = `/api/analytics/export/approvals${queryString}`;
+  };
+
   const getSearchTypeBadgeColor = (type: string) => {
     const colors: Record<string, string> = {
       regular: 'bg-blue-500',
@@ -324,12 +331,24 @@ export default function SearchAnalyticsComponent() {
         <TabsContent value="approvals" className="mt-6">
           <Card>
             <CardHeader className="p-6">
-              <div>
-                <CardTitle>Approval Analytics</CardTitle>
-                <CardDescription className="mt-2">
-                  Track AI predictions sent for approval including status (pending, approved, rejected), 
-                  complete vehicle data, and prediction details.
-                </CardDescription>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <CardTitle>Approval Analytics</CardTitle>
+                  <CardDescription className="mt-2">
+                    Track AI predictions sent for approval including status (pending, approved, rejected), 
+                    complete vehicle data, and prediction details.
+                  </CardDescription>
+                </div>
+                <Button 
+                  onClick={handleExportApprovals} 
+                  variant="outline" 
+                  size="sm"
+                  data-testid="button-export-approvals"
+                  disabled={isLoadingApprovals || !approvalData || approvalData.records.length === 0}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </Button>
               </div>
             </CardHeader>
 

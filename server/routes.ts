@@ -1543,6 +1543,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export approval analytics as CSV (protected - admin only)
+  app.get("/api/analytics/export/approvals", requireAuth, async (req, res) => {
+    try {
+      const { status } = req.query;
+      const filterStatus = status === 'pending' || status === 'approved' || status === 'rejected' 
+        ? status 
+        : undefined;
+      
+      const allPending = await storage.getAllPendingVehicles(filterStatus);
+      
+      // Build CSV
+      const headers = [
+        'Date Created',
+        'Status',
+        'Make',
+        'Model',
+        'Year',
+        'Device Type',
+        'Port Type',
+        'Confidence',
+        'Source',
+        'User Name',
+        'User Email'
+      ];
+      
+      const rows = allPending.map(record => [
+        record.createdAt ? new Date(record.createdAt).toISOString() : '',
+        record.status || '',
+        record.make || '',
+        record.model || '',
+        record.year?.toString() || '',
+        record.deviceType || '',
+        record.portType || '',
+        record.confidence?.toString() || '',
+        record.source || '',
+        record.userName || '',
+        record.userEmail || ''
+      ]);
+      
+      const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=approval-analytics${filterStatus ? `-${filterStatus}` : ''}.csv`);
+      res.send(csv);
+    } catch (error) {
+      console.error("Export approval analytics CSV error:", error);
+      res.status(500).json({ message: "Failed to export approval analytics" });
+    }
+  });
+
   // Get pending vehicles (protected - admin only)
   app.get("/api/pending-vehicles", requireAuth, async (req, res) => {
     try {
