@@ -7,7 +7,7 @@ VehicleDB Pro is a comprehensive, full-stack vehicle database management system 
 - **Site Configuration Visibility:** Site Config tab is now hidden by default and can be toggled via keyboard shortcut (Ctrl+Shift+C) or eye icon button in admin navigation. Preference persists in localStorage.
 - **Billing Updates:** Removed "Exact Match" tier from Search Tier Breakdown display. Display now focuses on Database Searches (pattern matching), Google API, and Gemini AI tiers.
 - **Pending Approvals Cleanup:** Removed analytics pie charts and source editing functionality. Pending Approvals now focuses solely on approve/reject/delete workflow.
-- **Confidence Scoring Documentation:** Updated AI Search confidence levels to reflect current system: 100% (Exact Match), 80-95% (DB ±5yr), 60-79% (DB ±10yr), 20-59% (Gemini AI).
+- **Confidence Scoring Simplified:** Removed ±10 year database tier. Updated AI Search confidence levels: 100% (Exact Match), 80-95% (DB ±5yr), 60-79% (Gemini AI - high accuracy predictions).
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

@@ -169,9 +169,9 @@ export default function Billing() {
                   FREE
                 </Badge>
               </div>
-              <div className="text-2xl font-bold" data-testid="text-database-count">{stats.tier1Searches + stats.tier2Searches}</div>
+              <div className="text-2xl font-bold" data-testid="text-database-count">{stats.tier1Searches}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                Pattern matching (±5 and ±10 years)
+                Pattern matching (±5 years)
               </p>
             </div>
 
@@ -211,8 +211,8 @@ export default function Billing() {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Cost Structure:</strong> Database predictions (exact match and pattern matching within ±5/±10 years) are completely free. 
-          Google API (historical) and Gemini AI (current) predictions cost $0.01 per request and are only used when no database matches are found.
+          <strong>Cost Structure:</strong> Database predictions (exact match and pattern matching within ±5 years) are completely free. 
+          Google API and Gemini AI predictions cost $0.01 per request and are only used when no database matches are found.
         </AlertDescription>
       </Alert>
 
@@ -287,11 +287,6 @@ export default function Billing() {
                         {log.source === 'database_tier1' && (
                           <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
                             Database ±5
-                          </Badge>
-                        )}
-                        {log.source === 'database_tier2' && (
-                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
-                            Database ±10
                           </Badge>
                         )}
                         {log.source === 'google_api' && (
