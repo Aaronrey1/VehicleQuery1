@@ -71,15 +71,13 @@ export default function AISearch() {
     }
   });
 
-  // Clean up input: trim, remove duplicates, remove extra words
+  // Clean up input: trim, remove duplicate words only
   const cleanInput = (input: string) => {
     return input
       .trim()
       .split(/\s+/)
-      .filter((word, index, arr) => index === 0 || word !== arr[index - 1]) // Remove consecutive duplicates
+      .filter((word, index, arr) => index === 0 || word !== arr[index - 1]) // Remove consecutive duplicates only
       .join(" ")
-      .replace(/\b(dump\s+)?truck\b/gi, "") // Remove "truck" or "dump truck"
-      .replace(/\b(vehicle|car|auto|automobile)\b/gi, "") // Remove generic descriptors
       .trim();
   };
 
@@ -172,7 +170,7 @@ export default function AISearch() {
                 <Input
                   id="ai-model"
                   type="text"
-                  placeholder="e.g., NPR, Model 3 (extras removed automatically)"
+                  placeholder="e.g., NPR, NPR Dump Truck, Model 3"
                   value={model}
                   onChange={(e) => { setModel(e.target.value); setPrediction(null); }}
                   data-testid="input-ai-model"
