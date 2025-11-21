@@ -13,7 +13,7 @@ import { PendingApprovals } from "@/components/pending-approvals";
 import ApiKeysManagement from "@/components/api-keys";
 import ApiCallAnalytics from "@/components/api-call-analytics";
 import { SiteConfiguration } from "@/components/site-configuration";
-import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck, Hash, LineChart, Key, BookOpen, Activity, Cog, Eye, EyeOff } from "lucide-react";
+import { Car, Upload, BarChart3, Menu, List, Settings, Lock, LogOut, Cable, Sparkles, DollarSign, ClipboardCheck, Hash, LineChart, Key, BookOpen, Activity, Cog, Eye, EyeOff, FileText } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
@@ -132,6 +132,15 @@ export default function Home() {
                 <Settings className="h-3 w-3" />
                 Admin
                 {!isAuthenticated && <Lock className="h-3 w-3" />}
+              </button>
+              <button
+                onClick={() => window.open('/api/guides/search-modes.pdf', '_blank')}
+                className="transition-colors flex items-center gap-1 text-muted-foreground hover:text-primary"
+                data-testid="nav-guide-pdf"
+                title="Download Search Modes Guide"
+              >
+                <FileText className="h-3 w-3" />
+                Guide
               </button>
               <Link href="/api-docs">
                 <button
