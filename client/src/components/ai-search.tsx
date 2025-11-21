@@ -108,7 +108,7 @@ export default function AISearch() {
               <ul className="mt-2 space-y-1 text-xs">
                 <li>• <strong>100% (Exact Match):</strong> Direct database match - completely reliable</li>
                 <li>• <strong>80-95% (High):</strong> Database pattern matching within ±5 years - highly reliable</li>
-                <li>• <strong>60-79% (High):</strong> AI-powered prediction via Gemini - very accurate, minimal review needed</li>
+                <li>• <strong>60-100% (High):</strong> AI-powered prediction via Gemini - very accurate, often 90%+ confidence</li>
               </ul>
             </AlertDescription>
           </Alert>
