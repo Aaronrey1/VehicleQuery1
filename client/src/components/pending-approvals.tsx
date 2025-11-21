@@ -5,13 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, XCircle, Trash2, Clock, AlertCircle, ExternalLink, Lock, PieChart as PieChartIcon } from "lucide-react";
+import { CheckCircle, XCircle, Trash2, Clock, AlertCircle, ExternalLink, Lock } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { PendingVehicle, PendingApprovalsAnalytics } from "@shared/schema";
+import { PendingVehicle } from "@shared/schema";
 import { formatYearDisplay } from "@/lib/utils";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 export function PendingApprovals() {
   const { toast } = useToast();
@@ -21,12 +20,6 @@ export function PendingApprovals() {
   // Fetch pending vehicles
   const { data: pendingVehicles, isLoading, isError, error } = useQuery<PendingVehicle[]>({
     queryKey: ["/api/pending-vehicles"],
-  });
-
-
-  // Fetch analytics data for pie charts
-  const { data: analytics, isLoading: analyticsLoading } = useQuery<PendingApprovalsAnalytics>({
-    queryKey: ["/api/pending-vehicles/analytics"],
   });
 
   // Handle authentication errors
@@ -167,53 +160,6 @@ export function PendingApprovals() {
         </AlertDescription>
       </Alert>
 
-      {/* Analytics Pie Charts - Status by Source */}
-      {!analyticsLoading && analytics && analytics.sourceBreakdowns.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {analytics.sourceBreakdowns.map((sourceData, idx) => (
-            <Card key={idx} data-testid={`card-source-${idx}`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PieChartIcon className="h-5 w-5" />
-                  {sourceData.source}
-                </CardTitle>
-                <CardDescription>
-                  Total: {sourceData.total} prediction{sourceData.total !== 1 ? 's' : ''}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={sourceData.statuses}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, value, percentage }) => 
-                        value > 0 ? `${name}: ${value} (${percentage}%)` : ''
-                      }
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {sourceData.statuses.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value: number, name: string, props: any) => {
-                        const percentage = props.payload.percentage;
-                        return [`${value} (${percentage}%)`, name];
-                      }} 
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
 
 
       <Card>
