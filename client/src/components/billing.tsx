@@ -161,7 +161,7 @@ export default function Billing() {
             Search Tier Breakdown
           </CardTitle>
           <CardDescription>
-            How your searches are distributed across free and paid tiers
+            Distribution of searches across database, Google, and Gemini tiers
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -208,19 +208,6 @@ export default function Billing() {
               </p>
             </div>
 
-            <div className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Exact Match</span>
-                <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
-                  <Database className="h-3 w-3 mr-1" />
-                  FREE
-                </Badge>
-              </div>
-              <div className="text-2xl font-bold" data-testid="text-exact-match-count">{stats.exactMatchSearches || 0}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Direct database matches
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -359,11 +346,6 @@ export default function Billing() {
                           <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
                             <Sparkles className="h-3 w-3 mr-1" />
                             Gemini AI
-                          </Badge>
-                        )}
-                        {log.source === 'exact_match' && (
-                          <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
-                            Exact Match
                           </Badge>
                         )}
                       </TableCell>
