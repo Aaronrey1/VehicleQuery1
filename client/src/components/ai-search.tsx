@@ -71,9 +71,48 @@ export default function AISearch() {
     }
   });
 
+  // Clean up input: trim, remove duplicates, remove extra words
+  const cleanInput = (input: string) => {
+    return input
+      .trim()
+      .split(/\s+/)
+      .filter((word, index, arr) => index === 0 || word !== arr[index - 1]) // Remove consecutive duplicates
+      .join(" ")
+      .replace(/\b(dump\s+)?truck\b/gi, "") // Remove "truck" or "dump truck"
+      .replace(/\b(vehicle|car|auto|automobile)\b/gi, "") // Remove generic descriptors
+      .trim();
+  };
+
   const handleSearch = () => {
-    if (make && model && year) {
-      searchMutation.mutate();
+    const cleanMake = cleanInput(make);
+    const cleanModel = cleanInput(model);
+    const cleanYear = year.trim();
+
+    if (cleanMake && cleanModel && cleanYear) {
+      // Update state with cleaned values and search
+      setMake(cleanMake);
+      setModel(cleanModel);
+      setYear(cleanYear);
+      
+      // Create a temporary mutation with clean data
+      const params = new URLSearchParams({ 
+        make: cleanMake, 
+        model: cleanModel, 
+        year: cleanYear 
+      });
+      if (userName) params.append('userName', userName);
+      if (userEmail) params.append('userEmail', userEmail);
+      
+      const searchClean = async () => {
+        const response = await fetch(`/api/ai/predict?${params}`);
+        if (!response.ok) throw new Error('Search failed');
+        return response.json();
+      };
+      
+      searchClean().then(setPrediction).catch(e => {
+        console.error('Search error:', e);
+        setPrediction(null);
+      });
     }
   };
 
@@ -121,7 +160,7 @@ export default function AISearch() {
                 <Input
                   id="ai-make"
                   type="text"
-                  placeholder="Type any make (e.g., Tesla)"
+                  placeholder="e.g., Tesla, ISUZU, BMW (duplicates OK)"
                   value={make}
                   onChange={(e) => { setMake(e.target.value); setPrediction(null); }}
                   data-testid="input-ai-make"
@@ -133,7 +172,7 @@ export default function AISearch() {
                 <Input
                   id="ai-model"
                   type="text"
-                  placeholder="Type any model (e.g., Model 3)"
+                  placeholder="e.g., NPR, Model 3 (extras removed automatically)"
                   value={model}
                   onChange={(e) => { setModel(e.target.value); setPrediction(null); }}
                   data-testid="input-ai-model"
