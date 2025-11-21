@@ -106,9 +106,10 @@ export default function AISearch() {
             <AlertDescription className="text-sm">
               <strong>How Prediction Confidence Works:</strong>
               <ul className="mt-2 space-y-1 text-xs">
-                <li>• <strong>80-100% (High):</strong> Based on very similar vehicles (same make & model, ±5 years) - highly reliable</li>
-                <li>• <strong>60-79% (Medium):</strong> Based on manufacturer patterns (same make & model, ±10 years) - generally accurate</li>
-                <li>• <strong>20-59% (Low):</strong> Based on external search data - use with caution, consider adding to database</li>
+                <li>• <strong>100% (Exact Match):</strong> Direct database match - completely reliable</li>
+                <li>• <strong>80-95% (High):</strong> Database pattern matching within ±5 years - highly reliable</li>
+                <li>• <strong>60-79% (Medium):</strong> Database pattern matching within ±10 years - generally accurate</li>
+                <li>• <strong>20-59% (Low):</strong> AI-powered prediction via Gemini - use with caution, review before adding</li>
               </ul>
             </AlertDescription>
           </Alert>

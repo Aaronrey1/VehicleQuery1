@@ -44,7 +44,6 @@ export function PendingApprovals() {
     },
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles"] });
-      queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles/analytics"] });
       toast({
         title: "Vehicle Approved",
         description: "The vehicle has been added to the database.",
@@ -66,7 +65,6 @@ export function PendingApprovals() {
     },
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles"] });
-      queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles/analytics"] });
       toast({
         title: "Vehicle Rejected",
         description: "The vehicle has been marked as rejected.",
@@ -88,8 +86,6 @@ export function PendingApprovals() {
     },
     onSuccess: () => {
       queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles"] });
-      queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles/all"] });
-      queryClient.refetchQueries({ queryKey: ["/api/pending-vehicles/analytics"] });
       toast({
         title: "Vehicle Deleted",
         description: "The pending vehicle has been removed.",
