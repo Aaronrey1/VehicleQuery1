@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Sparkles, TrendingUp, Search, AlertCircle, CheckCircle2, XCircle, Mail, User } from "lucide-react";
+import { Sparkles, TrendingUp, Search, AlertCircle, CheckCircle2, XCircle, Mail, User, ChevronDown } from "lucide-react";
 import { formatForDisplay, formatYearDisplay } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -54,6 +54,34 @@ export default function AISearch() {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
+  const [showMakeSuggestions, setShowMakeSuggestions] = useState(false);
+  const [showModelSuggestions, setShowModelSuggestions] = useState(false);
+
+  // Fetch make suggestions
+  const { data: makeSuggestions = [] } = useQuery({
+    queryKey: ['/api/suggestions/makes', make],
+    queryFn: async () => {
+      if (!make) return [];
+      const response = await fetch(`/api/suggestions/makes?q=${encodeURIComponent(make)}`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.suggestions || [];
+    },
+    enabled: make.length > 0,
+  });
+
+  // Fetch model suggestions
+  const { data: modelSuggestions = [] } = useQuery({
+    queryKey: ['/api/suggestions/models', make, model],
+    queryFn: async () => {
+      if (!make || !model) return [];
+      const response = await fetch(`/api/suggestions/models?make=${encodeURIComponent(make)}&q=${encodeURIComponent(model)}`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.suggestions || [];
+    },
+    enabled: make.length > 0 && model.length > 0,
+  });
 
   // AI prediction mutation
   const searchMutation = useMutation({
@@ -155,26 +183,80 @@ export default function AISearch() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="ai-make">Make</Label>
-                <Input
-                  id="ai-make"
-                  type="text"
-                  placeholder="e.g., Tesla, ISUZU, BMW (duplicates OK)"
-                  value={make}
-                  onChange={(e) => { setMake(e.target.value); setPrediction(null); }}
-                  data-testid="input-ai-make"
-                />
+                <div className="relative">
+                  <Input
+                    id="ai-make"
+                    type="text"
+                    placeholder="e.g., Tesla, ISUZU, BMW"
+                    value={make}
+                    onChange={(e) => { 
+                      setMake(e.target.value); 
+                      setPrediction(null);
+                      setShowMakeSuggestions(true);
+                    }}
+                    onFocus={() => setShowMakeSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowMakeSuggestions(false), 200)}
+                    data-testid="input-ai-make"
+                  />
+                  {showMakeSuggestions && makeSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-40 overflow-y-auto">
+                      {makeSuggestions.map((suggestion, idx) => (
+                        <button
+                          key={idx}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
+                          onClick={() => {
+                            setMake(suggestion);
+                            setModel("");
+                            setShowMakeSuggestions(false);
+                            setPrediction(null);
+                          }}
+                          data-testid={`suggestion-make-${idx}`}
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="ai-model">Model</Label>
-                <Input
-                  id="ai-model"
-                  type="text"
-                  placeholder="e.g., NPR, NPR Dump Truck, Model 3"
-                  value={model}
-                  onChange={(e) => { setModel(e.target.value); setPrediction(null); }}
-                  data-testid="input-ai-model"
-                />
+                <div className="relative">
+                  <Input
+                    id="ai-model"
+                    type="text"
+                    placeholder="e.g., NPR, NPR Dump Truck, Model 3"
+                    value={model}
+                    onChange={(e) => { 
+                      setModel(e.target.value); 
+                      setPrediction(null);
+                      setShowModelSuggestions(true);
+                    }}
+                    onFocus={() => setShowModelSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowModelSuggestions(false), 200)}
+                    disabled={!make}
+                    data-testid="input-ai-model"
+                  />
+                  {showModelSuggestions && modelSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-40 overflow-y-auto">
+                      {modelSuggestions.map((suggestion, idx) => (
+                        <button
+                          key={idx}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
+                          onClick={() => {
+                            setModel(suggestion);
+                            setShowModelSuggestions(false);
+                            setPrediction(null);
+                          }}
+                          data-testid={`suggestion-model-${idx}`}
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
