@@ -72,7 +72,10 @@ export default function Home() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
               <Car className="text-primary text-2xl" />
-              <h1 className="text-xl font-semibold text-foreground">VehicleDB Pro</h1>
+              <div className="flex flex-col">
+                <h1 className="text-xl font-semibold text-foreground">VehicleDB Pro</h1>
+                <p className="text-xs text-muted-foreground">Powered by Alex Perez</p>
+              </div>
             </div>
             <nav className="hidden md:flex items-center space-x-6">
               <button
