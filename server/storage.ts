@@ -84,6 +84,10 @@ export interface IStorage {
   createCustomChart(chart: InsertCustomChart): Promise<CustomChart>;
   updateCustomChart(id: string, chart: Partial<InsertCustomChart>): Promise<void>;
   deleteCustomChart(id: string): Promise<void>;
+
+  // Autocomplete suggestions
+  getMakeSuggestions(query: string): Promise<string[]>;
+  getModelSuggestions(make: string, query: string): Promise<string[]>;
 }
 
 // Helper function to map snake_case database columns to camelCase TypeScript properties
@@ -1184,6 +1188,45 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCustomChart(id: string): Promise<void> {
     await db.delete(customCharts).where(eq(customCharts.id, id));
+  }
+
+  // Autocomplete suggestions
+  async getMakeSuggestions(query: string): Promise<string[]> {
+    if (!query) {
+      const result = await db
+        .selectDistinct({ make: vehicles.make })
+        .from(vehicles)
+        .orderBy(asc(vehicles.make))
+        .limit(10);
+      return result.map(r => r.make);
+    }
+    const result = await db
+      .selectDistinct({ make: vehicles.make })
+      .from(vehicles)
+      .where(ilike(vehicles.make, `${query}%`))
+      .orderBy(asc(vehicles.make))
+      .limit(10);
+    return result.map(r => r.make);
+  }
+
+  async getModelSuggestions(make: string, query: string): Promise<string[]> {
+    if (!make) return [];
+    if (!query) {
+      const result = await db
+        .selectDistinct({ model: vehicles.model })
+        .from(vehicles)
+        .where(eq(vehicles.make, make))
+        .orderBy(asc(vehicles.model))
+        .limit(10);
+      return result.map(r => r.model);
+    }
+    const result = await db
+      .selectDistinct({ model: vehicles.model })
+      .from(vehicles)
+      .where(and(eq(vehicles.make, make), ilike(vehicles.model, `${query}%`)))
+      .orderBy(asc(vehicles.model))
+      .limit(10);
+    return result.map(r => r.model);
   }
 }
 

@@ -2349,6 +2349,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Autocomplete suggestions for Make
+  app.get("/api/suggestions/makes", async (req, res) => {
+    try {
+      const query = (req.query.q as string || "").toUpperCase().trim();
+      const makes = await storage.getMakeSuggestions(query);
+      res.json({ suggestions: makes });
+    } catch (error: any) {
+      console.error("Make suggestions error:", error);
+      res.status(500).json({ message: "Failed to get suggestions", error: error.message });
+    }
+  });
+
+  // Autocomplete suggestions for Models by Make
+  app.get("/api/suggestions/models", async (req, res) => {
+    try {
+      const make = (req.query.make as string || "").toUpperCase().trim();
+      const query = (req.query.q as string || "").toUpperCase().trim();
+      const models = await storage.getModelSuggestions(make, query);
+      res.json({ suggestions: models });
+    } catch (error: any) {
+      console.error("Model suggestions error:", error);
+      res.status(500).json({ message: "Failed to get suggestions", error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
