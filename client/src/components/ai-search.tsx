@@ -200,7 +200,7 @@ export default function AISearch() {
                   />
                   {showMakeSuggestions && makeSuggestions.length > 0 && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-40 overflow-y-auto">
-                      {makeSuggestions.map((suggestion, idx) => (
+                      {makeSuggestions.map((suggestion: string, idx: number) => (
                         <button
                           key={idx}
                           className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
@@ -240,7 +240,7 @@ export default function AISearch() {
                   />
                   {showModelSuggestions && modelSuggestions.length > 0 && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-40 overflow-y-auto">
-                      {modelSuggestions.map((suggestion, idx) => (
+                      {modelSuggestions.map((suggestion: string, idx: number) => (
                         <button
                           key={idx}
                           className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
@@ -275,7 +275,7 @@ export default function AISearch() {
             <div className="border-t pt-4 pb-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="ai-user-name" className="text-sm text-muted-foreground">Your Name (optional)</Label>
+                  <Label htmlFor="ai-user-name" className="text-sm">Your Name <span className="text-red-500">*</span></Label>
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -285,6 +285,7 @@ export default function AISearch() {
                       value={userName}
                       onChange={(e) => setUserName(e.target.value)}
                       className="pl-9"
+                      required
                       data-testid="input-ai-user-name"
                     />
                   </div>
@@ -310,7 +311,7 @@ export default function AISearch() {
 
             <Button 
               onClick={handleSearch} 
-              disabled={!make || !model || !year || searchMutation.isPending}
+              disabled={!make || !model || !year || !userName.trim() || searchMutation.isPending}
               className="w-full"
               data-testid="button-ai-search"
             >

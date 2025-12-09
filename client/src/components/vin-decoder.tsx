@@ -148,7 +148,7 @@ export default function VinDecoder() {
           <div className="border-t pt-4 pb-4 mt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="vin-user-name" className="text-sm text-muted-foreground">Your Name (optional)</Label>
+                <Label htmlFor="vin-user-name" className="text-sm">Your Name <span className="text-red-500">*</span></Label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -158,6 +158,7 @@ export default function VinDecoder() {
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
                     className="pl-9"
+                    required
                     data-testid="input-vin-user-name"
                   />
                 </div>
@@ -183,7 +184,7 @@ export default function VinDecoder() {
 
           <Button 
             onClick={activeTab === "single" ? handleSingleDecode : handleBulkDecode}
-            disabled={decodeMutation.isPending || (activeTab === "single" ? !singleVin.trim() : !bulkVins.trim())}
+            disabled={decodeMutation.isPending || !userName.trim() || (activeTab === "single" ? !singleVin.trim() : !bulkVins.trim())}
             className="w-full"
             data-testid="button-decode-vin"
           >
