@@ -7,7 +7,7 @@ import multer from "multer";
 import csv from "csv-parser";
 import { Readable } from "stream";
 import axios from "axios";
-import { predictVehicleSpecs, checkIfHeavyVehicle as geminiCheckHeavyVehicle } from "./gemini";
+import { predictVehicleSpecs, checkIfHeavyVehicle as geminiCheckHeavyVehicle, predictVehicleSpecsDebug } from "./gemini";
 import { sendApprovalEmail } from "./email";
 import { getClientIp, getClientCountry } from "./geolocation";
 
@@ -1007,6 +1007,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Delete harness error:", error);
       res.status(500).json({ message: "Failed to delete harnesses" });
+    }
+  });
+
+  // Debug Gemini prediction endpoint - shows full response including prompt and reasoning
+  app.get("/api/ai/debug", requireAuth, async (req, res) => {
+    try {
+      const { make, model, year } = req.query;
+      
+      if (!make || !model || !year) {
+        return res.status(400).json({ message: "Make, model, and year are required" });
+      }
+
+      const yearNum = parseInt(year as string);
+      const normalizedMake = normalizeMake(make as string) || (make as string).toUpperCase().trim();
+      const normalizedModel = (model as string).toUpperCase().trim();
+      
+      console.log(`[Debug] Testing Gemini prediction for: ${yearNum} ${normalizedMake} ${normalizedModel}`);
+      
+      const debugResult = await predictVehicleSpecsDebug(normalizedMake, normalizedModel, yearNum);
+      
+      if (!debugResult) {
+        return res.status(500).json({ message: "Gemini prediction failed", error: "No response from AI" });
+      }
+      
+      res.json({
+        vehicle: `${yearNum} ${normalizedMake} ${normalizedModel}`,
+        prediction: {
+          portType: debugResult.portType,
+          deviceType: debugResult.deviceType,
+          confidence: debugResult.confidence,
+          reasoning: debugResult.reasoning
+        },
+        debug: {
+          rawResponse: debugResult.rawResponse,
+          prompt: debugResult.prompt,
+          timestamp: debugResult.timestamp
+        }
+      });
+    } catch (error: any) {
+      console.error("Debug prediction error:", error);
+      res.status(500).json({ message: "Debug prediction failed", error: error.message });
     }
   });
 
