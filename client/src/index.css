@@ -13,14 +13,14 @@
   --primary-foreground: hsl(0, 0%, 0%);
   --secondary: hsl(103, 50%, 90%);
   --secondary-foreground: hsl(0, 0%, 0%);
-  --muted: hsl(0, 0%, 96%);
+  --muted: hsl(0, 0%, 98%);
   --muted-foreground: hsl(0, 0%, 30%);
-  --accent: hsl(103, 50%, 95%);
+  --accent: hsl(0, 0%, 98%);
   --accent-foreground: hsl(0, 0%, 0%);
   --destructive: hsl(0, 84%, 60%);
   --destructive-foreground: hsl(0, 0%, 98%);
-  --border: hsl(0, 0%, 85%);
-  --input: hsl(0, 0%, 85%);
+  --border: hsl(0, 0%, 80%);
+  --input: hsl(0, 0%, 100%);
   --ring: hsl(103, 71%, 43%);
   --chart-1: hsl(103, 71%, 43%);
   --chart-2: hsl(159.7826, 100%, 36.0784%);
