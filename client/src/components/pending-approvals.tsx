@@ -184,7 +184,7 @@ export function PendingApprovals() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Images</TableHead>
+                    <TableHead>Image</TableHead>
                     <TableHead>Vehicle</TableHead>
                     <TableHead>Predicted Port</TableHead>
                     <TableHead>Predicted Device</TableHead>
@@ -199,29 +199,18 @@ export function PendingApprovals() {
                     <Fragment key={vehicle.id}>
                       <TableRow data-testid={`row-pending-${vehicle.id}`}>
                         <TableCell>
-                          <div className="flex gap-2">
-                            {vehicle.vehicleImageUrl && (
-                              <img 
-                                src={vehicle.vehicleImageUrl} 
-                                alt={`${vehicle.make} ${vehicle.model}`}
-                                className="w-12 h-12 object-cover rounded-md border"
-                                data-testid={`img-vehicle-${vehicle.id}`}
-                              />
-                            )}
-                            {vehicle.portImageUrl && (
-                              <img 
-                                src={vehicle.portImageUrl} 
-                                alt={vehicle.portType}
-                                className="w-12 h-12 object-cover rounded-md border"
-                                data-testid={`img-port-${vehicle.id}`}
-                              />
-                            )}
-                            {!vehicle.vehicleImageUrl && !vehicle.portImageUrl && (
-                              <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">
-                                No img
-                              </div>
-                            )}
-                          </div>
+                          {vehicle.vehicleImageUrl ? (
+                            <img 
+                              src={vehicle.vehicleImageUrl} 
+                              alt={`${vehicle.make} ${vehicle.model}`}
+                              className="w-12 h-12 object-cover rounded-md border"
+                              data-testid={`img-vehicle-${vehicle.id}`}
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">
+                              No img
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="font-medium" data-testid={`text-vehicle-${vehicle.id}`}>
                           {formatYearDisplay(vehicle)} {vehicle.make} {vehicle.model}
