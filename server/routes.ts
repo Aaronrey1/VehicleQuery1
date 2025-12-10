@@ -1181,6 +1181,150 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // SMART SWAP DETECTION: Check if make/model might be swapped
+      // Detect if make looks like a model number (mostly numeric) and model looks like a brand name
+      const makeStr = (make as string).toUpperCase().trim();
+      const modelStr = (model as string).toUpperCase().trim();
+      const makeIsNumeric = /^\d+$/.test(makeStr) || /^\d+[A-Z]{0,3}$/.test(makeStr); // "4500", "350HD"
+      const modelLooksLikeBrand = normalizeMake(modelStr) !== undefined;
+      
+      let usedSwappedInputs = false;
+      let swappedMake = '';
+      let swappedModel = '';
+      
+      if (makeIsNumeric || (modelLooksLikeBrand && !normalizeMake(makeStr))) {
+        // Try swapping make and model
+        swappedMake = normalizeMake(modelStr) || modelStr;
+        swappedModel = makeStr;
+        
+        console.log(`[Swap Detection] Original: make="${makeStr}", model="${modelStr}" | Trying swapped: make="${swappedMake}", model="${swappedModel}"`);
+        
+        const swappedMatch = await storage.searchVehicles({
+          make: swappedMake,
+          model: swappedModel,
+          year: yearNum,
+          limit: 1,
+          offset: 0,
+          sortBy: "year",
+          sortOrder: "asc"
+        });
+        
+        if (swappedMatch.vehicles.length > 0) {
+          usedSwappedInputs = true;
+          const matchedVehicle = swappedMatch.vehicles[0];
+          const isAllModelsFallback = matchedVehicle.model === 'ALL MODELS';
+          
+          // Add warning about swapped inputs
+          const swapWarning = `ℹ️ We detected the make and model fields may have been swapped. Showing results for ${swappedMake} ${swappedModel} ${yearNum}.`;
+          
+          // Log swapped match search
+          await storage.logSearch({
+            searchType: 'ai',
+            make: swappedMake,
+            model: swappedModel,
+            year: yearNum,
+            country: getClientCountry(req),
+            ipAddress: getClientIp(req),
+            resultsCount: 1,
+            queryDetails: JSON.stringify({ originalMake: makeStr, originalModel: modelStr, swapped: true }),
+            userName: userNameStr || null,
+            userEmail: userEmailStr || null,
+            apiKeyId: (req as any).apiKeyId || null,
+            endpoint: '/api/ai/predict',
+            exactMatch: true,
+          });
+          
+          return res.json({
+            found: true,
+            exactMatch: matchedVehicle,
+            isAllModelsFallback,
+            yearWarning,
+            makeModelWarning: swapWarning,
+            searchPath: [
+              { source: 'Database (Original)', checked: true, found: false },
+              { source: 'Database (Swapped Make/Model)', checked: true, found: true }
+            ]
+          });
+        }
+        
+        // Also try swapped values within ±5 year range
+        const swappedSimilar = await storage.searchVehicles({
+          make: swappedMake,
+          model: swappedModel,
+          limit: 100,
+          offset: 0,
+          sortBy: "year",
+          sortOrder: "desc"
+        });
+        
+        const swappedNearbyVehicles = swappedSimilar.vehicles.filter(v => {
+          if (v.year !== null && v.year !== undefined) {
+            return Math.abs(v.year - yearNum) <= 5;
+          } else if (v.yearFrom !== null && v.yearTo !== null) {
+            return (yearNum >= v.yearFrom && yearNum <= v.yearTo) ||
+                   (Math.abs(v.yearFrom - yearNum) <= 5) ||
+                   (Math.abs(v.yearTo - yearNum) <= 5);
+          }
+          return false;
+        });
+        
+        if (swappedNearbyVehicles.length > 0) {
+          usedSwappedInputs = true;
+          const prediction = swappedNearbyVehicles[0];
+          const portTypes = swappedNearbyVehicles.map(v => v.portType);
+          const deviceTypes = swappedNearbyVehicles.map(v => v.deviceType);
+          const mostCommonPort = portTypes.sort((a, b) =>
+            portTypes.filter(v => v === a).length - portTypes.filter(v => v === b).length
+          ).pop();
+          const mostCommonDevice = deviceTypes.sort((a, b) =>
+            deviceTypes.filter(v => v === a).length - deviceTypes.filter(v => v === b).length
+          ).pop();
+          
+          const swapWarning = `ℹ️ We detected the make and model fields may have been swapped. Showing results for ${swappedMake} ${swappedModel} (based on ±5 year match).`;
+          
+          await storage.logSearch({
+            searchType: 'ai',
+            make: swappedMake,
+            model: swappedModel,
+            year: yearNum,
+            country: getClientCountry(req),
+            ipAddress: getClientIp(req),
+            resultsCount: swappedNearbyVehicles.length,
+            queryDetails: JSON.stringify({ originalMake: makeStr, originalModel: modelStr, swapped: true }),
+            userName: userNameStr || null,
+            userEmail: userEmailStr || null,
+            apiKeyId: (req as any).apiKeyId || null,
+            endpoint: '/api/ai/predict',
+            exactMatch: false,
+          });
+          
+          return res.json({
+            found: false,
+            predictions: {
+              portType: mostCommonPort,
+              portConfidence: 85,
+              deviceType: mostCommonDevice,
+              deviceConfidence: 85,
+              basedOn: swappedNearbyVehicles.length,
+              source: 'database_nearby_years',
+              similarVehicles: swappedNearbyVehicles.slice(0, 5).map(v => ({
+                make: v.make,
+                model: v.model,
+                year: v.year || v.yearFrom,
+                deviceType: v.deviceType,
+                portType: v.portType
+              }))
+            },
+            yearWarning,
+            makeModelWarning: swapWarning,
+            searchPath: [
+              { source: 'Database (Original)', checked: true, found: false },
+              { source: 'Database (Swapped ±5 Years)', checked: true, found: true }
+            ]
+          });
+        }
+      }
+
       // No exact match in database - find similar vehicles for prediction
       // Search for same make+model with all years, then filter to ±5 year window
       const allSimilarVehicles = await storage.searchVehicles({
