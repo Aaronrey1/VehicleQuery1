@@ -67,21 +67,21 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-card border-b border-border shadow-sm">
+      <header className="bg-primary shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <Car className="text-primary text-2xl" />
+              <Car className="text-white text-2xl" />
               <div className="flex flex-col">
-                <h1 className="text-xl font-semibold text-foreground">VehicleDB Pro</h1>
-                <p className="text-xs text-muted-foreground">Powered by Alex Perez</p>
+                <h1 className="text-xl font-semibold text-white">VehicleDB Pro</h1>
+                <p className="text-xs text-white/80">Powered by Alex Perez</p>
               </div>
             </div>
             <nav className="hidden md:flex items-center space-x-6">
               <button
                 onClick={() => setActiveSection("ai")}
                 className={`transition-colors flex items-center gap-1 ${
-                  activeSection === "ai" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                  activeSection === "ai" ? "text-white font-semibold" : "text-white/80 hover:text-white"
                 }`}
                 data-testid="nav-ai"
               >
@@ -91,7 +91,7 @@ export default function Home() {
               <button
                 onClick={() => setActiveSection("bulk")}
                 className={`transition-colors ${
-                  activeSection === "bulk" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                  activeSection === "bulk" ? "text-white font-semibold" : "text-white/80 hover:text-white"
                 }`}
                 data-testid="nav-bulk"
               >
@@ -100,7 +100,7 @@ export default function Home() {
               <button
                 onClick={() => setActiveSection("geometris")}
                 className={`transition-colors ${
-                  activeSection === "geometris" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                  activeSection === "geometris" ? "text-white font-semibold" : "text-white/80 hover:text-white"
                 }`}
                 data-testid="nav-geometris"
               >
@@ -109,7 +109,7 @@ export default function Home() {
               <button
                 onClick={() => setActiveSection("vin")}
                 className={`transition-colors flex items-center gap-1 ${
-                  activeSection === "vin" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                  activeSection === "vin" ? "text-white font-semibold" : "text-white/80 hover:text-white"
                 }`}
                 data-testid="nav-vin"
               >
@@ -119,7 +119,7 @@ export default function Home() {
               <button
                 onClick={() => setActiveSection("analytics")}
                 className={`transition-colors ${
-                  activeSection === "analytics" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                  activeSection === "analytics" ? "text-white font-semibold" : "text-white/80 hover:text-white"
                 }`}
                 data-testid="nav-analytics"
               >
@@ -128,7 +128,7 @@ export default function Home() {
               <button
                 onClick={() => handleProtectedSection("admin")}
                 className={`transition-colors flex items-center gap-1 ${
-                  activeSection === "admin" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                  activeSection === "admin" ? "text-white font-semibold" : "text-white/80 hover:text-white"
                 }`}
                 data-testid="nav-admin"
               >
@@ -138,7 +138,7 @@ export default function Home() {
               </button>
               <Link href="/api-docs">
                 <button
-                  className="transition-colors flex items-center gap-1 text-muted-foreground hover:text-primary"
+                  className="transition-colors flex items-center gap-1 text-white/80 hover:text-white"
                   data-testid="nav-api-docs"
                 >
                   <BookOpen className="h-3 w-3" />
@@ -150,6 +150,7 @@ export default function Home() {
                   onClick={logout}
                   variant="outline"
                   size="sm"
+                  className="border-white/50 text-white hover:bg-white/10 hover:text-white"
                   data-testid="button-logout"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
@@ -160,6 +161,7 @@ export default function Home() {
                   onClick={() => setLocation("/login")}
                   variant="outline"
                   size="sm"
+                  className="border-white/50 text-white hover:bg-white/10 hover:text-white"
                   data-testid="button-login"
                 >
                   <Lock className="mr-2 h-4 w-4" />
@@ -167,7 +169,7 @@ export default function Home() {
                 </Button>
               )}
             </nav>
-            <Button variant="ghost" className="md:hidden" data-testid="button-menu">
+            <Button variant="ghost" className="md:hidden text-white hover:bg-white/10" data-testid="button-menu">
               <Menu className="text-xl" />
             </Button>
           </div>
