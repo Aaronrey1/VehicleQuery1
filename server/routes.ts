@@ -8,6 +8,7 @@ import csv from "csv-parser";
 import { Readable } from "stream";
 import axios from "axios";
 import { predictVehicleSpecs, checkIfHeavyVehicle as geminiCheckHeavyVehicle, predictVehicleSpecsDebug } from "./gemini";
+import { getPredictionImages } from "./images";
 import { sendApprovalEmail } from "./email";
 import { getClientIp, getClientCountry } from "./geolocation";
 
@@ -1386,6 +1387,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cost: 10 // 10 tenths of a cent = $0.01 (conservative estimate)
           });
 
+          // Get vehicle and port images
+          const images = getPredictionImages(normalizedMake || String(make), geminiPrediction.portType);
+
           // Store Gemini result as pending vehicle for admin approval
           await storage.createPendingVehicle({
             make: normalizedMake || '',
@@ -1398,7 +1402,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             source: 'gemini_api',
             status: 'pending',
             userName: userNameStr,
-            userEmail: userEmailStr
+            userEmail: userEmailStr,
+            vehicleImageUrl: images.vehicleImageUrl,
+            portImageUrl: images.portImageUrl
           });
 
           return res.json({
@@ -1413,7 +1419,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               basedOn: 0,
               source: 'gemini',
               searchResults: geminiPrediction.reasoning,
-              similarVehicles: []
+              similarVehicles: [],
+              vehicleImageUrl: images.vehicleImageUrl,
+              portImageUrl: images.portImageUrl
             },
             yearWarning,
             makeModelWarning,

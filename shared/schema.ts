@@ -212,6 +212,8 @@ export const pendingVehicles = pgTable("pending_vehicles", {
   status: text("status").notNull().default("pending"), // 'pending', 'approved', 'rejected'
   userName: text("user_name"), // Optional: user's name for email notification
   userEmail: text("user_email"), // Optional: user's email for approval notification
+  vehicleImageUrl: text("vehicle_image_url"), // URL to vehicle image
+  portImageUrl: text("port_image_url"), // URL to port type image
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   statusIdx: index("pending_status_idx").on(table.status),

@@ -460,6 +460,36 @@ export default function AISearch() {
                           </div>
                           <Badge className={getConfidenceColor(prediction.predictions.deviceConfidence)}>{formatForDisplay(prediction.predictions.deviceType)}</Badge>
                         </div>
+                        
+                        {(prediction.predictions.vehicleImageUrl || prediction.predictions.portImageUrl) && (
+                          <div className="border rounded-lg p-3 bg-background">
+                            <p className="text-sm font-medium mb-2">Reference Images</p>
+                            <div className="flex gap-4">
+                              {prediction.predictions.vehicleImageUrl && (
+                                <div className="text-center">
+                                  <img 
+                                    src={prediction.predictions.vehicleImageUrl} 
+                                    alt="Vehicle"
+                                    className="w-24 h-24 object-cover rounded-lg border"
+                                    data-testid="img-prediction-vehicle"
+                                  />
+                                  <p className="text-xs text-muted-foreground mt-1">Vehicle</p>
+                                </div>
+                              )}
+                              {prediction.predictions.portImageUrl && (
+                                <div className="text-center">
+                                  <img 
+                                    src={prediction.predictions.portImageUrl} 
+                                    alt="Port Type"
+                                    className="w-24 h-24 object-cover rounded-lg border"
+                                    data-testid="img-prediction-port"
+                                  />
+                                  <p className="text-xs text-muted-foreground mt-1">{formatForDisplay(prediction.predictions.portType)}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2 text-sm">
