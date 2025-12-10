@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ interface PredictionResult {
     deviceConfidence: number;
     basedOn: number;
     source?: string;
+    vehicleImageUrl?: string;
     searchResults?: Array<{
       title: string;
       link: string;
@@ -56,6 +57,8 @@ export default function AISearch() {
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
   const [showMakeSuggestions, setShowMakeSuggestions] = useState(false);
   const [showModelSuggestions, setShowModelSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   // Fetch make suggestions
   const { data: makeSuggestions = [] } = useQuery({
@@ -119,6 +122,13 @@ export default function AISearch() {
       setMake(cleanMake);
       setModel(cleanModel);
       setYear(cleanYear);
+      setIsSearching(true);
+      setPrediction(null);
+      
+      // Scroll to results area immediately
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
       
       // Create a temporary mutation with clean data
       const params = new URLSearchParams({ 
@@ -135,9 +145,13 @@ export default function AISearch() {
         return response.json();
       };
       
-      searchClean().then(setPrediction).catch(e => {
+      searchClean().then((data) => {
+        setPrediction(data);
+        setIsSearching(false);
+      }).catch(e => {
         console.error('Search error:', e);
         setPrediction(null);
+        setIsSearching(false);
       });
     }
   };
@@ -322,13 +336,27 @@ export default function AISearch() {
         </CardContent>
       </Card>
 
-      {prediction && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {prediction.found ? "Exact Match Found" : "AI Prediction"}
-            </CardTitle>
-          </CardHeader>
+      {/* Results area - shows loading or results */}
+      <div ref={resultsRef}>
+        {isSearching && (
+          <Card>
+            <CardContent className="py-12">
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <p className="text-lg font-medium">Analyzing vehicle data...</p>
+                <p className="text-sm text-muted-foreground">Searching database and AI models</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!isSearching && prediction && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {prediction.found ? "Exact Match Found" : "AI Prediction"}
+              </CardTitle>
+            </CardHeader>
           <CardContent className="space-y-4">
             {prediction.makeModelWarning && (
               <Alert variant="destructive" className="border-red-500 bg-red-50 dark:bg-red-950">
@@ -566,7 +594,8 @@ export default function AISearch() {
             )}
           </CardContent>
         </Card>
-      )}
+        )}
+      </div>
 
       <Card className="bg-muted/30">
         <CardHeader>
