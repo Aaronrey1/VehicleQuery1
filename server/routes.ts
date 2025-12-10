@@ -1127,14 +1127,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const minYear = minYears.length > 0 ? Math.min(...minYears) : yearNum;
         const maxYear = maxYears.length > 0 ? Math.max(...maxYears) : yearNum;
+        const currentYear = new Date().getFullYear();
         
         // Check if requested year is way outside the known range
         const yearDiff = yearNum < minYear ? minYear - yearNum : yearNum - maxYear;
         
         if (yearNum < minYear && yearDiff > 5) {
           yearWarning = `⚠️ This vehicle model was first produced in ${minYear}, but you searched for ${yearNum}. This year is likely incorrect.`;
-        } else if (yearNum > maxYear && yearDiff > 5) {
-          yearWarning = `⚠️ This vehicle model was last produced in ${maxYear}, but you searched for ${yearNum}. This year might be incorrect.`;
+        } else if (yearNum > maxYear && yearDiff > 10) {
+          // Only show "last produced" warning for clearly discontinued models
+          // (maxYear is more than 10 years before current year AND requested year is 10+ years beyond)
+          const yearsDiscontinued = currentYear - maxYear;
+          if (yearsDiscontinued > 10) {
+            yearWarning = `⚠️ This vehicle model was last produced in ${maxYear}, but you searched for ${yearNum}. This year might be incorrect.`;
+          }
         }
       }
 
