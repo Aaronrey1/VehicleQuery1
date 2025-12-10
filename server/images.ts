@@ -2,12 +2,12 @@
 // These are placeholder URLs that can be replaced with actual hosted images
 
 const PORT_TYPE_IMAGES: Record<string, string> = {
-  'OBD': '/assets/stock_images/obd2_obd-ii_diagnost_d9cdd0b0.jpg',
-  'OBD WITH EXTENSION CABLE': '/assets/stock_images/obd2_obd-ii_diagnost_30fa1a42.jpg',
-  'OBD WITH FLAT CABLES': '/assets/stock_images/obd2_obd-ii_diagnost_30fa1a42.jpg',
-  'OBD WITH FLAT EXTENSION CABLE': '/assets/stock_images/obd2_obd-ii_diagnost_30fa1a42.jpg',
-  'OBD WITH OBD EXTENSION CABLE': '/assets/stock_images/obd2_obd-ii_diagnost_30fa1a42.jpg',
-  'OBD/PORT PICTURE REQUIRED': '/assets/stock_images/obd2_obd-ii_diagnost_9c04a41d.jpg',
+  'OBD': '/assets/stock_images/car_vehicle_obd2_16-_80f77f06.jpg',
+  'OBD WITH EXTENSION CABLE': '/assets/stock_images/car_vehicle_obd2_16-_7b864454.jpg',
+  'OBD WITH FLAT CABLES': '/assets/stock_images/car_vehicle_obd2_16-_9ae1bcf2.jpg',
+  'OBD WITH FLAT EXTENSION CABLE': '/assets/stock_images/car_vehicle_obd2_16-_5b2e963f.jpg',
+  'OBD WITH OBD EXTENSION CABLE': '/assets/stock_images/car_vehicle_obd2_16-_3d85096d.jpg',
+  'OBD/PORT PICTURE REQUIRED': '/assets/stock_images/car_vehicle_obd2_16-_80f77f06.jpg',
   'HARDWIRED': 'https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?w=400&h=300&fit=crop',
   'JBUS 6PIN': 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400&h=300&fit=crop',
   'JBUS 9PIN TYPE 1 STANDARD': 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400&h=300&fit=crop',
@@ -21,7 +21,7 @@ const PORT_TYPE_IMAGES: Record<string, string> = {
 };
 
 // Default port image if type not found
-const DEFAULT_PORT_IMAGE = '/assets/stock_images/obd2_obd-ii_diagnost_d9cdd0b0.jpg';
+const DEFAULT_PORT_IMAGE = '/assets/stock_images/car_vehicle_obd2_16-_80f77f06.jpg';
 
 // Vehicle type image mappings based on common vehicle categories
 const VEHICLE_CATEGORY_IMAGES: Record<string, string> = {
