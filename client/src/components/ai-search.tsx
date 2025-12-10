@@ -306,7 +306,7 @@ export default function AISearch() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="ai-user-email" className="text-sm text-muted-foreground">Your Email (optional)</Label>
+                  <Label htmlFor="ai-user-email" className="text-sm">Your Email (optional)</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -597,11 +597,11 @@ export default function AISearch() {
         )}
       </div>
 
-      <Card className="bg-muted/30">
+      <Card className="bg-card">
         <CardHeader>
           <CardTitle className="text-lg">How Two-Step Prediction Works</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
+        <CardContent className="space-y-3 text-sm text-card-foreground">
           <div className="flex items-start gap-3">
             <Badge className="mt-0.5">1</Badge>
             <p>Search for any vehicle - even if it's not in the database</p>
