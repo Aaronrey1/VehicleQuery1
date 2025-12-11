@@ -213,12 +213,14 @@ export default function AISearch() {
                     data-testid="input-ai-make"
                   />
                   {showMakeSuggestions && makeSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-40 overflow-y-auto">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
                       {makeSuggestions.map((suggestion: string, idx: number) => (
                         <button
                           key={idx}
-                          className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
-                          onClick={() => {
+                          type="button"
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm cursor-pointer"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
                             setMake(suggestion);
                             setModel("");
                             setShowMakeSuggestions(false);
@@ -253,12 +255,14 @@ export default function AISearch() {
                     data-testid="input-ai-model"
                   />
                   {showModelSuggestions && modelSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-40 overflow-y-auto">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
                       {modelSuggestions.map((suggestion: string, idx: number) => (
                         <button
                           key={idx}
-                          className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
-                          onClick={() => {
+                          type="button"
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm cursor-pointer"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
                             setModel(suggestion);
                             setShowModelSuggestions(false);
                             setPrediction(null);
