@@ -354,7 +354,7 @@ export default function AISearch() {
           <Card>
             <CardHeader>
               <CardTitle>
-                {prediction.found ? "Exact Match Found" : "AI Prediction"}
+                {prediction.found ? "Exact Match Found" : "AI Prediction"}: {year} {make.toUpperCase()} {model.toUpperCase()}
               </CardTitle>
             </CardHeader>
           <CardContent className="space-y-4">
