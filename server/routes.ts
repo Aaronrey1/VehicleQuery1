@@ -1596,6 +1596,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Prediction endpoint - POST version for internal frontend use (no API key required)
+  app.post("/api/ai/predict", async (req, res) => {
+    try {
+      const { make, model, year, userName, userEmail } = req.body;
+      
+      if (!make || !model || !year) {
+        return res.status(400).json({ message: "Make, model, and year are required" });
+      }
+
+      const yearNum = parseInt(String(year));
+      const userNameStr = userName ? String(userName) : undefined;
+      const userEmailStr = userEmail ? String(userEmail) : undefined;
+      
+      // Normalize the make to handle common aliases
+      const normalizedMake = normalizeMake(make as string);
+      const normalizedModel = normalizeText(model as string);
+
+      // Step 1: Check for exact match in database
+      const exactMatch = await storage.searchVehicles({
+        make: normalizedMake,
+        model: normalizedModel,
+        year: yearNum,
+        limit: 1,
+        offset: 0,
+        sortBy: "year",
+        sortOrder: "asc"
+      });
+
+      if (exactMatch.vehicles.length > 0) {
+        const vehicle = exactMatch.vehicles[0];
+        // Get vehicle image
+        const vehicleImageUrl = await getVehicleImageAsync(yearNum, normalizedMake || String(make), String(model));
+        
+        return res.json({
+          found: true,
+          exactMatch: true,
+          predictions: {
+            portType: vehicle.portType,
+            portConfidence: 100,
+            deviceType: vehicle.deviceType,
+            deviceConfidence: 100,
+            source: 'database_exact',
+            vehicleImageUrl
+          }
+        });
+      }
+
+      // Step 2: Check for vehicles within ±5 years
+      const nearbyYearVehicles = await storage.searchVehicles({
+        make: normalizedMake,
+        model: normalizedModel,
+        limit: 1000,
+        offset: 0,
+        sortBy: "year",
+        sortOrder: "asc"
+      });
+
+      const vehiclesInRange = nearbyYearVehicles.vehicles.filter(v => 
+        v.year !== null && Math.abs(v.year - yearNum) <= 5
+      );
+
+      if (vehiclesInRange.length > 0) {
+        // Find most common port and device type
+        const portTypeCounts = new Map<string, number>();
+        const deviceTypeCounts = new Map<string, number>();
+        
+        vehiclesInRange.forEach(v => {
+          portTypeCounts.set(v.portType, (portTypeCounts.get(v.portType) || 0) + 1);
+          deviceTypeCounts.set(v.deviceType, (deviceTypeCounts.get(v.deviceType) || 0) + 1);
+        });
+
+        const mostCommonPort = Array.from(portTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+        const mostCommonDevice = Array.from(deviceTypeCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+        
+        const portConfidence = Math.round((mostCommonPort[1] / vehiclesInRange.length) * 100);
+        const deviceConfidence = Math.round((mostCommonDevice[1] / vehiclesInRange.length) * 100);
+
+        // Get vehicle image
+        const vehicleImageUrl = await getVehicleImageAsync(yearNum, normalizedMake || String(make), String(model));
+
+        // Store as pending for approval
+        await storage.createPendingVehicle({
+          make: normalizedMake || '',
+          model: String(model),
+          year: yearNum,
+          deviceType: mostCommonDevice[0],
+          portType: mostCommonPort[0],
+          confidence: Math.round((portConfidence + deviceConfidence) / 2),
+          googleSearchResults: JSON.stringify({ source: 'database_tier1', similarVehicles: vehiclesInRange.slice(0, 5) }),
+          source: 'database_tier1',
+          status: 'pending',
+          userName: userNameStr,
+          userEmail: userEmailStr,
+          vehicleImageUrl
+        });
+
+        return res.json({
+          found: false,
+          pendingApproval: true,
+          predictions: {
+            portType: mostCommonPort[0],
+            portConfidence,
+            deviceType: mostCommonDevice[0],
+            deviceConfidence,
+            source: 'database_tier1',
+            vehicleImageUrl
+          }
+        });
+      }
+
+      // Step 3: Use Gemini AI
+      const geminiPrediction = await predictVehicleSpecs(make as string, model as string, yearNum);
+      
+      if (geminiPrediction) {
+        const vehicleImageUrl = await getVehicleImageAsync(yearNum, normalizedMake || String(make), String(model));
+
+        await storage.createPendingVehicle({
+          make: normalizedMake || '',
+          model: String(model),
+          year: yearNum,
+          deviceType: geminiPrediction.deviceType,
+          portType: geminiPrediction.portType,
+          confidence: geminiPrediction.confidence,
+          googleSearchResults: JSON.stringify({ reasoning: geminiPrediction.reasoning }),
+          source: 'gemini_api',
+          status: 'pending',
+          userName: userNameStr,
+          userEmail: userEmailStr,
+          vehicleImageUrl
+        });
+
+        return res.json({
+          found: false,
+          pendingApproval: true,
+          predictions: {
+            portType: geminiPrediction.portType,
+            portConfidence: geminiPrediction.confidence,
+            deviceType: geminiPrediction.deviceType,
+            deviceConfidence: geminiPrediction.confidence,
+            source: 'gemini_api',
+            vehicleImageUrl
+          }
+        });
+      }
+
+      // No prediction available
+      return res.json({
+        found: false,
+        pendingApproval: false,
+        predictions: {
+          portType: 'UNKNOWN',
+          portConfidence: 0,
+          deviceType: 'UNKNOWN',
+          deviceConfidence: 0,
+          source: 'none'
+        }
+      });
+
+    } catch (error) {
+      console.error("AI prediction POST error:", error);
+      res.status(500).json({ message: "Failed to generate prediction" });
+    }
+  });
+
   // Get billing stats for AI Search
   app.get("/api/billing/stats", async (req, res) => {
     try {
