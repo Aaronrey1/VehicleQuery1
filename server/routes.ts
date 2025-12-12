@@ -2188,20 +2188,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         try {
-          // Call NHTSA API to decode VIN - fast fail approach
+          // Call NHTSA API to decode VIN with proper headers
+          const nhtsaHeaders = {
+            'User-Agent': 'VehicleDB-Pro/1.0 (Vehicle Database Application)',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cache-Control': 'no-cache',
+          };
+          
           let nhtsaResponse;
           try {
             nhtsaResponse = await axios.get(
               `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${cleanVin}?format=json`,
-              { timeout: 8000 }
+              { timeout: 15000, headers: nhtsaHeaders }
             );
           } catch (firstError: any) {
-            // Single quick retry
-            console.log(`NHTSA first attempt failed for ${cleanVin}, retrying...`);
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Single quick retry with delay
+            console.log(`NHTSA first attempt failed for ${cleanVin}: ${firstError.message}, retrying...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
             nhtsaResponse = await axios.get(
               `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${cleanVin}?format=json`,
-              { timeout: 8000 }
+              { timeout: 15000, headers: nhtsaHeaders }
             );
           }
 
