@@ -2563,10 +2563,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         } catch (error: any) {
           console.error(`VIN decode error for ${cleanVin}:`, error.message);
+          
+          // Provide meaningful error messages based on error type
+          let userFriendlyError = "Failed to decode VIN";
+          
+          if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+            userFriendlyError = "NHTSA server is taking too long to respond. The government database may be experiencing high traffic or temporary issues. Please try again in a few minutes.";
+          } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+            userFriendlyError = "Unable to connect to NHTSA server. The government database may be temporarily unavailable. Please try again later.";
+          } else if (error.response?.status === 503 || error.response?.status === 502) {
+            userFriendlyError = "NHTSA server is currently unavailable (maintenance or overload). Please try again in a few minutes.";
+          } else if (error.response?.status === 429) {
+            userFriendlyError = "Too many requests to NHTSA. Please wait a moment and try again.";
+          } else if (error.response?.status >= 500) {
+            userFriendlyError = "NHTSA server error. The government database is experiencing technical difficulties. Please try again later.";
+          }
+          
           results.push({
             vin: cleanVin,
             success: false,
-            error: error.message || "Failed to decode VIN"
+            error: userFriendlyError
           });
         }
       }
