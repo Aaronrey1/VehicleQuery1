@@ -2364,45 +2364,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Try Cloudflare Worker first (most reliable), then direct NHTSA
+      // Helper function to attempt NHTSA decode with retries
+      const attemptDecode = async (url: string, timeout: number, label: string): Promise<any> => {
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            console.log(`${label} attempt ${attempt} for VIN ${vin}...`);
+            const response = await axios.get(url, { 
+              timeout,
+              headers: {
+                'User-Agent': 'VehicleDB-Pro/1.0',
+                'Accept': 'application/json'
+              }
+            });
+            if (response.data?.Results) {
+              console.log(`${label} succeeded on attempt ${attempt}`);
+              return response.data;
+            }
+          } catch (e: any) {
+            console.log(`${label} attempt ${attempt} failed: ${e.message}`);
+            if (attempt < 3) {
+              await new Promise(r => setTimeout(r, 1000 * attempt)); // Backoff
+            }
+          }
+        }
+        return null;
+      };
+      
       const cloudflareUrl = `https://proud-haze-b9a3.24f3004219.workers.dev/?vin=${vin}`;
       const nhtsaUrl = `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${vin}?format=json`;
       
-      let data: any = null;
+      // Try Cloudflare Worker first (3 attempts), then direct NHTSA (3 attempts)
+      let data = await attemptDecode(cloudflareUrl, 45000, 'Cloudflare');
       
-      // Try Cloudflare Worker first
-      try {
-        const response = await axios.get(cloudflareUrl, { 
-          timeout: 45000,
-          headers: { 'Accept': 'application/json' }
-        });
-        if (response.data?.Results) {
-          data = response.data;
-        }
-      } catch (e: any) {
-        console.log('Cloudflare worker failed, trying direct NHTSA:', e.message);
-      }
-      
-      // Fallback to direct NHTSA
       if (!data) {
-        try {
-          const response = await axios.get(nhtsaUrl, { 
-            timeout: 30000,
-            headers: {
-              'User-Agent': 'VehicleDB-Pro/1.0',
-              'Accept': 'application/json'
-            }
-          });
-          data = response.data;
-        } catch (e: any) {
-          console.log('Direct NHTSA also failed:', e.message);
-        }
+        data = await attemptDecode(nhtsaUrl, 45000, 'Direct NHTSA');
       }
       
       if (!data?.Results || !Array.isArray(data.Results)) {
         return res.status(500).json({ 
           success: false, 
-          error: "Failed to decode VIN - NHTSA unavailable" 
+          error: "NHTSA API is currently slow or unavailable. Please try again in a moment." 
         });
       }
       
