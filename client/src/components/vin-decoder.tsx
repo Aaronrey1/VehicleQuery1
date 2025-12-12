@@ -33,15 +33,21 @@ interface NhtsaResult {
 
 async function decodeVinFromBrowser(vin: string): Promise<{ make: string; model: string; year: number; warning?: string } | null> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
     const response = await fetch(
       `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${vin}?format=json`,
       { 
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-        }
+        },
+        signal: controller.signal
       }
     );
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
       throw new Error(`NHTSA returned ${response.status}`);
@@ -72,8 +78,12 @@ async function decodeVinFromBrowser(vin: string): Promise<{ make: string; model:
     }
     
     return { make, model, year, warning };
-  } catch (error) {
-    console.error('Browser NHTSA decode failed:', error);
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.error('NHTSA request timed out');
+    } else {
+      console.error('Browser NHTSA decode failed:', error);
+    }
     return null;
   }
 }
@@ -102,7 +112,7 @@ export default function VinDecoder() {
           allResults.push({
             vin,
             success: false,
-            error: "Could not decode VIN. Please check the VIN is valid."
+            error: "NHTSA is temporarily unavailable. Please use AI Search tab to manually enter vehicle make, model, and year."
           });
           continue;
         }
