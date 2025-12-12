@@ -149,8 +149,16 @@ export default function VinDecoder() {
           if (userName) payload.userName = userName;
           if (userEmail) payload.userEmail = userEmail;
           
+          console.log('Calling AI prediction for:', payload);
           const response = await apiRequest("POST", "/api/ai/predict", payload);
+          
+          if (!response.ok) {
+            console.error('AI prediction failed with status:', response.status);
+            throw new Error(`AI prediction failed: ${response.status}`);
+          }
+          
           const prediction = await response.json();
+          console.log('AI prediction response:', prediction);
           
           if (prediction.found && prediction.exactMatch) {
             allResults.push({
