@@ -2191,7 +2191,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Call NHTSA API to decode VIN with retry logic
           let nhtsaResponse;
           let retryCount = 0;
-          const maxRetries = 2;
+          const maxRetries = 3;
+          let lastError: any = null;
           
           while (retryCount <= maxRetries) {
             try {
@@ -2201,12 +2202,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
               );
               break; // Success, exit retry loop
             } catch (retryError: any) {
+              lastError = retryError;
               retryCount++;
-              if (retryCount > maxRetries) {
-                throw retryError; // All retries failed
+              
+              // Check if it's a retryable error (timeout, 5xx, network issues)
+              const isRetryable = 
+                retryError.code === 'ECONNABORTED' ||
+                retryError.code === 'ENOTFOUND' ||
+                retryError.code === 'ECONNREFUSED' ||
+                retryError.code === 'ETIMEDOUT' ||
+                retryError.message?.includes('timeout') ||
+                (retryError.response?.status >= 500 && retryError.response?.status < 600);
+              
+              if (!isRetryable || retryCount > maxRetries) {
+                throw retryError; // Not retryable or all retries exhausted
               }
-              // Wait 1 second before retry
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              // Exponential backoff: 2s, 4s, 8s
+              const delay = Math.pow(2, retryCount) * 1000;
+              console.log(`NHTSA retry ${retryCount}/${maxRetries} for ${cleanVin}, waiting ${delay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
             }
           }
 
