@@ -67,21 +67,19 @@ async function decodeVinFromBrowser(vin: string): Promise<{ make: string; model:
     return { ...cached, fromCache: true };
   }
 
-  // Step 2: Try NHTSA API
+  // Step 2: Try NHTSA API via Cloudflare Worker proxy (bypasses IP blocks)
+  const cloudflareProxyUrl = `https://proud-haze-b9a3.24f3004219.workers.dev/?vin=${vin}`;
   const nhtsaUrl = `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${vin}?format=json`;
   
-  // Try multiple approaches: direct, then proxy services
+  // Try multiple approaches: Cloudflare proxy first (most reliable), then fallbacks
   const attempts = [
-    // Direct call
+    // Cloudflare Worker proxy (bypasses NHTSA IP blocks)
+    { url: cloudflareProxyUrl, parseResponse: (data: any) => data },
+    // Direct call (fallback)
     { url: nhtsaUrl, parseResponse: (data: any) => data },
     // AllOrigins proxy (free, no auth)
     { 
       url: `https://api.allorigins.win/raw?url=${encodeURIComponent(nhtsaUrl)}`,
-      parseResponse: (data: any) => data 
-    },
-    // corsproxy.io (another free option)
-    { 
-      url: `https://corsproxy.io/?${encodeURIComponent(nhtsaUrl)}`,
       parseResponse: (data: any) => data 
     },
   ];
