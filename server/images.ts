@@ -23,8 +23,9 @@ export async function searchVehicleImage(year: number | string, make: string, mo
   }
   
   try {
-    const searchQuery = `${year} ${make} ${model} vehicle`;
-    const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(searchQuery)}&searchType=image&num=1&safe=active&imgSize=medium`;
+    // Search for official/press photos, exclude dealer ads
+    const searchQuery = `${year} ${make} ${model} official press photo -dealer -price -sale`;
+    const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(searchQuery)}&searchType=image&num=5&safe=active&imgSize=large&imgType=photo`;
     
     console.log(`[Image Search] Searching for: ${searchQuery}`);
     
@@ -38,7 +39,25 @@ export async function searchVehicleImage(year: number | string, make: string, mo
     const data = await response.json();
     
     if (data.items && data.items.length > 0) {
-      const imageUrl = data.items[0].link;
+      // Filter out low-quality results (dealer ads, small images, etc.)
+      const validImages = data.items.filter((item: any) => {
+        const url = item.link.toLowerCase();
+        const title = (item.title || '').toLowerCase();
+        
+        // Skip dealer/ad images
+        if (url.includes('dealer') || url.includes('inventory') || url.includes('listing')) return false;
+        if (title.includes('for sale') || title.includes('price') || title.includes('dealer')) return false;
+        
+        // Prefer larger images
+        if (item.image && item.image.width < 300) return false;
+        
+        return true;
+      });
+      
+      // Use first valid image, or fall back to first result
+      const selectedImage = validImages.length > 0 ? validImages[0] : data.items[0];
+      const imageUrl = selectedImage.link;
+      
       console.log(`[Image Search] Found image: ${imageUrl}`);
       
       // Cache the result
