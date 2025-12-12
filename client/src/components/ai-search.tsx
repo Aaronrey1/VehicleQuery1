@@ -438,7 +438,7 @@ export default function AISearch() {
                         <img 
                           src={prediction.exactMatch.vehicleImageUrl} 
                           alt="Vehicle"
-                          className="w-24 h-24 object-cover rounded-lg border"
+                          className="w-40 h-32 object-cover rounded-lg border shadow-md"
                           data-testid="img-exact-match-vehicle"
                         />
                       )}
@@ -514,7 +514,7 @@ export default function AISearch() {
                                 <img 
                                   src={prediction.predictions.vehicleImageUrl} 
                                   alt="Vehicle"
-                                  className="w-24 h-24 object-cover rounded-lg border"
+                                  className="w-48 h-36 object-cover rounded-lg border shadow-md"
                                   data-testid="img-prediction-vehicle"
                                 />
                               </div>
