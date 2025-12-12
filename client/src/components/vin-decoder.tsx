@@ -67,88 +67,39 @@ async function decodeVinFromBrowser(vin: string): Promise<{ make: string; model:
     return { ...cached, fromCache: true };
   }
 
-  // Step 2: Try NHTSA API via Cloudflare Worker proxy (bypasses IP blocks)
-  const cloudflareProxyUrl = `https://proud-haze-b9a3.24f3004219.workers.dev/?vin=${vin}`;
-  const nhtsaUrl = `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${vin}?format=json`;
-  
-  // Try multiple approaches: Cloudflare proxy first (most reliable), then fallbacks
-  const attempts = [
-    // Cloudflare Worker proxy (bypasses NHTSA IP blocks)
-    { url: cloudflareProxyUrl, parseResponse: (data: any) => data },
-    // Direct call (fallback)
-    { url: nhtsaUrl, parseResponse: (data: any) => data },
-    // AllOrigins proxy (free, no auth)
-    { 
-      url: `https://api.allorigins.win/raw?url=${encodeURIComponent(nhtsaUrl)}`,
-      parseResponse: (data: any) => data 
-    },
-  ];
-  
-  for (const attempt of attempts) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout per attempt
-      
-      const response = await fetch(attempt.url, { 
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        continue; // Try next proxy
-      }
-      
-      // Check if response is HTML (NHTSA maintenance page)
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('text/html')) {
-        console.log('NHTSA returned HTML (likely maintenance page), trying next...');
-        continue;
-      }
-      
-      const rawData = await response.json();
-      const data = attempt.parseResponse(rawData);
-      const results = data?.Results as NhtsaResult[];
-      
-      if (!results || !Array.isArray(results)) {
-        continue; // Try next proxy
-      }
-      
-      const makeData = results.find((item) => item.Variable === "Make");
-      const modelData = results.find((item) => item.Variable === "Model");
-      const yearData = results.find((item) => item.Variable === "Model Year");
-      const errorText = results.find((item) => item.Variable === "Error Text");
-      
-      const make = makeData?.Value?.trim();
-      const model = modelData?.Value?.trim();
-      const yearStr = yearData?.Value?.trim();
-      const year = yearStr ? parseInt(yearStr) : null;
-      const warning = errorText?.Value && errorText.Value !== "0" && errorText.Value !== "0 -" 
-        ? errorText.Value.trim() 
-        : undefined;
-      
-      if (!make || !model || !year) {
-        continue; // Try next proxy
-      }
-      
-      console.log('VIN decoded successfully via:', attempt.url.includes('allorigins') ? 'AllOrigins proxy' : 
-                   attempt.url.includes('corsproxy') ? 'CorsProxy' : 'Direct');
+  // Step 2: Use server-side endpoint (more reliable than browser-side calls)
+  // Server uses Cloudflare Worker + direct NHTSA with proper timeouts
+  try {
+    const cleanVin = vin.trim().toUpperCase();
+    console.log('Decoding VIN via server:', cleanVin);
+    
+    const response = await fetch(`/api/vin/decode-internal/${cleanVin}`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success && data.make && data.model && data.year) {
+      console.log('VIN decoded successfully via server');
       
       // Save to cache for future use
-      saveVinToCache(vin, make, model, year);
+      saveVinToCache(vin, data.make, data.model, data.year);
       
-      return { make, model, year, warning };
-      
-    } catch (error: any) {
-      console.log('Attempt failed:', attempt.url.substring(0, 50), error.message);
-      continue; // Try next proxy
+      return { 
+        make: data.make, 
+        model: data.model, 
+        year: data.year, 
+        warning: data.warning 
+      };
+    } else {
+      console.error('Server VIN decode failed:', data.error);
+      return null;
     }
+  } catch (error: any) {
+    console.error('VIN decode error:', error.message);
+    return null;
   }
-  
-  console.error('All VIN decode attempts failed');
-  return null;
 }
 
 export default function VinDecoder() {

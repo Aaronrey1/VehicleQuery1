@@ -2351,6 +2351,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Internal VIN decode endpoint (for frontend use, no API key required)
+  // Uses server-side fetch which is more reliable than browser-side
+  app.get("/api/vin/decode-internal/:vin", async (req, res) => {
+    try {
+      const vin = req.params.vin?.trim().toUpperCase();
+      
+      if (!vin || !/^[A-HJ-NPR-Z0-9]{10,17}$/.test(vin)) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Invalid VIN format" 
+        });
+      }
+      
+      // Try Cloudflare Worker first (most reliable), then direct NHTSA
+      const cloudflareUrl = `https://proud-haze-b9a3.24f3004219.workers.dev/?vin=${vin}`;
+      const nhtsaUrl = `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${vin}?format=json`;
+      
+      let data: any = null;
+      
+      // Try Cloudflare Worker first
+      try {
+        const response = await axios.get(cloudflareUrl, { 
+          timeout: 45000,
+          headers: { 'Accept': 'application/json' }
+        });
+        if (response.data?.Results) {
+          data = response.data;
+        }
+      } catch (e: any) {
+        console.log('Cloudflare worker failed, trying direct NHTSA:', e.message);
+      }
+      
+      // Fallback to direct NHTSA
+      if (!data) {
+        try {
+          const response = await axios.get(nhtsaUrl, { 
+            timeout: 30000,
+            headers: {
+              'User-Agent': 'VehicleDB-Pro/1.0',
+              'Accept': 'application/json'
+            }
+          });
+          data = response.data;
+        } catch (e: any) {
+          console.log('Direct NHTSA also failed:', e.message);
+        }
+      }
+      
+      if (!data?.Results || !Array.isArray(data.Results)) {
+        return res.status(500).json({ 
+          success: false, 
+          error: "Failed to decode VIN - NHTSA unavailable" 
+        });
+      }
+      
+      const results = data.Results;
+      const makeData = results.find((item: any) => item.Variable === "Make");
+      const modelData = results.find((item: any) => item.Variable === "Model");
+      const yearData = results.find((item: any) => item.Variable === "Model Year");
+      const errorText = results.find((item: any) => item.Variable === "Error Text");
+      
+      const make = makeData?.Value?.trim();
+      const model = modelData?.Value?.trim();
+      const yearStr = yearData?.Value?.trim();
+      const year = yearStr ? parseInt(yearStr) : null;
+      const warning = errorText?.Value && errorText.Value !== "0" && errorText.Value !== "0 -" 
+        ? errorText.Value.trim() 
+        : undefined;
+      
+      if (!make || !model || !year) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Incomplete vehicle data from NHTSA" 
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        make, 
+        model, 
+        year, 
+        warning 
+      });
+      
+    } catch (error: any) {
+      console.error("Internal VIN decode error:", error.message);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || "Server error" 
+      });
+    }
+  });
+
   // VIN Decoder endpoint (requires API key)
   app.post("/api/vin/decode", validateApiKey, async (req, res) => {
     try {
