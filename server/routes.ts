@@ -2191,18 +2191,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Call NHTSA API to decode VIN with retry logic
           let nhtsaResponse;
           let retryCount = 0;
-          const maxRetries = 3;
-          let lastError: any = null;
+          const maxRetries = 2;
           
           while (retryCount <= maxRetries) {
             try {
               nhtsaResponse = await axios.get(
                 `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${cleanVin}?format=json`,
-                { timeout: 30000 }
+                { timeout: 15000 }
               );
               break; // Success, exit retry loop
             } catch (retryError: any) {
-              lastError = retryError;
               retryCount++;
               
               // Check if it's a retryable error (timeout, 5xx, network issues)
@@ -2218,10 +2216,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 throw retryError; // Not retryable or all retries exhausted
               }
               
-              // Exponential backoff: 2s, 4s, 8s
-              const delay = Math.pow(2, retryCount) * 1000;
-              console.log(`NHTSA retry ${retryCount}/${maxRetries} for ${cleanVin}, waiting ${delay}ms...`);
-              await new Promise(resolve => setTimeout(resolve, delay));
+              // Quick retry with 1s delay
+              console.log(`NHTSA retry ${retryCount}/${maxRetries} for ${cleanVin}...`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
             }
           }
 
