@@ -24,6 +24,7 @@ interface VinResult {
   error?: string;
   source?: string;
   nhtsaWarning?: string;
+  manualDecodeUrl?: string;
 }
 
 interface NhtsaResult {
@@ -130,7 +131,8 @@ export default function VinDecoder() {
           allResults.push({
             vin,
             success: false,
-            error: "NHTSA is temporarily unavailable. Please use AI Search tab to manually enter vehicle make, model, and year."
+            error: `NHTSA is temporarily unavailable. Click here to decode manually: https://vpic.nhtsa.dot.gov/decoder/ then use AI Search with the results.`,
+            manualDecodeUrl: `https://vpic.nhtsa.dot.gov/decoder/`
           });
           continue;
         }
@@ -438,7 +440,19 @@ export default function VinDecoder() {
                       </TableCell>
                       <TableCell data-testid={`text-source-${index}`}>
                         {result.error ? (
-                          <span className="text-red-500 text-xs">{result.error}</span>
+                          <div className="space-y-1">
+                            <span className="text-red-500 text-xs block">NHTSA unavailable</span>
+                            {result.manualDecodeUrl && (
+                              <a 
+                                href={result.manualDecodeUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline text-xs block"
+                              >
+                                Decode manually on NHTSA →
+                              </a>
+                            )}
+                          </div>
                         ) : result.source ? (
                           <Badge variant="outline">{result.source}</Badge>
                         ) : (
