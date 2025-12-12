@@ -101,6 +101,13 @@ async function decodeVinFromBrowser(vin: string): Promise<{ make: string; model:
         continue; // Try next proxy
       }
       
+      // Check if response is HTML (NHTSA maintenance page)
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('text/html')) {
+        console.log('NHTSA returned HTML (likely maintenance page), trying next...');
+        continue;
+      }
+      
       const rawData = await response.json();
       const data = attempt.parseResponse(rawData);
       const results = data?.Results as NhtsaResult[];
@@ -168,7 +175,7 @@ export default function VinDecoder() {
           allResults.push({
             vin,
             success: false,
-            error: `NHTSA service unavailable. Use AI Search instead - enter Make, Model, Year directly.`,
+            error: `NHTSA is currently under maintenance. Please try again later or use AI Search - enter Make, Model, Year directly.`,
             manualDecodeUrl: `https://vpic.nhtsa.dot.gov/decoder/?vin=${vin}`
           });
           continue;
