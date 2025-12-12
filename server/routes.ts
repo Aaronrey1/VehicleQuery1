@@ -2188,38 +2188,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         try {
-          // Call NHTSA API to decode VIN with retry logic
+          // Call NHTSA API to decode VIN - fast fail approach
           let nhtsaResponse;
-          let retryCount = 0;
-          const maxRetries = 2;
-          
-          while (retryCount <= maxRetries) {
-            try {
-              nhtsaResponse = await axios.get(
-                `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${cleanVin}?format=json`,
-                { timeout: 15000 }
-              );
-              break; // Success, exit retry loop
-            } catch (retryError: any) {
-              retryCount++;
-              
-              // Check if it's a retryable error (timeout, 5xx, network issues)
-              const isRetryable = 
-                retryError.code === 'ECONNABORTED' ||
-                retryError.code === 'ENOTFOUND' ||
-                retryError.code === 'ECONNREFUSED' ||
-                retryError.code === 'ETIMEDOUT' ||
-                retryError.message?.includes('timeout') ||
-                (retryError.response?.status >= 500 && retryError.response?.status < 600);
-              
-              if (!isRetryable || retryCount > maxRetries) {
-                throw retryError; // Not retryable or all retries exhausted
-              }
-              
-              // Quick retry with 1s delay
-              console.log(`NHTSA retry ${retryCount}/${maxRetries} for ${cleanVin}...`);
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
+          try {
+            nhtsaResponse = await axios.get(
+              `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${cleanVin}?format=json`,
+              { timeout: 8000 }
+            );
+          } catch (firstError: any) {
+            // Single quick retry
+            console.log(`NHTSA first attempt failed for ${cleanVin}, retrying...`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            nhtsaResponse = await axios.get(
+              `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${cleanVin}?format=json`,
+              { timeout: 8000 }
+            );
           }
 
           const decodedData = nhtsaResponse?.data?.Results;
@@ -2576,25 +2559,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (error: any) {
           console.error(`VIN decode error for ${cleanVin}:`, error.message);
           
-          // Provide meaningful error messages based on error type
-          let userFriendlyError = "Failed to decode VIN";
+          // Provide meaningful error messages with manual entry suggestion
+          let userFriendlyError = "Failed to decode VIN. Please use AI Search to enter vehicle details manually.";
           
           if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-            userFriendlyError = "NHTSA server is taking too long to respond. The government database may be experiencing high traffic or temporary issues. Please try again in a few minutes.";
+            userFriendlyError = "NHTSA server is not responding. Please use AI Search to enter the vehicle make, model, and year manually.";
           } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
-            userFriendlyError = "Unable to connect to NHTSA server. The government database may be temporarily unavailable. Please try again later.";
-          } else if (error.response?.status === 503 || error.response?.status === 502) {
-            userFriendlyError = "NHTSA server is currently unavailable (maintenance or overload). Please try again in a few minutes.";
-          } else if (error.response?.status === 429) {
-            userFriendlyError = "Too many requests to NHTSA. Please wait a moment and try again.";
+            userFriendlyError = "Cannot connect to NHTSA. Please use AI Search to enter vehicle details manually.";
           } else if (error.response?.status >= 500) {
-            userFriendlyError = "NHTSA server error. The government database is experiencing technical difficulties. Please try again later.";
+            userFriendlyError = "NHTSA server is temporarily unavailable. Please use AI Search to enter vehicle details manually.";
           }
           
           results.push({
             vin: cleanVin,
             success: false,
-            error: userFriendlyError
+            error: userFriendlyError,
+            suggestManualEntry: true
           });
         }
       }
