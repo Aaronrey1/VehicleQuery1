@@ -26,6 +26,58 @@ interface VinResult {
   nhtsaWarning?: string;
 }
 
+interface NhtsaResult {
+  Variable: string;
+  Value: string | null;
+}
+
+async function decodeVinFromBrowser(vin: string): Promise<{ make: string; model: string; year: number; warning?: string } | null> {
+  try {
+    const response = await fetch(
+      `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${vin}?format=json`,
+      { 
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        }
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`NHTSA returned ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const results = data?.Results as NhtsaResult[];
+    
+    if (!results || !Array.isArray(results)) {
+      return null;
+    }
+    
+    const makeData = results.find((item) => item.Variable === "Make");
+    const modelData = results.find((item) => item.Variable === "Model");
+    const yearData = results.find((item) => item.Variable === "Model Year");
+    const errorText = results.find((item) => item.Variable === "Error Text");
+    
+    const make = makeData?.Value?.trim();
+    const model = modelData?.Value?.trim();
+    const yearStr = yearData?.Value?.trim();
+    const year = yearStr ? parseInt(yearStr) : null;
+    const warning = errorText?.Value && errorText.Value !== "0" && errorText.Value !== "0 -" 
+      ? errorText.Value.trim() 
+      : undefined;
+    
+    if (!make || !model || !year) {
+      return null;
+    }
+    
+    return { make, model, year, warning };
+  } catch (error) {
+    console.error('Browser NHTSA decode failed:', error);
+    return null;
+  }
+}
+
 export default function VinDecoder() {
   const [activeTab, setActiveTab] = useState<"single" | "bulk">("single");
   const [singleVin, setSingleVin] = useState("");
@@ -33,16 +85,103 @@ export default function VinDecoder() {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [results, setResults] = useState<VinResult[]>([]);
+  const [decodeStatus, setDecodeStatus] = useState<string>("");
 
   const decodeMutation = useMutation({
     mutationFn: async (vins: string[]) => {
-      const payload: any = { vins };
-      if (userName) payload.userName = userName;
-      if (userEmail) payload.userEmail = userEmail;
+      const allResults: VinResult[] = [];
       
-      const response = await apiRequest("POST", "/api/vin/decode", payload);
-      const data = await response.json() as { results: VinResult[] };
-      return data;
+      for (let i = 0; i < vins.length; i++) {
+        const vin = vins[i];
+        setDecodeStatus(`Decoding VIN ${i + 1} of ${vins.length}...`);
+        
+        // Step 1: Decode VIN using browser (bypasses server IP block)
+        const nhtsaData = await decodeVinFromBrowser(vin);
+        
+        if (!nhtsaData) {
+          allResults.push({
+            vin,
+            success: false,
+            error: "Could not decode VIN. Please check the VIN is valid."
+          });
+          continue;
+        }
+        
+        // Step 2: Get AI prediction from our server
+        setDecodeStatus(`Getting prediction for ${nhtsaData.make} ${nhtsaData.model}...`);
+        
+        try {
+          const payload: any = {
+            make: nhtsaData.make,
+            model: nhtsaData.model,
+            year: nhtsaData.year,
+          };
+          if (userName) payload.userName = userName;
+          if (userEmail) payload.userEmail = userEmail;
+          
+          const response = await apiRequest("POST", "/api/ai/predict", payload);
+          const prediction = await response.json();
+          
+          if (prediction.found && prediction.exactMatch) {
+            allResults.push({
+              vin,
+              success: true,
+              make: nhtsaData.make,
+              model: nhtsaData.model,
+              year: nhtsaData.year,
+              portType: prediction.exactMatch.portType,
+              deviceType: prediction.exactMatch.deviceType,
+              confidence: 100,
+              source: "Database (Exact Match)",
+              nhtsaWarning: nhtsaData.warning
+            });
+          } else if (prediction.predictions) {
+            allResults.push({
+              vin,
+              success: true,
+              make: nhtsaData.make,
+              model: nhtsaData.model,
+              year: nhtsaData.year,
+              portType: prediction.predictions.portType,
+              deviceType: prediction.predictions.deviceType,
+              confidence: prediction.predictions.portConfidence,
+              source: prediction.predictions.source === 'gemini_api' ? 'Gemini AI - Pending Approval' : 
+                      prediction.predictions.source === 'database_tier1' ? 'Database (±5 years) - Pending Approval' : 
+                      'AI Prediction - Pending Approval',
+              nhtsaWarning: nhtsaData.warning
+            });
+          } else {
+            allResults.push({
+              vin,
+              success: true,
+              make: nhtsaData.make,
+              model: nhtsaData.model,
+              year: nhtsaData.year,
+              portType: "Unknown",
+              deviceType: "Unknown",
+              confidence: 0,
+              source: "No prediction available",
+              nhtsaWarning: nhtsaData.warning
+            });
+          }
+        } catch (predError) {
+          allResults.push({
+            vin,
+            success: true,
+            make: nhtsaData.make,
+            model: nhtsaData.model,
+            year: nhtsaData.year,
+            portType: "Unknown",
+            deviceType: "Unknown",
+            confidence: 0,
+            source: "Prediction failed",
+            nhtsaWarning: nhtsaData.warning
+          });
+        }
+      }
+      
+      setDecodeStatus("");
+      return { results: allResults };
     },
     onSuccess: (data) => {
       setResults(data.results);
@@ -197,6 +336,13 @@ export default function VinDecoder() {
               <>Decode VIN(s)</>
             )}
           </Button>
+          
+          {decodeStatus && (
+            <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground" data-testid="text-decode-status">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {decodeStatus}
+            </div>
+          )}
         </CardContent>
       </Card>
 
