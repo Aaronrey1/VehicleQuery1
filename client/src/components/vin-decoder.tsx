@@ -155,20 +155,8 @@ export default function VinDecoder() {
           const prediction = await response.json();
           console.log('AI prediction response:', prediction);
           
-          if (prediction.found && prediction.exactMatch) {
-            allResults.push({
-              vin,
-              success: true,
-              make: nhtsaData.make,
-              model: nhtsaData.model,
-              year: nhtsaData.year,
-              portType: prediction.exactMatch.portType,
-              deviceType: prediction.exactMatch.deviceType,
-              confidence: 100,
-              source: "Database (Exact Match)",
-              nhtsaWarning: nhtsaData.warning
-            });
-          } else if (prediction.predictions) {
+          if (prediction.found && prediction.predictions) {
+            const isExactMatch = prediction.exactMatch === true || prediction.predictions.source === 'database_exact';
             allResults.push({
               vin,
               success: true,
@@ -177,10 +165,11 @@ export default function VinDecoder() {
               year: nhtsaData.year,
               portType: prediction.predictions.portType,
               deviceType: prediction.predictions.deviceType,
-              confidence: prediction.predictions.portConfidence,
-              source: prediction.predictions.source === 'gemini_api' ? 'Gemini AI - Pending Approval' : 
+              confidence: prediction.predictions.portConfidence || 100,
+              source: isExactMatch ? "Database (Exact Match)" : 
+                      prediction.predictions.source === 'gemini_api' ? 'Gemini AI - Pending Approval' : 
                       prediction.predictions.source === 'database_tier1' ? 'Database (±5 years) - Pending Approval' : 
-                      'AI Prediction - Pending Approval',
+                      'AI Prediction',
               nhtsaWarning: nhtsaData.warning
             });
           } else {
