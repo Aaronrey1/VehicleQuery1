@@ -433,14 +433,24 @@ export default function AISearch() {
                         No exact model match found. Showing data for "{formatForDisplay(prediction.exactMatch.make)} ALL MODELS" as a general reference.
                       </p>
                     )}
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Device Type</p>
-                        <Badge variant="secondary" className="mt-1">{formatForDisplay(prediction.exactMatch.deviceType)}</Badge>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Port Type</p>
-                        <Badge variant="secondary" className="mt-1">{formatForDisplay(prediction.exactMatch.portType)}</Badge>
+                    <div className="flex gap-4 mt-3">
+                      {prediction.exactMatch.vehicleImageUrl && (
+                        <img 
+                          src={prediction.exactMatch.vehicleImageUrl} 
+                          alt="Vehicle"
+                          className="w-24 h-24 object-cover rounded-lg border"
+                          data-testid="img-exact-match-vehicle"
+                        />
+                      )}
+                      <div className="grid grid-cols-2 gap-2 flex-1">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Device Type</p>
+                          <Badge variant="secondary" className="mt-1">{formatForDisplay(prediction.exactMatch.deviceType)}</Badge>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Port Type</p>
+                          <Badge variant="secondary" className="mt-1">{formatForDisplay(prediction.exactMatch.portType)}</Badge>
+                        </div>
                       </div>
                     </div>
                   </div>

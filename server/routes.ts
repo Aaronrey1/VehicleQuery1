@@ -1159,6 +1159,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const matchedVehicle = exactMatch.vehicles[0];
         const isAllModelsFallback = matchedVehicle.model === 'ALL MODELS';
         
+        // Get vehicle image from Google Image Search
+        const vehicleImageUrl = await getVehicleImageAsync(yearNum, normalizedMake, normalizedModel);
+        
         // Log exact match search
         await storage.logSearch({
           searchType: 'ai',
@@ -1178,7 +1181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return res.json({
           found: true,
-          exactMatch: matchedVehicle,
+          exactMatch: { ...matchedVehicle, vehicleImageUrl },
           isAllModelsFallback,
           yearWarning,
           makeModelWarning,
@@ -1221,6 +1224,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const matchedVehicle = swappedMatch.vehicles[0];
           const isAllModelsFallback = matchedVehicle.model === 'ALL MODELS';
           
+          // Get vehicle image from Google Image Search
+          const vehicleImageUrl = await getVehicleImageAsync(yearNum, swappedMake, swappedModel);
+          
           // Add warning about swapped inputs
           const swapWarning = `ℹ️ We detected the make and model fields may have been swapped. Showing results for ${swappedMake} ${swappedModel} ${yearNum}.`;
           
@@ -1243,7 +1249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           return res.json({
             found: true,
-            exactMatch: matchedVehicle,
+            exactMatch: { ...matchedVehicle, vehicleImageUrl },
             isAllModelsFallback,
             yearWarning,
             makeModelWarning: swapWarning,
@@ -1287,6 +1293,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             deviceTypes.filter(v => v === a).length - deviceTypes.filter(v => v === b).length
           ).pop();
           
+          // Get vehicle image from Google Image Search
+          const vehicleImageUrl = await getVehicleImageAsync(yearNum, swappedMake, swappedModel);
+          
           const swapWarning = `ℹ️ We detected the make and model fields may have been swapped. Showing results for ${swappedMake} ${swappedModel} (based on ±5 year match).`;
           
           await storage.logSearch({
@@ -1314,6 +1323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               deviceConfidence: 85,
               basedOn: swappedNearbyVehicles.length,
               source: 'database_nearby_years',
+              vehicleImageUrl,
               similarVehicles: swappedNearbyVehicles.slice(0, 5).map(v => ({
                 make: v.make,
                 model: v.model,
@@ -1505,6 +1515,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cost: 0 // Database searches are free
       });
 
+      // Get vehicle image from Google Image Search
+      const vehicleImageUrl = await getVehicleImageAsync(yearNum, normalizedMake || String(make), String(model));
+
       // Save Tier 1 prediction to pending for admin approval
       await storage.createPendingVehicle({
         make: normalizedMake || '',
@@ -1520,7 +1533,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         source: 'database_tier1',
         status: 'pending',
         userName: userNameStr,
-        userEmail: userEmailStr
+        userEmail: userEmailStr,
+        vehicleImageUrl: vehicleImageUrl
       });
 
       res.json({
@@ -1534,6 +1548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           deviceConfidence: tier1DeviceConfidence,
           basedOn: nearbyYearVehicles.length,
           source: 'database_tier1',
+          vehicleImageUrl,
           similarVehicles: nearbyYearVehicles.slice(0, 10)
         },
         yearWarning,
