@@ -32,60 +32,78 @@ interface NhtsaResult {
 }
 
 async function decodeVinFromBrowser(vin: string): Promise<{ make: string; model: string; year: number; warning?: string } | null> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
-    const response = await fetch(
-      `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${vin}?format=json`,
-      { 
+  const nhtsaUrl = `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${vin}?format=json`;
+  
+  // Try multiple approaches: direct, then proxy services
+  const attempts = [
+    // Direct call
+    { url: nhtsaUrl, parseResponse: (data: any) => data },
+    // AllOrigins proxy (free, no auth)
+    { 
+      url: `https://api.allorigins.win/raw?url=${encodeURIComponent(nhtsaUrl)}`,
+      parseResponse: (data: any) => data 
+    },
+    // corsproxy.io (another free option)
+    { 
+      url: `https://corsproxy.io/?${encodeURIComponent(nhtsaUrl)}`,
+      parseResponse: (data: any) => data 
+    },
+  ];
+  
+  for (const attempt of attempts) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout per attempt
+      
+      const response = await fetch(attempt.url, { 
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
+        headers: { 'Accept': 'application/json' },
         signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        continue; // Try next proxy
       }
-    );
-    
-    clearTimeout(timeoutId);
-    
-    if (!response.ok) {
-      throw new Error(`NHTSA returned ${response.status}`);
+      
+      const rawData = await response.json();
+      const data = attempt.parseResponse(rawData);
+      const results = data?.Results as NhtsaResult[];
+      
+      if (!results || !Array.isArray(results)) {
+        continue; // Try next proxy
+      }
+      
+      const makeData = results.find((item) => item.Variable === "Make");
+      const modelData = results.find((item) => item.Variable === "Model");
+      const yearData = results.find((item) => item.Variable === "Model Year");
+      const errorText = results.find((item) => item.Variable === "Error Text");
+      
+      const make = makeData?.Value?.trim();
+      const model = modelData?.Value?.trim();
+      const yearStr = yearData?.Value?.trim();
+      const year = yearStr ? parseInt(yearStr) : null;
+      const warning = errorText?.Value && errorText.Value !== "0" && errorText.Value !== "0 -" 
+        ? errorText.Value.trim() 
+        : undefined;
+      
+      if (!make || !model || !year) {
+        continue; // Try next proxy
+      }
+      
+      console.log('VIN decoded successfully via:', attempt.url.includes('allorigins') ? 'AllOrigins proxy' : 
+                   attempt.url.includes('corsproxy') ? 'CorsProxy' : 'Direct');
+      return { make, model, year, warning };
+      
+    } catch (error: any) {
+      console.log('Attempt failed:', attempt.url.substring(0, 50), error.message);
+      continue; // Try next proxy
     }
-    
-    const data = await response.json();
-    const results = data?.Results as NhtsaResult[];
-    
-    if (!results || !Array.isArray(results)) {
-      return null;
-    }
-    
-    const makeData = results.find((item) => item.Variable === "Make");
-    const modelData = results.find((item) => item.Variable === "Model");
-    const yearData = results.find((item) => item.Variable === "Model Year");
-    const errorText = results.find((item) => item.Variable === "Error Text");
-    
-    const make = makeData?.Value?.trim();
-    const model = modelData?.Value?.trim();
-    const yearStr = yearData?.Value?.trim();
-    const year = yearStr ? parseInt(yearStr) : null;
-    const warning = errorText?.Value && errorText.Value !== "0" && errorText.Value !== "0 -" 
-      ? errorText.Value.trim() 
-      : undefined;
-    
-    if (!make || !model || !year) {
-      return null;
-    }
-    
-    return { make, model, year, warning };
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
-      console.error('NHTSA request timed out');
-    } else {
-      console.error('Browser NHTSA decode failed:', error);
-    }
-    return null;
   }
+  
+  console.error('All VIN decode attempts failed');
+  return null;
 }
 
 export default function VinDecoder() {
