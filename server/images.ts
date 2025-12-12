@@ -24,8 +24,8 @@ export async function searchVehicleImage(year: number | string, make: string, mo
   
   try {
     // Search for official/press photos, exclude dealer ads
-    const searchQuery = `${year} ${make} ${model} official press photo -dealer -price -sale`;
-    const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(searchQuery)}&searchType=image&num=5&safe=active&imgSize=large&imgType=photo`;
+    const searchQuery = `${year} ${make} ${model} car photo`;
+    const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(searchQuery)}&searchType=image&num=10&safe=active&imgSize=large&imgType=photo`;
     
     console.log(`[Image Search] Searching for: ${searchQuery}`);
     
@@ -39,17 +39,27 @@ export async function searchVehicleImage(year: number | string, make: string, mo
     const data = await response.json();
     
     if (data.items && data.items.length > 0) {
-      // Filter out low-quality results (dealer ads, small images, etc.)
+      // Filter out low-quality results (dealer ads, small images, YouTube thumbnails, etc.)
       const validImages = data.items.filter((item: any) => {
         const url = item.link.toLowerCase();
         const title = (item.title || '').toLowerCase();
         
+        // Skip YouTube thumbnails
+        if (url.includes('ytimg.com') || url.includes('youtube.com')) return false;
+        
         // Skip dealer/ad images
         if (url.includes('dealer') || url.includes('inventory') || url.includes('listing')) return false;
+        if (url.includes('cargurus') || url.includes('autotrader') || url.includes('cars.com')) return false;
         if (title.includes('for sale') || title.includes('price') || title.includes('dealer')) return false;
         
-        // Prefer larger images
-        if (item.image && item.image.width < 300) return false;
+        // Skip very small images
+        if (item.image && item.image.width < 400) return false;
+        
+        // Prefer standard image formats
+        if (!url.endsWith('.jpg') && !url.endsWith('.jpeg') && !url.endsWith('.png') && !url.endsWith('.webp')) {
+          // Allow if no extension but from trusted source
+          if (!url.includes('wikipedia') && !url.includes('ford.com') && !url.includes('media')) return false;
+        }
         
         return true;
       });
