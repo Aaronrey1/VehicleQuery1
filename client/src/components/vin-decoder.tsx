@@ -87,7 +87,7 @@ async function decodeVinFromBrowser(vin: string): Promise<{ make: string; model:
   for (const attempt of attempts) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout per attempt
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout per attempt
       
       const response = await fetch(attempt.url, { 
         method: 'GET',
