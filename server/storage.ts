@@ -1,4 +1,4 @@
-import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, dataOverrides, customCharts, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type BillingPieCharts, type PendingApprovalsAnalytics, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiCallAnalytics, type ApiKey, type InsertApiKey, type ApiKeyWithPlaintext, type DataOverride, type InsertDataOverride, type CustomChart, type InsertCustomChart } from "@shared/schema";
+import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, dataOverrides, customCharts, vinCache, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type BillingPieCharts, type PendingApprovalsAnalytics, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiCallAnalytics, type ApiKey, type InsertApiKey, type ApiKeyWithPlaintext, type DataOverride, type InsertDataOverride, type CustomChart, type InsertCustomChart } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, sql, ilike, desc, asc, gte, lte, ne } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -88,6 +88,10 @@ export interface IStorage {
   // Autocomplete suggestions
   getMakeSuggestions(query: string): Promise<string[]>;
   getModelSuggestions(make: string, query: string): Promise<string[]>;
+
+  // VIN Cache methods
+  getVinFromCache(vin: string): Promise<{ make: string; model: string; year: number } | undefined>;
+  saveVinToCache(vin: string, make: string, model: string, year: number): Promise<void>;
 }
 
 // Helper function to map snake_case database columns to camelCase TypeScript properties
@@ -1227,6 +1231,28 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(vehicles.model))
       .limit(10);
     return result.map(r => r.model);
+  }
+
+  // VIN Cache methods
+  async getVinFromCache(vin: string): Promise<{ make: string; model: string; year: number } | undefined> {
+    const [cached] = await db.select().from(vinCache).where(eq(vinCache.vin, vin.toUpperCase()));
+    if (cached) {
+      return { make: cached.make, model: cached.model, year: cached.year };
+    }
+    return undefined;
+  }
+
+  async saveVinToCache(vin: string, make: string, model: string, year: number): Promise<void> {
+    try {
+      await db.insert(vinCache).values({
+        vin: vin.toUpperCase(),
+        make: make.toUpperCase(),
+        model: model.toUpperCase(),
+        year
+      }).onConflictDoNothing();
+    } catch (error) {
+      console.error('Failed to cache VIN:', error);
+    }
   }
 }
 

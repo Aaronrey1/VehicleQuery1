@@ -373,3 +373,19 @@ export const insertCustomChartSchema = createInsertSchema(customCharts).omit({
 
 export type InsertCustomChart = z.infer<typeof insertCustomChartSchema>;
 export type CustomChart = typeof customCharts.$inferSelect;
+
+// VIN Cache table - stores decoded VINs to avoid repeated NHTSA calls
+export const vinCache = pgTable("vin_cache", {
+  vin: varchar("vin", { length: 17 }).primaryKey(),
+  make: text("make").notNull(),
+  model: text("model").notNull(),
+  year: integer("year").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertVinCacheSchema = createInsertSchema(vinCache).omit({
+  createdAt: true,
+});
+
+export type InsertVinCache = z.infer<typeof insertVinCacheSchema>;
+export type VinCache = typeof vinCache.$inferSelect;

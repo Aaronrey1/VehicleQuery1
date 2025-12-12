@@ -1052,6 +1052,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // VIN Cache endpoints
+  app.get("/api/vin/cache/:vin", async (req, res) => {
+    try {
+      const { vin } = req.params;
+      if (!vin || vin.length < 10) {
+        return res.status(400).json({ message: "Valid VIN required" });
+      }
+      const cached = await storage.getVinFromCache(vin);
+      if (cached) {
+        return res.json({ found: true, ...cached });
+      }
+      return res.json({ found: false });
+    } catch (error: any) {
+      console.error("VIN cache lookup error:", error);
+      res.status(500).json({ message: "Cache lookup failed" });
+    }
+  });
+
+  app.post("/api/vin/cache", async (req, res) => {
+    try {
+      const { vin, make, model, year } = req.body;
+      if (!vin || !make || !model || !year) {
+        return res.status(400).json({ message: "VIN, make, model, and year are required" });
+      }
+      await storage.saveVinToCache(vin, make, model, year);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("VIN cache save error:", error);
+      res.status(500).json({ message: "Cache save failed" });
+    }
+  });
+
   // AI Prediction endpoint - pattern-based suggestions (requires API key)
   app.get("/api/ai/predict", validateApiKey, async (req, res) => {
     try {

@@ -32,7 +32,42 @@ interface NhtsaResult {
   Value: string | null;
 }
 
-async function decodeVinFromBrowser(vin: string): Promise<{ make: string; model: string; year: number; warning?: string } | null> {
+async function checkVinCache(vin: string): Promise<{ make: string; model: string; year: number } | null> {
+  try {
+    const response = await fetch(`/api/vin/cache/${vin}`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.found) {
+        console.log('VIN found in cache:', data);
+        return { make: data.make, model: data.model, year: data.year };
+      }
+    }
+  } catch (error) {
+    console.log('Cache check failed:', error);
+  }
+  return null;
+}
+
+async function saveVinToCache(vin: string, make: string, model: string, year: number): Promise<void> {
+  try {
+    await fetch('/api/vin/cache', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vin, make, model, year })
+    });
+  } catch (error) {
+    console.log('Cache save failed:', error);
+  }
+}
+
+async function decodeVinFromBrowser(vin: string): Promise<{ make: string; model: string; year: number; warning?: string; fromCache?: boolean } | null> {
+  // Step 1: Check cache first
+  const cached = await checkVinCache(vin);
+  if (cached) {
+    return { ...cached, fromCache: true };
+  }
+
+  // Step 2: Try NHTSA API
   const nhtsaUrl = `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${vin}?format=json`;
   
   // Try multiple approaches: direct, then proxy services
@@ -95,6 +130,10 @@ async function decodeVinFromBrowser(vin: string): Promise<{ make: string; model:
       
       console.log('VIN decoded successfully via:', attempt.url.includes('allorigins') ? 'AllOrigins proxy' : 
                    attempt.url.includes('corsproxy') ? 'CorsProxy' : 'Direct');
+      
+      // Save to cache for future use
+      saveVinToCache(vin, make, model, year);
+      
       return { make, model, year, warning };
       
     } catch (error: any) {
@@ -131,8 +170,8 @@ export default function VinDecoder() {
           allResults.push({
             vin,
             success: false,
-            error: `NHTSA is temporarily unavailable. Click here to decode manually: https://vpic.nhtsa.dot.gov/decoder/ then use AI Search with the results.`,
-            manualDecodeUrl: `https://vpic.nhtsa.dot.gov/decoder/`
+            error: `NHTSA service unavailable. Use AI Search instead - enter Make, Model, Year directly.`,
+            manualDecodeUrl: `https://vpic.nhtsa.dot.gov/decoder/?vin=${vin}`
           });
           continue;
         }
@@ -449,15 +488,16 @@ export default function VinDecoder() {
                       <TableCell data-testid={`text-source-${index}`}>
                         {result.error ? (
                           <div className="space-y-1">
-                            <span className="text-red-500 text-xs block">NHTSA unavailable</span>
+                            <span className="text-orange-600 text-xs font-medium block">Use AI Search</span>
                             {result.manualDecodeUrl && (
                               <a 
                                 href={result.manualDecodeUrl} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="text-blue-600 hover:underline text-xs block"
+                                data-testid={`link-nhtsa-manual-${index}`}
                               >
-                                Decode manually on NHTSA →
+                                Decode on NHTSA.gov →
                               </a>
                             )}
                           </div>
