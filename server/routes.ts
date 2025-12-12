@@ -1160,7 +1160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const isAllModelsFallback = matchedVehicle.model === 'ALL MODELS';
         
         // Get vehicle image from Google Image Search
-        const vehicleImageUrl = await getVehicleImageAsync(yearNum, normalizedMake, normalizedModel);
+        const vehicleImageUrl = await getVehicleImageAsync(yearNum, normalizedMake || String(make), normalizedModel || String(model));
         
         // Log exact match search
         await storage.logSearch({
@@ -2188,13 +2188,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         try {
-          // Call NHTSA API to decode VIN
-          const nhtsaResponse = await axios.get(
-            `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${cleanVin}?format=json`,
-            { timeout: 10000 }
-          );
+          // Call NHTSA API to decode VIN with retry logic
+          let nhtsaResponse;
+          let retryCount = 0;
+          const maxRetries = 2;
+          
+          while (retryCount <= maxRetries) {
+            try {
+              nhtsaResponse = await axios.get(
+                `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${cleanVin}?format=json`,
+                { timeout: 30000 }
+              );
+              break; // Success, exit retry loop
+            } catch (retryError: any) {
+              retryCount++;
+              if (retryCount > maxRetries) {
+                throw retryError; // All retries failed
+              }
+              // Wait 1 second before retry
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
 
-          const decodedData = nhtsaResponse.data?.Results;
+          const decodedData = nhtsaResponse?.data?.Results;
           
           if (!decodedData || !Array.isArray(decodedData)) {
             results.push({
