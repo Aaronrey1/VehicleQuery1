@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { CloudUpload, Download, RefreshCw, Trash2 } from "lucide-react";
+import { CloudUpload, Download, RefreshCw, Trash2, Cpu } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { VehicleStats } from "@shared/schema";
@@ -14,13 +14,20 @@ export default function DataImport() {
   const [importMode, setImportMode] = useState("append");
   const [validationLevel, setValidationLevel] = useState("strict");
   const [dragActive, setDragActive] = useState(false);
+  const [featuresDragActive, setFeaturesDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const featuresFileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Get vehicle stats for display
   const { data: stats } = useQuery<VehicleStats>({
     queryKey: ["/api/vehicles/stats"],
+  });
+
+  // Get vehicle features stats
+  const { data: featuresStats } = useQuery<{ count: number }>({
+    queryKey: ["/api/vehicle-features/stats"],
   });
 
   // Import mutation
@@ -135,6 +142,69 @@ export default function DataImport() {
       console.error("Pentaho import error:", error);
     },
   });
+
+  // Vehicle Features import mutation
+  const featuresImportMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const response = await apiRequest("POST", "/api/vehicle-features/import", formData);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Device Capabilities Import Completed",
+        description: `Successfully imported ${data.imported} vehicle feature records.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/vehicle-features/stats"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Device Capabilities Import Failed",
+        description: error.message || "Failed to import vehicle features.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFeaturesDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setFeaturesDragActive(true);
+    } else if (e.type === "dragleave") {
+      setFeaturesDragActive(false);
+    }
+  };
+
+  const handleFeaturesDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFeaturesDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFeaturesFileUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFeaturesFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFeaturesFileUpload(e.target.files[0]);
+    }
+  };
+
+  const handleFeaturesFileUpload = (file: File) => {
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload an Excel file (.xlsx or .xls).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    featuresImportMutation.mutate(formData);
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -356,6 +426,92 @@ export default function DataImport() {
                 <Trash2 className="mr-2 h-4 w-4" />
                 Clear All Data
               </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Device Capabilities Import Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader className="p-6">
+              <div className="flex items-center space-x-3">
+                <Cpu className="text-blue-600 text-xl" />
+                <h3 className="text-lg font-semibold text-foreground">Import Device Capabilities</h3>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                  featuresDragActive ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-border hover:border-blue-500"
+                }`}
+                onDragEnter={handleFeaturesDrag}
+                onDragLeave={handleFeaturesDrag}
+                onDragOver={handleFeaturesDrag}
+                onDrop={handleFeaturesDrop}
+                onClick={() => featuresFileInputRef.current?.click()}
+                data-testid="features-file-drop-zone"
+              >
+                <Cpu className="text-4xl text-blue-500 mb-4 mx-auto" />
+                <h4 className="text-lg font-medium text-foreground mb-2">Upload Device Capabilities Excel File</h4>
+                <p className="text-muted-foreground mb-4">Import vehicle feature data (VIN Support, RPM, Speed, etc.)</p>
+                <Button className="bg-blue-600 text-white hover:bg-blue-700" data-testid="button-choose-features-file">
+                  Choose Excel File
+                </Button>
+                <p className="text-sm text-muted-foreground mt-3">
+                  Supports .xlsx and .xls files (Danlaw format)
+                </p>
+                <input
+                  ref={featuresFileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleFeaturesFileSelect}
+                  className="hidden"
+                  data-testid="input-features-file"
+                />
+              </div>
+
+              {featuresImportMutation.isPending && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Importing device capabilities...</span>
+                    <span>Processing</span>
+                  </div>
+                  <Progress value={50} className="w-full" />
+                </div>
+              )}
+
+              <div className="bg-muted rounded-lg p-4">
+                <h5 className="font-medium text-foreground mb-3">Expected Data Format (Danlaw Excel)</h5>
+                <div className="bg-card rounded border border-border p-3 text-sm font-mono text-muted-foreground overflow-x-auto">
+                  <div>Year | Make | Model | VIN Support | RPM | Speed | MIL State | ...</div>
+                  <div>2020 | TOYOTA | CAMRY | Yes | Yes | Yes | Yes | ...</div>
+                  <div>2019 | HONDA | ACCORD | Yes | Yes | Yes | No | ...</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader className="p-6">
+              <h4 className="font-semibold text-foreground">Device Capabilities Status</h4>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Total Records</span>
+                <span className="text-sm text-foreground" data-testid="text-features-total">
+                  {featuresStats?.count?.toLocaleString() || "0"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Import Status</span>
+                <span className="text-sm font-medium text-green-600">
+                  {featuresImportMutation.isPending ? "Importing..." : "Ready"}
+                </span>
+              </div>
             </CardContent>
           </Card>
         </div>
