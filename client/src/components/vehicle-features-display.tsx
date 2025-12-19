@@ -61,8 +61,8 @@ const featureLabels: Record<string, string> = {
 function FeatureBadge({ value }: { value: string | null }) {
   if (!value || value === "N/A" || value === "NA") {
     return (
-      <Badge variant="outline" className="text-gray-500 border-gray-300" data-testid="badge-feature-na">
-        <XCircle className="w-3 h-3 mr-1" />
+      <Badge variant="outline" className="text-gray-500 border-gray-300 text-xs px-1.5 py-0" data-testid="badge-feature-na">
+        <XCircle className="w-2.5 h-2.5 mr-0.5" />
         N/A
       </Badge>
     );
@@ -70,8 +70,8 @@ function FeatureBadge({ value }: { value: string | null }) {
 
   if (value.toLowerCase() === "yes") {
     return (
-      <Badge variant="default" className="bg-green-600 hover:bg-green-700" data-testid="badge-feature-yes">
-        <CheckCircle className="w-3 h-3 mr-1" />
+      <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-xs px-1.5 py-0" data-testid="badge-feature-yes">
+        <CheckCircle className="w-2.5 h-2.5 mr-0.5" />
         Yes
       </Badge>
     );
@@ -79,15 +79,15 @@ function FeatureBadge({ value }: { value: string | null }) {
 
   if (value.toLowerCase() === "no") {
     return (
-      <Badge variant="destructive" data-testid="badge-feature-no">
-        <XCircle className="w-3 h-3 mr-1" />
+      <Badge variant="destructive" className="text-xs px-1.5 py-0" data-testid="badge-feature-no">
+        <XCircle className="w-2.5 h-2.5 mr-0.5" />
         No
       </Badge>
     );
   }
 
   return (
-    <Badge variant="secondary" data-testid="badge-feature-custom">
+    <Badge variant="secondary" className="text-xs px-1.5 py-0" data-testid="badge-feature-custom">
       {value}
     </Badge>
   );
@@ -106,11 +106,11 @@ export default function VehicleFeaturesDisplay({ make, model, year }: VehicleFea
 
   if (isLoading) {
     return (
-      <Card className="mt-4" data-testid="card-features-loading">
-        <CardContent className="py-6">
-          <div className="flex items-center justify-center gap-2">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span>Loading device capabilities...</span>
+      <Card className="mt-2" data-testid="card-features-loading">
+        <CardContent className="py-3">
+          <div className="flex items-center justify-center gap-2 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Loading capabilities...</span>
           </div>
         </CardContent>
       </Card>
@@ -119,11 +119,11 @@ export default function VehicleFeaturesDisplay({ make, model, year }: VehicleFea
 
   if (isError || !data?.found) {
     return (
-      <Card className="mt-4 border-yellow-200 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800" data-testid="card-features-not-found">
-        <CardContent className="py-4">
-          <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
-            <AlertTriangle className="w-5 h-5" />
-            <span>Device capability data not available for this vehicle</span>
+      <Card className="mt-2 border-yellow-200 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800" data-testid="card-features-not-found">
+        <CardContent className="py-2">
+          <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300 text-xs">
+            <AlertTriangle className="w-4 h-4" />
+            <span>Device capability data not available</span>
           </div>
         </CardContent>
       </Card>
@@ -147,37 +147,35 @@ export default function VehicleFeaturesDisplay({ make, model, year }: VehicleFea
   });
 
   return (
-    <Card className="mt-4 border-blue-200 bg-blue-50/50 dark:bg-blue-950/30 dark:border-blue-800" data-testid="card-vehicle-features">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Cpu className="w-5 h-5 text-blue-600" />
+    <Card className="mt-2 border-blue-200 bg-blue-50/50 dark:bg-blue-950/30 dark:border-blue-800" data-testid="card-vehicle-features">
+      <CardHeader className="py-2 px-3">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Cpu className="w-4 h-4 text-blue-600" />
           Device Capabilities
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+      <CardContent className="px-3 pb-3 pt-0">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
           {standardFeatures.map((key) => (
-            <div key={key} className="flex flex-col gap-1" data-testid={`feature-${key}`}>
-              <span className="text-xs text-muted-foreground">{featureLabels[key]}</span>
+            <div key={key} className="flex flex-col gap-0.5" data-testid={`feature-${key}`}>
+              <span className="text-[10px] text-muted-foreground leading-tight">{featureLabels[key]}</span>
               <FeatureBadge value={features[key]} />
             </div>
           ))}
         </div>
 
         {hasEvFeatures && (
-          <>
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-sm font-medium mb-3 text-green-600 dark:text-green-400">EV Metrics</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {evFeatures.map((key) => (
-                  <div key={key} className="flex flex-col gap-1" data-testid={`feature-${key}`}>
-                    <span className="text-xs text-muted-foreground">{featureLabels[key]}</span>
-                    <FeatureBadge value={features[key]} />
-                  </div>
-                ))}
-              </div>
+          <div className="mt-2 pt-2 border-t">
+            <p className="text-xs font-medium mb-1 text-green-600 dark:text-green-400">EV Metrics</p>
+            <div className="grid grid-cols-4 gap-2">
+              {evFeatures.map((key) => (
+                <div key={key} className="flex flex-col gap-0.5" data-testid={`feature-${key}`}>
+                  <span className="text-[10px] text-muted-foreground leading-tight">{featureLabels[key]}</span>
+                  <FeatureBadge value={features[key]} />
+                </div>
+              ))}
             </div>
-          </>
+          </div>
         )}
       </CardContent>
     </Card>

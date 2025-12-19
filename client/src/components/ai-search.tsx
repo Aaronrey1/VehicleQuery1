@@ -344,11 +344,10 @@ export default function AISearch() {
       <div ref={resultsRef} className="lg:flex-1 lg:order-2 order-2">
         {isSearching && (
           <Card>
-            <CardContent className="py-12">
-              <div className="flex flex-col items-center justify-center space-y-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                <p className="text-lg font-medium">Analyzing vehicle data...</p>
-                <p className="text-sm text-muted-foreground">Searching database and AI models</p>
+            <CardContent className="py-6">
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="text-sm font-medium">Analyzing vehicle data...</p>
               </div>
             </CardContent>
           </Card>
@@ -356,15 +355,15 @@ export default function AISearch() {
 
         {!isSearching && prediction && (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex flex-wrap items-center gap-2">
-                <span>{prediction.found ? "Exact Match Found" : "AI Prediction"}:</span>
-                <span className="text-primary font-bold bg-primary/10 px-2 py-1 rounded-md">
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+                <span>{prediction.found ? "Exact Match" : "AI Prediction"}:</span>
+                <span className="text-primary font-bold bg-primary/10 px-2 py-0.5 rounded text-sm">
                   {year} {make.toUpperCase()} {model.toUpperCase()}
                 </span>
               </CardTitle>
             </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-2 px-4 pb-4 pt-0">
             {prediction.makeModelWarning && (
               <Alert variant="destructive" className="border-red-500 bg-red-50 dark:bg-red-950">
                 <AlertCircle className="h-4 w-4 text-red-600" />
@@ -383,32 +382,20 @@ export default function AISearch() {
               </Alert>
             )}
 
-            {/* Search Path Visualization */}
+            {/* Search Path Visualization - Compact */}
             {prediction.searchPath && prediction.searchPath.length > 0 && (
-              <div className="border rounded-lg p-4 bg-muted/50">
-                <p className="text-sm font-semibold mb-3">Search Path</p>
-                <div className="space-y-2">
+              <div className="border rounded p-2 bg-muted/50">
+                <p className="text-xs font-semibold mb-1">Search Path</p>
+                <div className="flex flex-wrap gap-1">
                   {prediction.searchPath.map((step, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-background border">
-                        <span className="text-xs font-medium">{index + 1}</span>
-                      </div>
-                      <div className="flex-1 flex items-center gap-2">
-                        <span className="text-sm">{step.source}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {step.found ? (
-                          <>
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            <span className="text-xs font-medium text-green-600">Found</span>
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="h-4 w-4 text-gray-400" />
-                            <span className="text-xs text-gray-500">Not found</span>
-                          </>
-                        )}
-                      </div>
+                    <div key={index} className="flex items-center gap-1 text-xs bg-background px-2 py-0.5 rounded border">
+                      <span className="font-medium">{index + 1}.</span>
+                      <span>{step.source}</span>
+                      {step.found ? (
+                        <CheckCircle2 className="h-3 w-3 text-green-600" />
+                      ) : (
+                        <XCircle className="h-3 w-3 text-gray-400" />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -416,40 +403,40 @@ export default function AISearch() {
             )}
             
             {prediction.found && prediction.exactMatch ? (
-              <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-                <TrendingUp className="h-4 w-4 text-green-600" />
+              <Alert className="border-green-500 bg-green-50 dark:bg-green-950 py-2">
+                <TrendingUp className="h-3 w-3 text-green-600" />
                 <AlertDescription className="text-green-800 dark:text-green-200">
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold">Vehicle found in database!</p>
+                      <p className="font-semibold text-sm">Vehicle found in database!</p>
                       {prediction.isAllModelsFallback && (
-                        <Badge variant="outline" className="text-amber-700 border-amber-500 bg-amber-100 dark:bg-amber-950">
-                          ALL MODELS Fallback
+                        <Badge variant="outline" className="text-amber-700 border-amber-500 bg-amber-100 dark:bg-amber-950 text-xs">
+                          ALL MODELS
                         </Badge>
                       )}
                     </div>
                     {prediction.isAllModelsFallback && (
-                      <p className="text-sm text-amber-800 dark:text-amber-300">
-                        No exact model match found. Showing data for "{formatForDisplay(prediction.exactMatch.make)} ALL MODELS" as a general reference.
+                      <p className="text-xs text-amber-800 dark:text-amber-300">
+                        Showing data for "{formatForDisplay(prediction.exactMatch.make)} ALL MODELS".
                       </p>
                     )}
-                    <div className="flex gap-4 mt-3">
+                    <div className="flex gap-3 mt-2">
                       {prediction.exactMatch.vehicleImageUrl && (
                         <img 
                           src={prediction.exactMatch.vehicleImageUrl} 
                           alt="Vehicle"
-                          className="w-40 h-32 object-cover rounded-lg border shadow-md"
+                          className="w-24 h-20 object-cover rounded border shadow-sm"
                           data-testid="img-exact-match-vehicle"
                         />
                       )}
-                      <div className="grid grid-cols-2 gap-2 flex-1">
+                      <div className="flex gap-4">
                         <div>
-                          <p className="text-sm text-muted-foreground">Device Type</p>
-                          <Badge variant="secondary" className="mt-1">{formatForDisplay(prediction.exactMatch.deviceType)}</Badge>
+                          <p className="text-xs text-muted-foreground">Device Type</p>
+                          <Badge variant="secondary" className="text-xs">{formatForDisplay(prediction.exactMatch.deviceType)}</Badge>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Port Type</p>
-                          <Badge variant="secondary" className="mt-1">{formatForDisplay(prediction.exactMatch.portType)}</Badge>
+                          <p className="text-xs text-muted-foreground">Port Type</p>
+                          <Badge variant="secondary" className="text-xs">{formatForDisplay(prediction.exactMatch.portType)}</Badge>
                         </div>
                       </div>
                     </div>
@@ -457,146 +444,115 @@ export default function AISearch() {
                 </AlertDescription>
               </Alert>
             ) : prediction.predictions ? (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 <Alert className={
-                  prediction.predictions.source === 'google' ? "border-purple-500 bg-purple-50 dark:bg-purple-950" : 
-                  "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                  prediction.predictions.source === 'google' ? "border-purple-500 bg-purple-50 dark:bg-purple-950 py-2" : 
+                  "border-blue-500 bg-blue-50 dark:bg-blue-950 py-2"
                 }>
                   <Sparkles className={
-                    prediction.predictions.source === 'google' ? "h-4 w-4 text-purple-600" : 
-                    "h-4 w-4 text-blue-600"
+                    prediction.predictions.source === 'google' ? "h-3 w-3 text-purple-600" : 
+                    "h-3 w-3 text-blue-600"
                   } />
                   <AlertDescription className={
                     prediction.predictions.source === 'google' ? "text-purple-800 dark:text-purple-200" : 
                     "text-blue-800 dark:text-blue-200"
                   }>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="font-semibold">
+                        <p className="font-semibold text-sm">
                           {prediction.predictions.source === 'google' ? 'Google AI Prediction' : 
                            'Two-Step AI Prediction'}
                         </p>
                         {prediction.predictions.source === 'google' && (
-                          <Badge variant="outline" className="text-purple-600 border-purple-400">
-                            From Google Search
+                          <Badge variant="outline" className="text-purple-600 border-purple-400 text-xs">
+                            Google Search
                           </Badge>
                         )}
                       </div>
                       
-                      <div className="space-y-3">
-                        <div className="border rounded-lg p-3 bg-background">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm font-medium">Step 1: Port Type Prediction</p>
-                            <div className="flex items-center gap-2">
-                              <div className={`h-2 w-2 rounded-full ${getConfidenceColor(prediction.predictions.portConfidence)}`} />
-                              <span className="text-xs">{prediction.predictions.portConfidence}%</span>
-                            </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="border rounded p-2 bg-background">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs font-medium">Port Type</p>
+                            <span className="text-xs">{prediction.predictions.portConfidence}%</span>
                           </div>
-                          <Badge className={getConfidenceColor(prediction.predictions.portConfidence)}>{formatForDisplay(prediction.predictions.portType)}</Badge>
+                          <Badge className={`text-xs ${getConfidenceColor(prediction.predictions.portConfidence)}`}>{formatForDisplay(prediction.predictions.portType)}</Badge>
                         </div>
 
-                        <div className="border rounded-lg p-3 bg-background">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm font-medium">Step 2: Device Type (for {formatForDisplay(prediction.predictions.portType)})</p>
-                            <div className="flex items-center gap-2">
-                              <div className={`h-2 w-2 rounded-full ${getConfidenceColor(prediction.predictions.deviceConfidence)}`} />
-                              <span className="text-xs">{prediction.predictions.deviceConfidence}%</span>
-                            </div>
+                        <div className="border rounded p-2 bg-background">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs font-medium">Device Type</p>
+                            <span className="text-xs">{prediction.predictions.deviceConfidence}%</span>
                           </div>
-                          <Badge className={getConfidenceColor(prediction.predictions.deviceConfidence)}>{formatForDisplay(prediction.predictions.deviceType)}</Badge>
+                          <Badge className={`text-xs ${getConfidenceColor(prediction.predictions.deviceConfidence)}`}>{formatForDisplay(prediction.predictions.deviceType)}</Badge>
                         </div>
+                      </div>
                         
-                        {prediction.predictions.vehicleImageUrl && (
-                          <div className="border rounded-lg p-3 bg-background">
-                            <p className="text-sm font-medium mb-2">Vehicle Reference</p>
-                            <div className="flex gap-4">
-                              <div className="text-center">
-                                <img 
-                                  src={prediction.predictions.vehicleImageUrl} 
-                                  alt="Vehicle"
-                                  className="w-48 h-36 object-cover rounded-lg border shadow-md"
-                                  data-testid="img-prediction-vehicle"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2 text-sm">
-                        <TrendingUp className="h-4 w-4" />
-                        <span>
-                          Based on analysis of {prediction.predictions.basedOn} similar vehicles
-                        </span>
-                      </div>
+                      {prediction.predictions.vehicleImageUrl && (
+                        <div className="flex gap-2 items-center">
+                          <img 
+                            src={prediction.predictions.vehicleImageUrl} 
+                            alt="Vehicle"
+                            className="w-24 h-20 object-cover rounded border shadow-sm"
+                            data-testid="img-prediction-vehicle"
+                          />
+                          <p className="text-xs">Based on {prediction.predictions.basedOn} similar vehicles</p>
+                        </div>
+                      )}
+                      
+                      {!prediction.predictions.vehicleImageUrl && (
+                        <p className="text-xs flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3" />
+                          Based on {prediction.predictions.basedOn} similar vehicles
+                        </p>
+                      )}
                     </div>
                   </AlertDescription>
                 </Alert>
 
 {prediction.predictions.source === 'google' ? (
-                  <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950">
-                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                  <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950 py-1">
+                    <AlertCircle className="h-3 w-3 text-orange-600" />
                     <AlertDescription className="text-xs text-orange-800 dark:text-orange-200">
-                      Note: This prediction is based on external search data and has lower confidence. Consider adding this vehicle to your database for accurate future predictions.
+                      External search data - lower confidence. Consider adding to database.
                     </AlertDescription>
                   </Alert>
                 ) : prediction.predictions.source === 'exact_match' ? (
-                  <Alert className="border-indigo-500 bg-indigo-50 dark:bg-indigo-950">
-                    <AlertCircle className="h-4 w-4 text-indigo-600" />
+                  <Alert className="border-indigo-500 bg-indigo-50 dark:bg-indigo-950 py-1">
+                    <AlertCircle className="h-3 w-3 text-indigo-600" />
                     <AlertDescription className="text-xs text-indigo-800 dark:text-indigo-200">
-                      Note: This prediction comes from an exact match in the database. The data will be added once approved by an admin.
+                      Exact match found. Will be added once admin approves.
                     </AlertDescription>
                   </Alert>
                 ) : prediction.predictions.similarVehicles && prediction.predictions.similarVehicles.length > 0 ? (
-                  <Card className="bg-muted/50">
-                    <CardHeader>
-                      <CardTitle className="text-lg">Similar Vehicles Used for Prediction</CardTitle>
-                      <CardDescription>
-                        These {prediction.predictions.similarVehicles.length} vehicles were analyzed to make this prediction
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {prediction.predictions.similarVehicles.slice(0, 10).map((vehicle, idx) => (
-                          <div 
-                            key={idx} 
-                            className="flex items-center justify-between p-3 bg-background rounded-lg border"
-                            data-testid={`similar-vehicle-${idx}`}
-                          >
-                            <div className="flex-1">
-                              <p className="font-medium">
-                                {formatYearDisplay(vehicle)} {formatForDisplay(vehicle.make)} {formatForDisplay(vehicle.model)}
-                              </p>
-                            </div>
-                            <div className="flex gap-2">
-                              <Badge variant="outline" className="text-xs">{formatForDisplay(vehicle.deviceType)}</Badge>
-                              <Badge variant="outline" className="text-xs">{formatForDisplay(vehicle.portType)}</Badge>
-                            </div>
+                  <div className="border rounded p-2 bg-muted/30">
+                    <p className="text-xs font-medium mb-1">Similar Vehicles ({prediction.predictions.similarVehicles.length})</p>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {prediction.predictions.similarVehicles.slice(0, 5).map((vehicle, idx) => (
+                        <div 
+                          key={idx} 
+                          className="flex items-center justify-between text-xs p-1.5 bg-background rounded border"
+                          data-testid={`similar-vehicle-${idx}`}
+                        >
+                          <span>{formatYearDisplay(vehicle)} {formatForDisplay(vehicle.make)} {formatForDisplay(vehicle.model)}</span>
+                          <div className="flex gap-1">
+                            <Badge variant="outline" className="text-xs px-1 py-0">{formatForDisplay(vehicle.deviceType)}</Badge>
+                            <Badge variant="outline" className="text-xs px-1 py-0">{formatForDisplay(vehicle.portType)}</Badge>
                           </div>
-                        ))}
-                        {prediction.predictions.similarVehicles.length > 10 && (
-                          <p className="text-sm text-muted-foreground text-center py-2">
-                            ... and {prediction.predictions.similarVehicles.length - 10} more
-                          </p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                        </div>
+                      ))}
+                      {prediction.predictions.similarVehicles.length > 5 && (
+                        <p className="text-xs text-muted-foreground text-center">+{prediction.predictions.similarVehicles.length - 5} more</p>
+                      )}
+                    </div>
+                  </div>
                 ) : null}
                 
                 {prediction.pendingApproval && (
-                  <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950">
-                    <Sparkles className="h-4 w-4 text-blue-600" />
-                    <AlertDescription className="text-blue-800 dark:text-blue-200">
-                      <div className="space-y-2">
-                        <p className="text-lg font-bold">{prediction.message}</p>
-                        <p className="font-medium">
-                          This prediction has been saved for admin review. Once approved, it will be added to the database for future searches.
-                        </p>
-                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                          💡 Check the "Pending" tab in the Admin section to review predictions
-                        </p>
-                      </div>
+                  <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950 py-1">
+                    <Sparkles className="h-3 w-3 text-blue-600" />
+                    <AlertDescription className="text-blue-800 dark:text-blue-200 text-xs">
+                      Saved for admin review. Check "Pending" tab in Admin to approve.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -621,32 +577,6 @@ export default function AISearch() {
           />
         )}
 
-        {/* How it works card - shown below results */}
-        {(prediction || isSearching) && (
-          <Card className="bg-muted/30 mt-4">
-            <CardHeader className="py-3">
-              <CardTitle className="text-base">How Two-Step Prediction Works</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-xs text-muted-foreground py-2">
-              <div className="flex items-start gap-2">
-                <Badge className="text-xs h-5 w-5 flex items-center justify-center p-0">1</Badge>
-                <p>Search for any vehicle - even if it's not in the database</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <Badge className="text-xs h-5 w-5 flex items-center justify-center p-0">2</Badge>
-                <p>AI finds similar vehicles (same make/model from nearby years)</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <Badge className="text-xs h-5 w-5 flex items-center justify-center p-0">3</Badge>
-                <p><strong>Step 1:</strong> Predicts Port Type from all similar vehicles</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <Badge className="text-xs h-5 w-5 flex items-center justify-center p-0">4</Badge>
-                <p><strong>Step 2:</strong> Filters to vehicles with that port, then predicts Device Type</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Empty state when no search yet */}
         {!prediction && !isSearching && (
