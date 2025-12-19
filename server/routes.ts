@@ -2908,6 +2908,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vehicle Features endpoints
+  app.get("/api/vehicle-features/:make/:model/:year", async (req, res) => {
+    try {
+      const { make, model, year } = req.params;
+      const yearNum = parseInt(year);
+      
+      if (isNaN(yearNum)) {
+        return res.status(400).json({ message: "Invalid year" });
+      }
+      
+      const features = await storage.getVehicleFeatures(make, model, yearNum);
+      
+      if (!features) {
+        return res.json({ found: false });
+      }
+      
+      res.json({ found: true, features });
+    } catch (error: any) {
+      console.error("Vehicle features error:", error);
+      res.status(500).json({ message: "Failed to get vehicle features", error: error.message });
+    }
+  });
+
+  app.get("/api/vehicle-features/stats", async (req, res) => {
+    try {
+      const count = await storage.getVehicleFeaturesCount();
+      res.json({ count });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to get stats", error: error.message });
+    }
+  });
+
+  app.post("/api/vehicle-features/import", requireAuth, upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const XLSX = require('xlsx');
+      const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+      // Skip header row
+      const features: any[] = [];
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i] as any[];
+        if (!row || row.length < 4) continue;
+
+        const year = row[0];
+        const make = row[1];
+        const model = row[2];
+
+        if (!year || !make || !model) continue;
+
+        features.push({
+          year: typeof year === 'number' ? year : parseInt(year),
+          make: String(make).toUpperCase().trim(),
+          model: String(model).toUpperCase().trim(),
+          vinSupport: row[3] || null,
+          rpm: row[4] || null,
+          speed: row[5] || null,
+          milState: row[6] || null,
+          ignitionStatus: row[7] || null,
+          preciseFuel: row[8] || null,
+          trueOdometer: row[9] || null,
+          driverSeatBelt: row[10] || null,
+          tirePressure: row[11] || null,
+          doorLockStatus: row[12] || null,
+          oilPercent: row[13] || null,
+          maf: row[14] || null,
+          map: row[15] || null,
+          evStateOfCharge: row[16] || null,
+          evRange: row[17] || null,
+          evChargingStatus: row[18] || null,
+          evStateOfHealth: row[19] || null,
+        });
+      }
+
+      // Clear existing and insert new
+      await storage.deleteAllVehicleFeatures();
+      const inserted = await storage.createBulkVehicleFeatures(features);
+
+      res.json({ 
+        message: "Vehicle features imported successfully",
+        imported: inserted,
+        total: features.length
+      });
+    } catch (error: any) {
+      console.error("Vehicle features import error:", error);
+      res.status(500).json({ message: "Failed to import vehicle features", error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

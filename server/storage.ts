@@ -1,4 +1,4 @@
-import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, dataOverrides, customCharts, vinCache, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type BillingPieCharts, type PendingApprovalsAnalytics, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiCallAnalytics, type ApiKey, type InsertApiKey, type ApiKeyWithPlaintext, type DataOverride, type InsertDataOverride, type CustomChart, type InsertCustomChart } from "@shared/schema";
+import { vehicles, users, harnesses, aiSearchLogs, pendingVehicles, searchLogs, apiKeys, dataOverrides, customCharts, vinCache, vehicleFeatures, type Vehicle, type InsertVehicle, type SearchVehicle, type User, type InsertUser, type Harness, type InsertHarness, type SearchHarness, type InsertAiSearchLog, type BillingStats, type BillingPieCharts, type PendingApprovalsAnalytics, type PendingVehicle, type InsertPendingVehicle, type InsertSearchLog, type SearchLog, type SearchAnalytics, type ApiCallAnalytics, type ApiKey, type InsertApiKey, type ApiKeyWithPlaintext, type DataOverride, type InsertDataOverride, type CustomChart, type InsertCustomChart, type VehicleFeatures, type InsertVehicleFeatures } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, sql, ilike, desc, asc, gte, lte, ne } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -92,6 +92,13 @@ export interface IStorage {
   // VIN Cache methods
   getVinFromCache(vin: string): Promise<{ make: string; model: string; year: number } | undefined>;
   saveVinToCache(vin: string, make: string, model: string, year: number): Promise<void>;
+
+  // Vehicle Features methods
+  getVehicleFeatures(make: string, model: string, year: number): Promise<VehicleFeatures | undefined>;
+  createVehicleFeatures(features: InsertVehicleFeatures): Promise<VehicleFeatures>;
+  createBulkVehicleFeatures(features: InsertVehicleFeatures[]): Promise<number>;
+  deleteAllVehicleFeatures(): Promise<void>;
+  getVehicleFeaturesCount(): Promise<number>;
 }
 
 // Helper function to map snake_case database columns to camelCase TypeScript properties
@@ -1253,6 +1260,52 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Failed to cache VIN:', error);
     }
+  }
+
+  // Vehicle Features methods
+  async getVehicleFeatures(make: string, model: string, year: number): Promise<VehicleFeatures | undefined> {
+    const normalizedMake = make.toUpperCase().trim();
+    const normalizedModel = model.toUpperCase().trim();
+    
+    const [result] = await db.select().from(vehicleFeatures)
+      .where(and(
+        sql`UPPER(${vehicleFeatures.make}) = ${normalizedMake}`,
+        sql`UPPER(${vehicleFeatures.model}) = ${normalizedModel}`,
+        eq(vehicleFeatures.year, year)
+      ))
+      .limit(1);
+    
+    return result;
+  }
+
+  async createVehicleFeatures(features: InsertVehicleFeatures): Promise<VehicleFeatures> {
+    const [result] = await db.insert(vehicleFeatures).values(features).returning();
+    return result;
+  }
+
+  async createBulkVehicleFeatures(features: InsertVehicleFeatures[]): Promise<number> {
+    if (features.length === 0) return 0;
+    
+    // Insert in batches of 100
+    const batchSize = 100;
+    let inserted = 0;
+    
+    for (let i = 0; i < features.length; i += batchSize) {
+      const batch = features.slice(i, i + batchSize);
+      await db.insert(vehicleFeatures).values(batch);
+      inserted += batch.length;
+    }
+    
+    return inserted;
+  }
+
+  async deleteAllVehicleFeatures(): Promise<void> {
+    await db.delete(vehicleFeatures);
+  }
+
+  async getVehicleFeaturesCount(): Promise<number> {
+    const result = await db.select({ count: sql<number>`COUNT(*)::int` }).from(vehicleFeatures);
+    return result[0]?.count || 0;
   }
 }
 
