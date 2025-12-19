@@ -139,8 +139,67 @@ export default function BulkSearch() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
-      {/* Results area - LEFT side on desktop */}
-      <div className="lg:flex-1 lg:order-1 order-2">
+      {/* Form area - LEFT side on desktop */}
+      <div className="lg:w-80 lg:order-1 order-1 lg:flex-shrink-0">
+        <Card>
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="flex items-center space-x-2 text-lg">
+              <Search className="h-5 w-5" />
+              <span>Bulk Search</span>
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Search multiple vehicles at once
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3 px-4 pb-4">
+            <div>
+              <label className="text-xs font-medium text-foreground mb-1 block">
+                Vehicles (Make Model Year)
+              </label>
+              <Textarea
+                placeholder="Toyota Camry 2019&#10;Honda Accord 2018&#10;Ford F-150 2020"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                rows={6}
+                className="font-mono text-xs"
+                data-testid="textarea-bulk-search"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                One vehicle per line
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2 p-2 bg-muted/50 rounded-lg">
+              <Switch
+                id="one-to-one-mode"
+                checked={oneToOneMode}
+                onCheckedChange={setOneToOneMode}
+                className="scale-90"
+                data-testid="switch-one-to-one"
+              />
+              <Label htmlFor="one-to-one-mode" className="text-xs cursor-pointer">
+                <span className="font-medium">1-to-1 Lookup</span>
+                <span className="text-muted-foreground block text-xs">
+                  {oneToOneMode ? "One result per vehicle" : "All matches"}
+                </span>
+              </Label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button onClick={handleParseInput} disabled={!inputText.trim()} className="flex-1 h-9" data-testid="button-search-bulk">
+                <Search className="mr-2 h-4 w-4" />
+                Search All
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleClear} data-testid="button-clear-bulk">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Results area - RIGHT side on desktop */}
+      <div className="lg:flex-1 lg:order-2 order-2">
         {isSearching ? (
           <Card>
             <CardHeader className="py-3">
@@ -218,65 +277,6 @@ export default function BulkSearch() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Form area - RIGHT side on desktop */}
-      <div className="lg:w-80 lg:order-2 order-1 lg:flex-shrink-0">
-        <Card>
-          <CardHeader className="py-3 px-4">
-            <CardTitle className="flex items-center space-x-2 text-lg">
-              <Search className="h-5 w-5" />
-              <span>Bulk Search</span>
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Search multiple vehicles at once
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-3 px-4 pb-4">
-            <div>
-              <label className="text-xs font-medium text-foreground mb-1 block">
-                Vehicles (Make Model Year)
-              </label>
-              <Textarea
-                placeholder="Toyota Camry 2019&#10;Honda Accord 2018&#10;Ford F-150 2020"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                rows={6}
-                className="font-mono text-xs"
-                data-testid="textarea-bulk-search"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                One vehicle per line
-              </p>
-            </div>
-
-            <div className="flex items-center space-x-2 p-2 bg-muted/50 rounded-lg">
-              <Switch
-                id="one-to-one-mode"
-                checked={oneToOneMode}
-                onCheckedChange={setOneToOneMode}
-                className="scale-90"
-                data-testid="switch-one-to-one"
-              />
-              <Label htmlFor="one-to-one-mode" className="text-xs cursor-pointer">
-                <span className="font-medium">1-to-1 Lookup</span>
-                <span className="text-muted-foreground block text-xs">
-                  {oneToOneMode ? "One result per vehicle" : "All matches"}
-                </span>
-              </Label>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button onClick={handleParseInput} disabled={!inputText.trim()} className="flex-1 h-9" data-testid="button-search-bulk">
-                <Search className="mr-2 h-4 w-4" />
-                Search All
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleClear} data-testid="button-clear-bulk">
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

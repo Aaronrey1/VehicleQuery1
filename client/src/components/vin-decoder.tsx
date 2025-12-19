@@ -246,8 +246,121 @@ export default function VinDecoder() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
-      {/* Results area - LEFT side on desktop */}
-      <div className="lg:flex-1 lg:order-1 order-2">
+      {/* Form area - LEFT side on desktop */}
+      <div className="lg:w-80 lg:order-1 order-1 lg:flex-shrink-0">
+        <Card>
+          <CardHeader className="py-3 px-4">
+            <div className="flex items-center gap-2">
+              <Hash className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">VIN Decoder</CardTitle>
+            </div>
+            <CardDescription className="text-xs">
+              Decode VINs to get vehicle info and AI predictions
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <Tabs defaultValue="single" className="w-full" value={activeTab} onValueChange={(value) => setActiveTab(value as "single" | "bulk")}>
+              <TabsList className="grid w-full grid-cols-2 h-8">
+                <TabsTrigger value="single" className="text-xs" data-testid="tab-single-vin">Single</TabsTrigger>
+                <TabsTrigger value="bulk" className="text-xs" data-testid="tab-bulk-vin">Bulk</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="single" className="space-y-2 mt-3">
+                <div className="space-y-1">
+                  <Label htmlFor="single-vin" className="text-xs">VIN Number</Label>
+                  <Input
+                    id="single-vin"
+                    type="text"
+                    placeholder="1HGBH41JXMN109186"
+                    value={singleVin}
+                    onChange={(e) => setSingleVin(e.target.value.toUpperCase())}
+                    maxLength={17}
+                    className="h-8 text-sm font-mono"
+                    data-testid="input-single-vin"
+                  />
+                  <p className="text-xs text-muted-foreground">17 characters</p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="bulk" className="space-y-2 mt-3">
+                <div className="space-y-1">
+                  <Label htmlFor="bulk-vins" className="text-xs">VINs (one per line)</Label>
+                  <Textarea
+                    id="bulk-vins"
+                    placeholder="1HGBH41JXMN109186&#10;5UXWX7C5XBA123456"
+                    value={bulkVins}
+                    onChange={(e) => setBulkVins(e.target.value.toUpperCase())}
+                    rows={4}
+                    className="font-mono text-xs"
+                    data-testid="input-bulk-vins"
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <div className="border-t pt-3 mt-3 space-y-2">
+              <div className="space-y-1">
+                <Label htmlFor="vin-user-name" className="text-xs">Your Name <span className="text-red-500">*</span></Label>
+                <div className="relative">
+                  <User className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
+                  <Input
+                    id="vin-user-name"
+                    type="text"
+                    placeholder="John Doe"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    className="pl-7 h-8 text-sm"
+                    required
+                    data-testid="input-vin-user-name"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="vin-user-email" className="text-xs text-muted-foreground">Email (optional)</Label>
+                <div className="relative">
+                  <Mail className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
+                  <Input
+                    id="vin-user-email"
+                    type="email"
+                    placeholder="john@example.com"
+                    value={userEmail}
+                    onChange={(e) => setUserEmail(e.target.value)}
+                    className="pl-7 h-8 text-sm"
+                    data-testid="input-vin-user-email"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Button 
+              onClick={activeTab === "single" ? handleSingleDecode : handleBulkDecode}
+              disabled={decodeMutation.isPending || !userName.trim() || (activeTab === "single" ? !singleVin.trim() : !bulkVins.trim())}
+              className="w-full h-9 mt-3"
+              data-testid="button-decode-vin"
+            >
+              {decodeMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Decoding...
+                </>
+              ) : (
+                <>Decode VIN(s)</>
+              )}
+            </Button>
+            
+            {decodeStatus && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground" data-testid="text-decode-status">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                {decodeStatus}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Results area - RIGHT side on desktop */}
+      <div className="lg:flex-1 lg:order-2 order-2">
         {results.length > 0 ? (
           <Card>
           <CardHeader>
@@ -397,119 +510,6 @@ export default function VinDecoder() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Form area - RIGHT side on desktop */}
-      <div className="lg:w-80 lg:order-2 order-1 lg:flex-shrink-0">
-        <Card>
-          <CardHeader className="py-3 px-4">
-            <div className="flex items-center gap-2">
-              <Hash className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">VIN Decoder</CardTitle>
-            </div>
-            <CardDescription className="text-xs">
-              Decode VINs to get vehicle info and AI predictions
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <Tabs defaultValue="single" className="w-full" value={activeTab} onValueChange={(value) => setActiveTab(value as "single" | "bulk")}>
-              <TabsList className="grid w-full grid-cols-2 h-8">
-                <TabsTrigger value="single" className="text-xs" data-testid="tab-single-vin">Single</TabsTrigger>
-                <TabsTrigger value="bulk" className="text-xs" data-testid="tab-bulk-vin">Bulk</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="single" className="space-y-2 mt-3">
-                <div className="space-y-1">
-                  <Label htmlFor="single-vin" className="text-xs">VIN Number</Label>
-                  <Input
-                    id="single-vin"
-                    type="text"
-                    placeholder="1HGBH41JXMN109186"
-                    value={singleVin}
-                    onChange={(e) => setSingleVin(e.target.value.toUpperCase())}
-                    maxLength={17}
-                    className="h-8 text-sm font-mono"
-                    data-testid="input-single-vin"
-                  />
-                  <p className="text-xs text-muted-foreground">17 characters</p>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="bulk" className="space-y-2 mt-3">
-                <div className="space-y-1">
-                  <Label htmlFor="bulk-vins" className="text-xs">VINs (one per line)</Label>
-                  <Textarea
-                    id="bulk-vins"
-                    placeholder="1HGBH41JXMN109186&#10;5UXWX7C5XBA123456"
-                    value={bulkVins}
-                    onChange={(e) => setBulkVins(e.target.value.toUpperCase())}
-                    rows={4}
-                    className="font-mono text-xs"
-                    data-testid="input-bulk-vins"
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-
-            <div className="border-t pt-3 mt-3 space-y-2">
-              <div className="space-y-1">
-                <Label htmlFor="vin-user-name" className="text-xs">Your Name <span className="text-red-500">*</span></Label>
-                <div className="relative">
-                  <User className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
-                  <Input
-                    id="vin-user-name"
-                    type="text"
-                    placeholder="John Doe"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    className="pl-7 h-8 text-sm"
-                    required
-                    data-testid="input-vin-user-name"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="vin-user-email" className="text-xs text-muted-foreground">Email (optional)</Label>
-                <div className="relative">
-                  <Mail className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
-                  <Input
-                    id="vin-user-email"
-                    type="email"
-                    placeholder="john@example.com"
-                    value={userEmail}
-                    onChange={(e) => setUserEmail(e.target.value)}
-                    className="pl-7 h-8 text-sm"
-                    data-testid="input-vin-user-email"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Button 
-              onClick={activeTab === "single" ? handleSingleDecode : handleBulkDecode}
-              disabled={decodeMutation.isPending || !userName.trim() || (activeTab === "single" ? !singleVin.trim() : !bulkVins.trim())}
-              className="w-full h-9 mt-3"
-              data-testid="button-decode-vin"
-            >
-              {decodeMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Decoding...
-                </>
-              ) : (
-                <>Decode VIN(s)</>
-              )}
-            </Button>
-            
-            {decodeStatus && (
-              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground" data-testid="text-decode-status">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                {decodeStatus}
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

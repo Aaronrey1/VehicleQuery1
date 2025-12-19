@@ -1262,20 +1262,127 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Vehicle Features methods
+  // Vehicle Features methods - with fuzzy matching for make/model variations
   async getVehicleFeatures(make: string, model: string, year: number): Promise<VehicleFeatures | undefined> {
     const normalizedMake = make.toUpperCase().trim();
     const normalizedModel = model.toUpperCase().trim();
     
-    const [result] = await db.select().from(vehicleFeatures)
+    // Step 1: Try exact match first (case-insensitive)
+    const [exactResult] = await db.select().from(vehicleFeatures)
       .where(and(
-        sql`UPPER(${vehicleFeatures.make}) = ${normalizedMake}`,
-        sql`UPPER(${vehicleFeatures.model}) = ${normalizedModel}`,
+        ilike(vehicleFeatures.make, normalizedMake),
+        ilike(vehicleFeatures.model, normalizedModel),
         eq(vehicleFeatures.year, year)
       ))
       .limit(1);
     
-    return result;
+    if (exactResult) {
+      return exactResult;
+    }
+
+    // Manufacturer synonym map for fuzzy matching
+    const synonymMap: Record<string, string[]> = {
+      'MERCEDES': ['MERCEDES-BENZ', 'MERCEDES BENZ'],
+      'MERCEDES-BENZ': ['MERCEDES', 'MERCEDES BENZ'],
+      'MERCEDES BENZ': ['MERCEDES', 'MERCEDES-BENZ'],
+      'CHEVY': ['CHEVROLET'],
+      'CHEVROLET': ['CHEVY'],
+      'VW': ['VOLKSWAGEN'],
+      'VOLKSWAGEN': ['VW'],
+      'ALFA': ['ALFA ROMEO'],
+      'ALFA ROMEO': ['ALFA'],
+      'LAND ROVER': ['LANDROVER'],
+      'LANDROVER': ['LAND ROVER'],
+      'RANGE ROVER': ['LAND ROVER'],
+      'RAM': ['DODGE', 'RAM TRUCK'],
+      'GMC': ['GENERAL MOTORS'],
+      'INFINITI': ['NISSAN'],
+      'LEXUS': ['TOYOTA'],
+      'ACURA': ['HONDA'],
+    };
+
+    // Get all make variants to try
+    const makeSynonyms = synonymMap[normalizedMake] || [];
+    const allMakeVariants = [normalizedMake, ...makeSynonyms];
+
+    // Step 2: Try synonyms for make with exact model match
+    for (const makeVariant of allMakeVariants) {
+      const [synonymResult] = await db.select().from(vehicleFeatures)
+        .where(and(
+          ilike(vehicleFeatures.make, makeVariant),
+          ilike(vehicleFeatures.model, normalizedModel),
+          eq(vehicleFeatures.year, year)
+        ))
+        .limit(1);
+      
+      if (synonymResult) {
+        return synonymResult;
+      }
+    }
+
+    // Step 3: Try LIKE matching for model with all make variants
+    for (const makeVariant of allMakeVariants) {
+      const likeResults = await db.select().from(vehicleFeatures)
+        .where(and(
+          ilike(vehicleFeatures.make, makeVariant),
+          ilike(vehicleFeatures.model, `%${normalizedModel}%`),
+          eq(vehicleFeatures.year, year)
+        ))
+        .limit(1);
+      
+      if (likeResults.length > 0) {
+        return likeResults[0];
+      }
+    }
+
+    // Step 4: Token-based matching - get all records for year and check in JS
+    for (const makeVariant of allMakeVariants) {
+      const yearRecords = await db.select().from(vehicleFeatures)
+        .where(and(
+          ilike(vehicleFeatures.make, makeVariant),
+          eq(vehicleFeatures.year, year)
+        ));
+      
+      const searchTokens = normalizedModel.split(/[\s-]+/).filter(t => t.length > 0);
+      
+      for (const record of yearRecords) {
+        const dbModel = record.model?.toUpperCase() || '';
+        const dbTokens = dbModel.split(/[\s-]+/).filter(t => t.length > 0);
+        
+        // Check if all search tokens are found in the db model
+        const allTokensMatch = searchTokens.every(searchToken => 
+          dbTokens.some(dbToken => dbToken.includes(searchToken) || searchToken.includes(dbToken))
+        );
+        
+        if (allTokensMatch) {
+          return record;
+        }
+      }
+    }
+
+    // Step 5: Try without the make name in model (e.g., "MERCEDES SPRINTER" -> "SPRINTER")
+    const modelWithoutMake = normalizedModel
+      .replace(normalizedMake, '')
+      .replace(/^[\s-]+|[\s-]+$/g, '')
+      .trim();
+    
+    if (modelWithoutMake && modelWithoutMake !== normalizedModel) {
+      for (const makeVariant of allMakeVariants) {
+        const [cleanedResult] = await db.select().from(vehicleFeatures)
+          .where(and(
+            ilike(vehicleFeatures.make, makeVariant),
+            ilike(vehicleFeatures.model, `%${modelWithoutMake}%`),
+            eq(vehicleFeatures.year, year)
+          ))
+          .limit(1);
+        
+        if (cleanedResult) {
+          return cleanedResult;
+        }
+      }
+    }
+
+    return undefined;
   }
 
   async createVehicleFeatures(features: InsertVehicleFeatures): Promise<VehicleFeatures> {
