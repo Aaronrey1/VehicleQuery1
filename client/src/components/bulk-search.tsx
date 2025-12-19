@@ -138,140 +138,146 @@ export default function BulkSearch() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Search className="h-5 w-5" />
-            <span>Bulk Vehicle Search</span>
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Search multiple vehicles at once by entering Make, Model, and Year (one per line)
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-foreground mb-2 block">
-              Enter Vehicles (Format: Make Model Year)
-            </label>
-            <Textarea
-              placeholder="Example:&#10;Toyota Camry 2019&#10;Honda Accord 2018&#10;Ford F-150 2020"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              rows={8}
-              className="font-mono text-sm"
-              data-testid="textarea-bulk-search"
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              Supported formats: comma-separated, space-separated, or tab-separated
-            </p>
-          </div>
-
-          <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg">
-            <Switch
-              id="one-to-one-mode"
-              checked={oneToOneMode}
-              onCheckedChange={setOneToOneMode}
-              data-testid="switch-one-to-one"
-            />
-            <Label htmlFor="one-to-one-mode" className="text-sm cursor-pointer">
-              <span className="font-medium">1-to-1 Lookup</span>
-              <span className="text-muted-foreground block text-xs">
-                {oneToOneMode 
-                  ? "Returns one result per vehicle (recommended)" 
-                  : "Returns all matching results"}
-              </span>
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-3">
-            <Button onClick={handleParseInput} disabled={!inputText.trim()} data-testid="button-search-bulk">
-              <Search className="mr-2 h-4 w-4" />
-              Search All
-            </Button>
-            <Button variant="ghost" onClick={handleClear} data-testid="button-clear-bulk">
-              <X className="mr-2 h-4 w-4" />
-              Clear
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {isSearching && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">
-                Search Results
-                {results && <span className="ml-2 text-muted-foreground">({results.length} found)</span>}
-              </CardTitle>
-              {results && results.length > 0 && (
-                <Button variant="outline" size="sm" onClick={handleExport} data-testid="button-export-bulk">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export CSV
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {bulkSearchMutation.isPending ? (
-              <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="mt-4 text-muted-foreground">Searching vehicles...</p>
-              </div>
-            ) : results && results.length > 0 ? (
-              <div className="space-y-4">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Make</TableHead>
-                        <TableHead>Model</TableHead>
-                        <TableHead>Year</TableHead>
-                        <TableHead>Device Type</TableHead>
-                        <TableHead>Port Type</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {results.map((vehicle, index) => (
-                        <TableRow key={index} data-testid={`row-bulk-result-${index}`}>
-                          <TableCell className="font-medium" data-testid={`cell-make-${index}`}>{formatForDisplay(vehicle.make)}</TableCell>
-                          <TableCell data-testid={`cell-model-${index}`}>{formatForDisplay(vehicle.model)}</TableCell>
-                          <TableCell data-testid={`cell-year-${index}`}>{formatYearDisplay(vehicle)}</TableCell>
-                          <TableCell>
-                            <Badge className={getDeviceTypeColor(vehicle.deviceType)} data-testid={`cell-device-${index}`}>
-                              {formatForDisplay(vehicle.deviceType)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell data-testid={`cell-port-${index}`}>{formatForDisplay(vehicle.portType)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-                
-                {/* Show device capabilities for single result */}
-                {results.length === 1 && (
-                  <VehicleFeaturesDisplay 
-                    make={results[0].make} 
-                    model={results[0].model} 
-                    year={typeof results[0].year === 'number' ? results[0].year : parseInt(String(results[0].year))} 
-                  />
+    <div className="flex flex-col lg:flex-row gap-6">
+      {/* Results area - LEFT side on desktop */}
+      <div className="lg:flex-1 lg:order-1 order-2">
+        {isSearching ? (
+          <Card>
+            <CardHeader className="py-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">
+                  Search Results
+                  {results && <span className="ml-2 text-muted-foreground text-sm">({results.length} found)</span>}
+                </CardTitle>
+                {results && results.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={handleExport} data-testid="button-export-bulk">
+                    <Download className="mr-2 h-3 w-3" />
+                    Export
+                  </Button>
                 )}
               </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">
-                  No vehicles found matching your search criteria.
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  No results found for the entered vehicles
-                </p>
-              </div>
-            )}
+            </CardHeader>
+            <CardContent>
+              {bulkSearchMutation.isPending ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="mt-4 text-muted-foreground">Searching vehicles...</p>
+                </div>
+              ) : results && results.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs">Make</TableHead>
+                          <TableHead className="text-xs">Model</TableHead>
+                          <TableHead className="text-xs">Year</TableHead>
+                          <TableHead className="text-xs">Device Type</TableHead>
+                          <TableHead className="text-xs">Port Type</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {results.map((vehicle, index) => (
+                          <TableRow key={index} data-testid={`row-bulk-result-${index}`}>
+                            <TableCell className="font-medium text-sm py-2" data-testid={`cell-make-${index}`}>{formatForDisplay(vehicle.make)}</TableCell>
+                            <TableCell className="text-sm py-2" data-testid={`cell-model-${index}`}>{formatForDisplay(vehicle.model)}</TableCell>
+                            <TableCell className="text-sm py-2" data-testid={`cell-year-${index}`}>{formatYearDisplay(vehicle)}</TableCell>
+                            <TableCell className="py-2">
+                              <Badge className={`${getDeviceTypeColor(vehicle.deviceType)} text-xs`} data-testid={`cell-device-${index}`}>
+                                {formatForDisplay(vehicle.deviceType)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm py-2" data-testid={`cell-port-${index}`}>{formatForDisplay(vehicle.portType)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  {results.length === 1 && (
+                    <VehicleFeaturesDisplay 
+                      make={results[0].make} 
+                      model={results[0].model} 
+                      year={typeof results[0].year === 'number' ? results[0].year : parseInt(String(results[0].year))} 
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No vehicles found matching your search criteria.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg bg-muted/20">
+            <div className="text-center text-muted-foreground">
+              <Upload className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-lg font-medium">Search Results</p>
+              <p className="text-sm">Enter vehicles and click "Search All"</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Form area - RIGHT side on desktop */}
+      <div className="lg:w-80 lg:order-2 order-1 lg:flex-shrink-0">
+        <Card>
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="flex items-center space-x-2 text-lg">
+              <Search className="h-5 w-5" />
+              <span>Bulk Search</span>
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Search multiple vehicles at once
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3 px-4 pb-4">
+            <div>
+              <label className="text-xs font-medium text-foreground mb-1 block">
+                Vehicles (Make Model Year)
+              </label>
+              <Textarea
+                placeholder="Toyota Camry 2019&#10;Honda Accord 2018&#10;Ford F-150 2020"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                rows={6}
+                className="font-mono text-xs"
+                data-testid="textarea-bulk-search"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                One vehicle per line
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2 p-2 bg-muted/50 rounded-lg">
+              <Switch
+                id="one-to-one-mode"
+                checked={oneToOneMode}
+                onCheckedChange={setOneToOneMode}
+                className="scale-90"
+                data-testid="switch-one-to-one"
+              />
+              <Label htmlFor="one-to-one-mode" className="text-xs cursor-pointer">
+                <span className="font-medium">1-to-1 Lookup</span>
+                <span className="text-muted-foreground block text-xs">
+                  {oneToOneMode ? "One result per vehicle" : "All matches"}
+                </span>
+              </Label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button onClick={handleParseInput} disabled={!inputText.trim()} className="flex-1 h-9" data-testid="button-search-bulk">
+                <Search className="mr-2 h-4 w-4" />
+                Search All
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleClear} data-testid="button-clear-bulk">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </CardContent>
         </Card>
-      )}
+      </div>
     </div>
   );
 }

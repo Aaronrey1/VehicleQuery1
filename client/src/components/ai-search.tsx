@@ -170,179 +170,9 @@ export default function AISearch() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" />
-            <CardTitle className="text-2xl">AI-Powered Smart Search</CardTitle>
-          </div>
-          <CardDescription>
-            Get intelligent predictions for vehicles not in the database, based on pattern analysis of 31,000+ existing records
-          </CardDescription>
-          
-          <Alert className="mt-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="text-sm">
-              <strong>How Prediction Confidence Works:</strong>
-              <ul className="mt-2 space-y-1 text-xs">
-                <li>• <strong>100% (Exact Match):</strong> Direct database match - completely reliable</li>
-                <li>• <strong>80-95% (High):</strong> Database pattern matching within ±5 years - highly reliable</li>
-                <li>• <strong>60-100% (High):</strong> AI-powered prediction via Gemini - very accurate, often 90%+ confidence</li>
-              </ul>
-            </AlertDescription>
-          </Alert>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="ai-make">Make</Label>
-                <div className="relative">
-                  <Input
-                    id="ai-make"
-                    type="text"
-                    placeholder="e.g., Tesla, ISUZU, BMW"
-                    value={make}
-                    onChange={(e) => { 
-                      setMake(e.target.value); 
-                      setPrediction(null);
-                      setShowMakeSuggestions(true);
-                    }}
-                    onFocus={() => setShowMakeSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowMakeSuggestions(false), 200)}
-                    data-testid="input-ai-make"
-                  />
-                  {showMakeSuggestions && makeSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
-                      {makeSuggestions.map((suggestion: string, idx: number) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm cursor-pointer"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            setMake(suggestion);
-                            setModel("");
-                            setShowMakeSuggestions(false);
-                            setPrediction(null);
-                          }}
-                          data-testid={`suggestion-make-${idx}`}
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="ai-model">Model</Label>
-                <div className="relative">
-                  <Input
-                    id="ai-model"
-                    type="text"
-                    placeholder="e.g., NPR, NPR Dump Truck, Model 3"
-                    value={model}
-                    onChange={(e) => { 
-                      setModel(e.target.value); 
-                      setPrediction(null);
-                      setShowModelSuggestions(true);
-                    }}
-                    onFocus={() => setShowModelSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowModelSuggestions(false), 200)}
-                    disabled={!make}
-                    data-testid="input-ai-model"
-                  />
-                  {showModelSuggestions && modelSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
-                      {modelSuggestions.map((suggestion: string, idx: number) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm cursor-pointer"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            setModel(suggestion);
-                            setShowModelSuggestions(false);
-                            setPrediction(null);
-                          }}
-                          data-testid={`suggestion-model-${idx}`}
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="ai-year">Year</Label>
-                <Input
-                  id="ai-year"
-                  type="number"
-                  placeholder="2024"
-                  value={year}
-                  onChange={(e) => { setYear(e.target.value); setPrediction(null); }}
-                  data-testid="input-ai-year"
-                />
-              </div>
-            </div>
-
-            <div className="border-t pt-4 pb-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="ai-user-name" className="text-sm">Your Name <span className="text-red-500">*</span></Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="ai-user-name"
-                      type="text"
-                      placeholder="John Doe"
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
-                      className="pl-9"
-                      required
-                      data-testid="input-ai-user-name"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="ai-user-email" className="text-sm text-muted-foreground">Your Email (optional)</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="ai-user-email"
-                      type="email"
-                      placeholder="john@example.com"
-                      value={userEmail}
-                      onChange={(e) => setUserEmail(e.target.value)}
-                      className="pl-9"
-                      data-testid="input-ai-user-email"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Button 
-              onClick={handleSearch} 
-              disabled={!make || !model || !year || !userName.trim() || searchMutation.isPending}
-              className="w-full"
-              data-testid="button-ai-search"
-            >
-              <Search className="mr-2 h-4 w-4" />
-              {searchMutation.isPending ? "Analyzing..." : "Smart Search"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Results area - shows loading or results */}
-      <div ref={resultsRef}>
+    <div className="flex flex-col lg:flex-row gap-6">
+      {/* Results area - LEFT side on desktop */}
+      <div ref={resultsRef} className="lg:flex-1 lg:order-1 order-2">
         {isSearching && (
           <Card>
             <CardContent className="py-12">
@@ -621,35 +451,214 @@ export default function AISearch() {
             year={parseInt(year)} 
           />
         )}
+
+        {/* How it works card - shown below results */}
+        {(prediction || isSearching) && (
+          <Card className="bg-muted/30 mt-4">
+            <CardHeader className="py-3">
+              <CardTitle className="text-base">How Two-Step Prediction Works</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-xs text-muted-foreground py-2">
+              <div className="flex items-start gap-2">
+                <Badge className="text-xs h-5 w-5 flex items-center justify-center p-0">1</Badge>
+                <p>Search for any vehicle - even if it's not in the database</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <Badge className="text-xs h-5 w-5 flex items-center justify-center p-0">2</Badge>
+                <p>AI finds similar vehicles (same make/model from nearby years)</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <Badge className="text-xs h-5 w-5 flex items-center justify-center p-0">3</Badge>
+                <p><strong>Step 1:</strong> Predicts Port Type from all similar vehicles</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <Badge className="text-xs h-5 w-5 flex items-center justify-center p-0">4</Badge>
+                <p><strong>Step 2:</strong> Filters to vehicles with that port, then predicts Device Type</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Empty state when no search yet */}
+        {!prediction && !isSearching && (
+          <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg bg-muted/20">
+            <div className="text-center text-muted-foreground">
+              <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-lg font-medium">Search Results</p>
+              <p className="text-sm">Enter vehicle details and click "Smart Search"</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      <Card className="bg-muted/30">
-        <CardHeader>
-          <CardTitle className="text-lg">How Two-Step Prediction Works</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <div className="flex items-start gap-3">
-            <Badge className="mt-0.5">1</Badge>
-            <p>Search for any vehicle - even if it's not in the database</p>
-          </div>
-          <div className="flex items-start gap-3">
-            <Badge className="mt-0.5">2</Badge>
-            <p>AI finds similar vehicles (same make/model from nearby years)</p>
-          </div>
-          <div className="flex items-start gap-3">
-            <Badge className="mt-0.5">3</Badge>
-            <p><strong>Step 1:</strong> Predicts Port Type from all similar vehicles</p>
-          </div>
-          <div className="flex items-start gap-3">
-            <Badge className="mt-0.5">4</Badge>
-            <p><strong>Step 2:</strong> Filters to vehicles with that port, then predicts Device Type</p>
-          </div>
-          <div className="flex items-start gap-3">
-            <Badge className="mt-0.5">5</Badge>
-            <p>Shows separate confidence scores for each prediction step</p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Form area - RIGHT side on desktop */}
+      <div className="lg:w-80 lg:order-2 order-1 lg:flex-shrink-0">
+        <Card>
+          <CardHeader className="py-3 px-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">AI Smart Search</CardTitle>
+            </div>
+            <CardDescription className="text-xs">
+              Get intelligent predictions for any vehicle
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="ai-make" className="text-xs">Make</Label>
+                  <div className="relative">
+                    <Input
+                      id="ai-make"
+                      type="text"
+                      placeholder="Tesla, BMW..."
+                      value={make}
+                      onChange={(e) => { 
+                        setMake(e.target.value); 
+                        setPrediction(null);
+                        setShowMakeSuggestions(true);
+                      }}
+                      onFocus={() => setShowMakeSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowMakeSuggestions(false), 200)}
+                      className="h-8 text-sm"
+                      data-testid="input-ai-make"
+                    />
+                    {showMakeSuggestions && makeSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-50 max-h-32 overflow-y-auto">
+                        {makeSuggestions.map((suggestion: string, idx: number) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            className="w-full text-left px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs cursor-pointer"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setMake(suggestion);
+                              setModel("");
+                              setShowMakeSuggestions(false);
+                              setPrediction(null);
+                            }}
+                            data-testid={`suggestion-make-${idx}`}
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="ai-year" className="text-xs">Year</Label>
+                  <Input
+                    id="ai-year"
+                    type="number"
+                    placeholder="2024"
+                    value={year}
+                    onChange={(e) => { setYear(e.target.value); setPrediction(null); }}
+                    className="h-8 text-sm"
+                    data-testid="input-ai-year"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="ai-model" className="text-xs">Model</Label>
+                <div className="relative">
+                  <Input
+                    id="ai-model"
+                    type="text"
+                    placeholder="e.g., Model 3, NPR"
+                    value={model}
+                    onChange={(e) => { 
+                      setModel(e.target.value); 
+                      setPrediction(null);
+                      setShowModelSuggestions(true);
+                    }}
+                    onFocus={() => setShowModelSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowModelSuggestions(false), 200)}
+                    disabled={!make}
+                    className="h-8 text-sm"
+                    data-testid="input-ai-model"
+                  />
+                  {showModelSuggestions && modelSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-50 max-h-32 overflow-y-auto">
+                      {modelSuggestions.map((suggestion: string, idx: number) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          className="w-full text-left px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs cursor-pointer"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setModel(suggestion);
+                            setShowModelSuggestions(false);
+                            setPrediction(null);
+                          }}
+                          data-testid={`suggestion-model-${idx}`}
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t pt-3 space-y-2">
+                <div className="space-y-1">
+                  <Label htmlFor="ai-user-name" className="text-xs">Your Name <span className="text-red-500">*</span></Label>
+                  <div className="relative">
+                    <User className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
+                    <Input
+                      id="ai-user-name"
+                      type="text"
+                      placeholder="John Doe"
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      className="pl-7 h-8 text-sm"
+                      required
+                      data-testid="input-ai-user-name"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="ai-user-email" className="text-xs text-muted-foreground">Email (optional)</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
+                    <Input
+                      id="ai-user-email"
+                      type="email"
+                      placeholder="john@example.com"
+                      value={userEmail}
+                      onChange={(e) => setUserEmail(e.target.value)}
+                      className="pl-7 h-8 text-sm"
+                      data-testid="input-ai-user-email"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Button 
+                onClick={handleSearch} 
+                disabled={!make || !model || !year || !userName.trim() || searchMutation.isPending}
+                className="w-full h-9"
+                data-testid="button-ai-search"
+              >
+                <Search className="mr-2 h-4 w-4" />
+                {searchMutation.isPending ? "Analyzing..." : "Smart Search"}
+              </Button>
+
+              <Alert className="py-2 px-3">
+                <AlertCircle className="h-3 w-3" />
+                <AlertDescription className="text-xs ml-2">
+                  <strong>Confidence:</strong> 100% (Exact) • 80-95% (DB ±5yr) • 60-100% (AI)
+                </AlertDescription>
+              </Alert>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
