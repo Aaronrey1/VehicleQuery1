@@ -3,7 +3,12 @@
 ## Overview
 VehicleDB Pro is a comprehensive, full-stack vehicle database management system for searching, managing, and analyzing vehicle compatibility data. It provides intelligent search capabilities, including a multi-tiered AI Search feature, alongside robust data management tools. The system supports data import, analytics, a specialized Geometris system for harness type searches, and a powerful Site Configuration system allowing admins to manually override displayed metrics and create custom charts. The project aims to streamline vehicle data workflows and enhance data accuracy through an admin approval process for AI predictions, ultimately offering a robust solution for vehicle data management with significant market potential.
 
-## Recent Changes (November 21, 2025)
+## Recent Changes (December 19, 2025)
+- **Device Capabilities Feature:** Added comprehensive device capability display showing what data points each device can provide for specific vehicles. Features displayed include: VIN Support, RPM, Speed, MIL State, Ignition Status, Precise Fuel, True Odometer, Driver Seat Belt, Tire Pressure, Door Lock Status, Oil %, MAF, MAP, and EV metrics (State of Charge, Range, Charging Status, State of Health).
+- **Vehicle Features Integration:** Device capabilities are now shown in AI Search, VIN Decoder (single VIN), and Bulk Search (single result) after search results.
+- **Vehicle Features Data:** Imported 3934 vehicle feature records from Danlaw Vehicle Compatibility database.
+
+## Previous Changes (November 21, 2025)
 - **Site Configuration Visibility:** Site Config tab is now hidden by default and can be toggled via keyboard shortcut (Ctrl+Shift+C) or eye icon button in admin navigation. Preference persists in localStorage.
 - **Billing Updates:** Removed "Exact Match" tier from Search Tier Breakdown display. Display now focuses on Database Searches (pattern matching), Google API, and Gemini AI tiers.
 - **Pending Approvals Cleanup:** Removed analytics pie charts and source editing functionality. Pending Approvals now focuses solely on approve/reject/delete workflow.
@@ -44,6 +49,7 @@ PostgreSQL is used as the database, accessed via the Neon serverless driver. Dri
 **Database Schema includes:**
 - `vehicles`: Vehicle data (make, model, year, deviceType, portType).
 - `harnesses`: Harness data with year ranges.
+- `vehicle_features`: Device capability data by make/model/year (3934 records). Tracks which data points each device can provide: VIN support, RPM, speed, MIL state, ignition status, precise fuel, true odometer, seat belt, tire pressure, door lock, oil %, MAF, MAP, and EV metrics.
 - `ai_search_logs`: Records AI Search predictions, source, confidence, cost.
 - `search_logs`: Tracks special search operations (AI, Bulk, VIN, Geometris) with geolocation, query details, results, API key, and endpoint. Includes `exactMatch` boolean.
 - `pending_vehicles`: Stores AI predictions awaiting admin approval, with user contact info for notifications.
