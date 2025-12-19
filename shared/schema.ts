@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, index, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, index, timestamp, boolean, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -389,3 +389,35 @@ export const insertVinCacheSchema = createInsertSchema(vinCache).omit({
 
 export type InsertVinCache = z.infer<typeof insertVinCacheSchema>;
 export type VinCache = typeof vinCache.$inferSelect;
+
+// Vehicle Features table - stores device capability/feature support per vehicle
+export const vehicleFeatures = pgTable("vehicle_features", {
+  id: serial("id").primaryKey(),
+  year: integer("year").notNull(),
+  make: text("make").notNull(),
+  model: text("model").notNull(),
+  vinSupport: text("vin_support"),
+  rpm: text("rpm"),
+  speed: text("speed"),
+  milState: text("mil_state"),
+  ignitionStatus: text("ignition_status"),
+  preciseFuel: text("precise_fuel"),
+  trueOdometer: text("true_odometer"),
+  driverSeatBelt: text("driver_seat_belt"),
+  tirePressure: text("tire_pressure"),
+  doorLockStatus: text("door_lock_status"),
+  oilPercent: text("oil_percent"),
+  maf: text("maf"),
+  map: text("map"),
+  evStateOfCharge: text("ev_state_of_charge"),
+  evRange: text("ev_range"),
+  evChargingStatus: text("ev_charging_status"),
+  evStateOfHealth: text("ev_state_of_health"),
+});
+
+export const insertVehicleFeaturesSchema = createInsertSchema(vehicleFeatures).omit({
+  id: true,
+});
+
+export type InsertVehicleFeatures = z.infer<typeof insertVehicleFeaturesSchema>;
+export type VehicleFeatures = typeof vehicleFeatures.$inferSelect;
