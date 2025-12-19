@@ -7,6 +7,7 @@ import multer from "multer";
 import csv from "csv-parser";
 import { Readable } from "stream";
 import axios from "axios";
+import * as XLSX from "xlsx";
 import { predictVehicleSpecs, checkIfHeavyVehicle as geminiCheckHeavyVehicle, predictVehicleSpecsDebug } from "./gemini";
 import { getVehicleImageAsync } from "./images";
 import { sendApprovalEmail } from "./email";
@@ -2946,7 +2947,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const XLSX = require('xlsx');
       const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
