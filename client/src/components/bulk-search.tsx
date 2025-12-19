@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Vehicle, SearchResults } from "@shared/schema";
 import { formatForDisplay, formatYearDisplay } from "@/lib/utils";
+import VehicleFeaturesDisplay from "./vehicle-features-display";
 
 export default function BulkSearch() {
   const [inputText, setInputText] = useState("");
@@ -219,33 +220,44 @@ export default function BulkSearch() {
                 <p className="mt-4 text-muted-foreground">Searching vehicles...</p>
               </div>
             ) : results && results.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Make</TableHead>
-                      <TableHead>Model</TableHead>
-                      <TableHead>Year</TableHead>
-                      <TableHead>Device Type</TableHead>
-                      <TableHead>Port Type</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.map((vehicle, index) => (
-                      <TableRow key={index} data-testid={`row-bulk-result-${index}`}>
-                        <TableCell className="font-medium" data-testid={`cell-make-${index}`}>{formatForDisplay(vehicle.make)}</TableCell>
-                        <TableCell data-testid={`cell-model-${index}`}>{formatForDisplay(vehicle.model)}</TableCell>
-                        <TableCell data-testid={`cell-year-${index}`}>{formatYearDisplay(vehicle)}</TableCell>
-                        <TableCell>
-                          <Badge className={getDeviceTypeColor(vehicle.deviceType)} data-testid={`cell-device-${index}`}>
-                            {formatForDisplay(vehicle.deviceType)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell data-testid={`cell-port-${index}`}>{formatForDisplay(vehicle.portType)}</TableCell>
+              <div className="space-y-4">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Make</TableHead>
+                        <TableHead>Model</TableHead>
+                        <TableHead>Year</TableHead>
+                        <TableHead>Device Type</TableHead>
+                        <TableHead>Port Type</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {results.map((vehicle, index) => (
+                        <TableRow key={index} data-testid={`row-bulk-result-${index}`}>
+                          <TableCell className="font-medium" data-testid={`cell-make-${index}`}>{formatForDisplay(vehicle.make)}</TableCell>
+                          <TableCell data-testid={`cell-model-${index}`}>{formatForDisplay(vehicle.model)}</TableCell>
+                          <TableCell data-testid={`cell-year-${index}`}>{formatYearDisplay(vehicle)}</TableCell>
+                          <TableCell>
+                            <Badge className={getDeviceTypeColor(vehicle.deviceType)} data-testid={`cell-device-${index}`}>
+                              {formatForDisplay(vehicle.deviceType)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell data-testid={`cell-port-${index}`}>{formatForDisplay(vehicle.portType)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                
+                {/* Show device capabilities for single result */}
+                {results.length === 1 && (
+                  <VehicleFeaturesDisplay 
+                    make={results[0].make} 
+                    model={results[0].model} 
+                    year={typeof results[0].year === 'number' ? results[0].year : parseInt(String(results[0].year))} 
+                  />
+                )}
               </div>
             ) : (
               <div className="text-center py-12">

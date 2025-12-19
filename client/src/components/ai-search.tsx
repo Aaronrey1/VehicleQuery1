@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Sparkles, TrendingUp, Search, AlertCircle, CheckCircle2, XCircle, Mail, User, ChevronDown } from "lucide-react";
 import { formatForDisplay, formatYearDisplay } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
+import VehicleFeaturesDisplay from "./vehicle-features-display";
 
 interface SearchPathStep {
   source: string;
@@ -611,6 +612,14 @@ export default function AISearch() {
             )}
           </CardContent>
         </Card>
+        )}
+
+        {!isSearching && prediction && year && make && model && (
+          <VehicleFeaturesDisplay 
+            make={make} 
+            model={model} 
+            year={parseInt(year)} 
+          />
         )}
       </div>
 

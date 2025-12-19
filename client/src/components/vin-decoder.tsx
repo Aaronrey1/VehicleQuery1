@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, Loader2, CheckCircle, XCircle, Hash, Mail, User, Sparkles } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
+import VehicleFeaturesDisplay from "./vehicle-features-display";
 
 interface VinResult {
   vin: string;
@@ -497,6 +498,15 @@ export default function VinDecoder() {
                   </div>
                 </AlertDescription>
               </Alert>
+            )}
+            
+            {/* Show device capabilities for single VIN decode */}
+            {results.length === 1 && results[0].success && results[0].make && results[0].model && results[0].year && (
+              <VehicleFeaturesDisplay 
+                make={results[0].make} 
+                model={results[0].model} 
+                year={results[0].year} 
+              />
             )}
           </CardContent>
         </Card>
