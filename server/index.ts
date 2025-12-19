@@ -5,6 +5,7 @@ import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedHarnesses } from "./seed-harnesses";
+import { ensureVehicleFeaturesTable } from "./db";
 
 const app = express();
 
@@ -104,6 +105,9 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
+  // Ensure vehicle_features table exists (for production sync)
+  await ensureVehicleFeaturesTable();
+  
   // Seed harness data if database is empty
   await seedHarnesses();
 
