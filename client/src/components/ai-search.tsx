@@ -403,46 +403,56 @@ export default function AISearch() {
             )}
             
             {prediction.found && prediction.exactMatch ? (
-              <Alert className="border-green-500 bg-green-50 dark:bg-green-950 py-2">
-                <TrendingUp className="h-3 w-3 text-green-600" />
-                <AlertDescription className="text-green-800 dark:text-green-200">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-sm">Vehicle found in database!</p>
+              <>
+                <Alert className="border-green-500 bg-green-50 dark:bg-green-950 py-2">
+                  <TrendingUp className="h-3 w-3 text-green-600" />
+                  <AlertDescription className="text-green-800 dark:text-green-200">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-sm">Vehicle found in database!</p>
+                        {prediction.isAllModelsFallback && (
+                          <Badge variant="outline" className="text-amber-700 border-amber-500 bg-amber-100 dark:bg-amber-950 text-xs">
+                            ALL MODELS
+                          </Badge>
+                        )}
+                      </div>
                       {prediction.isAllModelsFallback && (
-                        <Badge variant="outline" className="text-amber-700 border-amber-500 bg-amber-100 dark:bg-amber-950 text-xs">
-                          ALL MODELS
-                        </Badge>
+                        <p className="text-xs text-amber-800 dark:text-amber-300">
+                          Showing data for "{formatForDisplay(prediction.exactMatch.make)} ALL MODELS".
+                        </p>
                       )}
-                    </div>
-                    {prediction.isAllModelsFallback && (
-                      <p className="text-xs text-amber-800 dark:text-amber-300">
-                        Showing data for "{formatForDisplay(prediction.exactMatch.make)} ALL MODELS".
-                      </p>
-                    )}
-                    <div className="flex gap-3 mt-2">
-                      {prediction.exactMatch.vehicleImageUrl && (
-                        <img 
-                          src={prediction.exactMatch.vehicleImageUrl} 
-                          alt="Vehicle"
-                          className="w-24 h-20 object-cover rounded border shadow-sm"
-                          data-testid="img-exact-match-vehicle"
-                        />
-                      )}
-                      <div className="flex gap-4">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Device Type</p>
-                          <Badge variant="secondary" className="text-xs">{formatForDisplay(prediction.exactMatch.deviceType)}</Badge>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Port Type</p>
-                          <Badge variant="secondary" className="text-xs">{formatForDisplay(prediction.exactMatch.portType)}</Badge>
+                      <div className="flex gap-3 mt-2">
+                        {prediction.exactMatch.vehicleImageUrl && (
+                          <img 
+                            src={prediction.exactMatch.vehicleImageUrl} 
+                            alt="Vehicle"
+                            className="w-24 h-20 object-cover rounded border shadow-sm"
+                            data-testid="img-exact-match-vehicle"
+                          />
+                        )}
+                        <div className="flex gap-4">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Device Type</p>
+                            <Badge variant="secondary" className="text-xs">{formatForDisplay(prediction.exactMatch.deviceType)}</Badge>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Port Type</p>
+                            <Badge variant="secondary" className="text-xs">{formatForDisplay(prediction.exactMatch.portType)}</Badge>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </AlertDescription>
-              </Alert>
+                  </AlertDescription>
+                </Alert>
+                {/* Device Capabilities for exact match */}
+                {year && make && model && (
+                  <VehicleFeaturesDisplay 
+                    make={make} 
+                    model={model} 
+                    year={parseInt(year)} 
+                  />
+                )}
+              </>
             ) : prediction.predictions ? (
               <div className="space-y-2">
                 <Alert className={
@@ -524,7 +534,19 @@ export default function AISearch() {
                       Exact match found. Will be added once admin approves.
                     </AlertDescription>
                   </Alert>
-                ) : prediction.predictions.similarVehicles && prediction.predictions.similarVehicles.length > 0 ? (
+                ) : null}
+
+                {/* Device Capabilities - shown before similar vehicles */}
+                {year && make && model && (
+                  <VehicleFeaturesDisplay 
+                    make={make} 
+                    model={model} 
+                    year={parseInt(year)} 
+                  />
+                )}
+
+                {/* Similar Vehicles - shown after device capabilities */}
+                {prediction.predictions.similarVehicles && prediction.predictions.similarVehicles.length > 0 && (
                   <div className="border rounded p-2 bg-muted/30">
                     <p className="text-xs font-medium mb-1">Similar Vehicles ({prediction.predictions.similarVehicles.length})</p>
                     <div className="space-y-1 max-h-32 overflow-y-auto">
@@ -546,7 +568,7 @@ export default function AISearch() {
                       )}
                     </div>
                   </div>
-                ) : null}
+                )}
                 
                 {prediction.pendingApproval && (
                   <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950 py-1">
@@ -568,15 +590,6 @@ export default function AISearch() {
           </CardContent>
         </Card>
         )}
-
-        {!isSearching && prediction && year && make && model && (
-          <VehicleFeaturesDisplay 
-            make={make} 
-            model={model} 
-            year={parseInt(year)} 
-          />
-        )}
-
 
         {/* Empty state when no search yet */}
         {!prediction && !isSearching && (
