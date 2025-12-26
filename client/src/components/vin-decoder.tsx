@@ -156,7 +156,7 @@ export default function VinDecoder() {
           const prediction = await response.json();
           console.log('AI prediction response:', prediction);
           
-          if (prediction.found && prediction.predictions) {
+          if (prediction.predictions) {
             const isExactMatch = prediction.exactMatch === true || prediction.predictions.source === 'database_exact';
             allResults.push({
               vin,
