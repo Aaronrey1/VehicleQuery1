@@ -123,7 +123,7 @@ export default function VehicleFeaturesDisplay({ make, model, year }: VehicleFea
         <CardContent className="py-2">
           <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300 text-xs">
             <AlertTriangle className="w-4 h-4" />
-            <span>Device capability data not available</span>
+            <span>Feature capability data not available</span>
           </div>
         </CardContent>
       </Card>
