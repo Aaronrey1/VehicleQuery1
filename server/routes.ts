@@ -1224,6 +1224,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // EXPLICIT "ALL MODELS" FALLBACK: Check if make has an ALL MODELS entry for this year
+      const allModelsFallback = await storage.searchVehicles({
+        make: normalizedMake,
+        model: 'ALL MODELS',
+        year: yearNum,
+        limit: 1,
+        offset: 0,
+        sortBy: "year",
+        sortOrder: "asc"
+      });
+
+      if (allModelsFallback.vehicles.length > 0) {
+        const matchedVehicle = allModelsFallback.vehicles[0];
+        
+        // Get vehicle image from Google Image Search (use original model name for image)
+        const vehicleImageUrl = await getVehicleImageAsync(yearNum, normalizedMake || String(make), normalizedModel || String(model));
+        
+        // Log ALL MODELS fallback search
+        await storage.logSearch({
+          searchType: 'ai',
+          make: make as string,
+          model: model as string,
+          year: yearNum,
+          country: getClientCountry(req),
+          ipAddress: getClientIp(req),
+          resultsCount: 1,
+          queryDetails: JSON.stringify({ fallback: 'ALL MODELS' }),
+          userName: userNameStr || null,
+          userEmail: userEmailStr || null,
+          apiKeyId: (req as any).apiKeyId || null,
+          endpoint: '/api/ai/predict',
+          exactMatch: true,
+        });
+        
+        return res.json({
+          found: true,
+          exactMatch: { ...matchedVehicle, vehicleImageUrl },
+          isAllModelsFallback: true,
+          yearWarning,
+          makeModelWarning,
+          searchPath: [
+            { source: 'Database (Exact Match)', checked: true, found: false },
+            { source: 'Database (ALL MODELS Fallback)', checked: true, found: true }
+          ]
+        });
+      }
+
       // SMART SWAP DETECTION: Check if make/model might be swapped
       // Detect if make looks like a model number (mostly numeric) and model looks like a brand name
       const makeStr = (make as string).toUpperCase().trim();
