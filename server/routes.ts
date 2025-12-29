@@ -1166,13 +1166,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const yearDiff = yearNum < minYear ? minYear - yearNum : yearNum - maxYear;
         
         if (yearNum < minYear && yearDiff > 5) {
-          yearWarning = `⚠️ This vehicle model was first produced in ${minYear}, but you searched for ${yearNum}. This year is likely incorrect.`;
+          yearWarning = `ℹ️ Our database has records for this model starting from ${minYear}. We'll use the closest available data for your ${yearNum} search.`;
         } else if (yearNum > maxYear && yearDiff > 10) {
           // Only show "last produced" warning for clearly discontinued models
           // (maxYear is more than 10 years before current year AND requested year is 10+ years beyond)
           const yearsDiscontinued = currentYear - maxYear;
           if (yearsDiscontinued > 10) {
-            yearWarning = `⚠️ This vehicle model was last produced in ${maxYear}, but you searched for ${yearNum}. This year might be incorrect.`;
+            yearWarning = `ℹ️ Our database has records for this model up to ${maxYear}. We'll use the closest available data for your ${yearNum} search.`;
           }
         }
       }

@@ -23,8 +23,13 @@ export async function searchVehicleImage(year: number | string, make: string, mo
   }
   
   try {
+    // Determine if this is a commercial truck/heavy vehicle make
+    const truckMakes = ['KENWORTH', 'PETERBILT', 'FREIGHTLINER', 'MACK', 'VOLVO TRUCK', 'INTERNATIONAL', 'WESTERN STAR', 'HINO', 'ISUZU', 'UD TRUCKS', 'NAVISTAR'];
+    const isTruck = truckMakes.some(tm => make.toUpperCase().includes(tm) || tm.includes(make.toUpperCase()));
+    
     // Search for official/press photos, exclude dealer ads
-    const searchQuery = `${year} ${make} ${model} car photo`;
+    const vehicleType = isTruck ? 'truck' : 'car';
+    const searchQuery = `${year} ${make} ${model} ${vehicleType} photo`;
     const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(searchQuery)}&searchType=image&num=10&safe=active&imgSize=large&imgType=photo`;
     
     console.log(`[Image Search] Searching for: ${searchQuery}`);
