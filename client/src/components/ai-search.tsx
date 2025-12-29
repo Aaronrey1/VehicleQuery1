@@ -202,6 +202,7 @@ export default function AISearch() {
                       onFocus={() => setShowMakeSuggestions(true)}
                       onBlur={() => setTimeout(() => setShowMakeSuggestions(false), 200)}
                       className="h-8 text-sm"
+                      autoComplete="off"
                       data-testid="input-ai-make"
                     />
                     {showMakeSuggestions && makeSuggestions.length > 0 && (
@@ -237,6 +238,7 @@ export default function AISearch() {
                     value={year}
                     onChange={(e) => { setYear(e.target.value); setPrediction(null); }}
                     className="h-8 text-sm"
+                    autoComplete="off"
                     data-testid="input-ai-year"
                   />
                 </div>
@@ -259,6 +261,7 @@ export default function AISearch() {
                     onBlur={() => setTimeout(() => setShowModelSuggestions(false), 200)}
                     disabled={!make}
                     className="h-8 text-sm"
+                    autoComplete="off"
                     data-testid="input-ai-model"
                   />
                   {showModelSuggestions && modelSuggestions.length > 0 && (
