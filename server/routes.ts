@@ -2548,7 +2548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const response = await axios.post(
             'https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVINValuesBatch/',
             `DATA=${encodeURIComponent(dataParam)}&format=json`,
-            { timeout: 60000, headers: nhtsaBatchHeaders }
+            { timeout: 120000, headers: nhtsaBatchHeaders }
           );
           const batchResults: any[] = response.data?.Results || [];
           for (const item of batchResults) {
