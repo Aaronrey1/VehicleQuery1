@@ -2502,80 +2502,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Please provide an array of VINs" });
       }
 
-      if (vins.length > 50) {
-        return res.status(400).json({ message: "Maximum 50 VINs per request" });
+      if (vins.length > 100) {
+        return res.status(400).json({ message: "Maximum 100 VINs per request" });
       }
 
       const userNameStr = userName ? String(userName) : undefined;
       const userEmailStr = userEmail ? String(userEmail) : undefined;
 
-      const results = [];
+      // Separate valid and invalid VINs upfront
+      const validVins: string[] = [];
+      const results: any[] = [];
+      const vinResultMap = new Map<string, any>();
 
       for (const vin of vins) {
-        const cleanVin = vin.trim().toUpperCase();
-        
-        // Validate VIN format (10-17 characters, alphanumeric except I, O, Q)
-        // NHTSA can decode incomplete VINs and will return warnings
+        const cleanVin = String(vin).trim().toUpperCase();
         if (!/^[A-HJ-NPR-Z0-9]{10,17}$/.test(cleanVin)) {
           results.push({
             vin: cleanVin,
             success: false,
             error: "Invalid VIN format (must be 10-17 alphanumeric characters)"
           });
+        } else {
+          validVins.push(cleanVin);
+        }
+      }
+
+      // Use NHTSA batch API (up to 50 per call) to decode all valid VINs in parallel batches
+      const BATCH_SIZE = 50;
+      const nhtsaDecodedMap = new Map<string, { make: string; model: string; year: number; nhtsaWarning: string | null }>();
+
+      const batches: string[][] = [];
+      for (let i = 0; i < validVins.length; i += BATCH_SIZE) {
+        batches.push(validVins.slice(i, i + BATCH_SIZE));
+      }
+
+      const nhtsaBatchHeaders = {
+        'User-Agent': 'VehicleDB-Pro/1.0 (Vehicle Database Application)',
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      };
+
+      const decodeBatch = async (batchVins: string[], attempt = 1): Promise<void> => {
+        const dataParam = batchVins.join(';');
+        try {
+          const response = await axios.post(
+            'https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVINValuesBatch/',
+            `DATA=${encodeURIComponent(dataParam)}&format=json`,
+            { timeout: 60000, headers: nhtsaBatchHeaders }
+          );
+          const batchResults: any[] = response.data?.Results || [];
+          for (const item of batchResults) {
+            const vin = item.VIN?.trim().toUpperCase();
+            if (!vin) continue;
+            const make = item.Make?.trim() || null;
+            const model = item.Model?.trim() || null;
+            const yearStr = item.ModelYear?.trim();
+            const year = yearStr ? parseInt(yearStr) : null;
+            const errorText = item.ErrorText?.trim();
+            const nhtsaWarning = errorText && errorText !== "0" && !errorText.startsWith("0 -") ? errorText : null;
+            if (make && model && year) {
+              nhtsaDecodedMap.set(vin, { make, model, year, nhtsaWarning });
+            } else {
+              vinResultMap.set(vin, {
+                vin,
+                success: false,
+                error: "Incomplete vehicle data from NHTSA"
+              });
+            }
+          }
+        } catch (err: any) {
+          if (attempt < 3) {
+            console.log(`NHTSA batch attempt ${attempt} failed: ${err.message}, retrying...`);
+            await new Promise(r => setTimeout(r, 1500 * attempt));
+            return decodeBatch(batchVins, attempt + 1);
+          }
+          // If all retries fail, mark all VINs in this batch as failed
+          console.error(`NHTSA batch failed after ${attempt} attempts:`, err.message);
+          for (const vin of batchVins) {
+            vinResultMap.set(vin, {
+              vin,
+              success: false,
+              error: "NHTSA server is not responding. Please use AI Search to enter the vehicle make, model, and year manually.",
+              suggestManualEntry: true
+            });
+          }
+        }
+      };
+
+      // Run all batches in parallel
+      await Promise.all(batches.map(batch => decodeBatch(batch)));
+
+      // Now process each valid VIN using decoded NHTSA data
+      for (const cleanVin of validVins) {
+        // If already errored (batch failure or incomplete data)
+        if (vinResultMap.has(cleanVin)) {
+          results.push(vinResultMap.get(cleanVin));
           continue;
         }
 
+        const decoded = nhtsaDecodedMap.get(cleanVin);
+        if (!decoded) {
+          results.push({ vin: cleanVin, success: false, error: "VIN not found in NHTSA response" });
+          continue;
+        }
+
+        const { make, model, year, nhtsaWarning } = decoded;
+
         try {
-          // Call NHTSA API to decode VIN with proper headers
-          const nhtsaHeaders = {
-            'User-Agent': 'VehicleDB-Pro/1.0 (Vehicle Database Application)',
-            'Accept': 'application/json',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Cache-Control': 'no-cache',
-          };
-          
-          let nhtsaResponse;
-          try {
-            nhtsaResponse = await axios.get(
-              `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${cleanVin}?format=json`,
-              { timeout: 15000, headers: nhtsaHeaders }
-            );
-          } catch (firstError: any) {
-            // Single quick retry with delay
-            console.log(`NHTSA first attempt failed for ${cleanVin}: ${firstError.message}, retrying...`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            nhtsaResponse = await axios.get(
-              `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVin/${cleanVin}?format=json`,
-              { timeout: 15000, headers: nhtsaHeaders }
-            );
-          }
-
-          const decodedData = nhtsaResponse?.data?.Results;
-          
-          if (!decodedData || !Array.isArray(decodedData)) {
-            results.push({
-              vin: cleanVin,
-              success: false,
-              error: "Failed to decode VIN"
-            });
-            continue;
-          }
-
-          // Extract make, model, year from NHTSA response
-          const makeData = decodedData.find((item: any) => item.Variable === "Make");
-          const modelData = decodedData.find((item: any) => item.Variable === "Model");
-          const yearData = decodedData.find((item: any) => item.Variable === "Model Year");
-          
-          // Extract NHTSA error information (e.g., check digit warnings)
-          const errorText = decodedData.find((item: any) => item.Variable === "Error Text");
-          const nhtsaWarning = errorText?.Value && errorText.Value !== "0" && errorText.Value !== "0 -" 
-            ? errorText.Value.trim() 
-            : null;
-
-          const make = makeData?.Value?.trim();
-          const model = modelData?.Value?.trim();
-          const yearStr = yearData?.Value?.trim();
-          const year = yearStr ? parseInt(yearStr) : null;
 
           if (!make || !model || !year) {
             results.push({

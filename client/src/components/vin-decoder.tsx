@@ -113,98 +113,84 @@ export default function VinDecoder() {
   const [decodeStatus, setDecodeStatus] = useState<string>("");
 
   const decodeMutation = useMutation({
-    mutationFn: async (vins: string[]) => {
-      const allResults: VinResult[] = [];
-      
-      for (let i = 0; i < vins.length; i++) {
-        const vin = vins[i];
-        setDecodeStatus(`Decoding VIN ${i + 1} of ${vins.length}...`);
-        
-        // Step 1: Decode VIN using browser (bypasses server IP block)
+    mutationFn: async ({ vins, isBulk }: { vins: string[]; isBulk: boolean }) => {
+      // Single VIN: use browser-side NHTSA decode + AI predict (cache-friendly, fast)
+      if (!isBulk) {
+        const vin = vins[0];
+        setDecodeStatus(`Decoding VIN...`);
         const nhtsaData = await decodeVinFromBrowser(vin);
-        
         if (!nhtsaData) {
-          allResults.push({
-            vin,
-            success: false,
-            error: `NHTSA is currently under maintenance. Please try again later or use AI Search - enter Make, Model, Year directly.`,
-            manualDecodeUrl: `https://vpic.nhtsa.dot.gov/decoder/?vin=${vin}`
-          });
-          continue;
-        }
-        
-        // Step 2: Get AI prediction from our server
-        setDecodeStatus(`Getting prediction for ${nhtsaData.make} ${nhtsaData.model}...`);
-        
-        try {
-          const payload: any = {
-            make: nhtsaData.make,
-            model: nhtsaData.model,
-            year: nhtsaData.year,
+          setDecodeStatus("");
+          return {
+            results: [{
+              vin,
+              success: false,
+              error: `NHTSA is currently under maintenance. Please try again later or use AI Search - enter Make, Model, Year directly.`,
+              manualDecodeUrl: `https://vpic.nhtsa.dot.gov/decoder/?vin=${vin}`
+            }]
           };
+        }
+        setDecodeStatus(`Getting prediction for ${nhtsaData.make} ${nhtsaData.model}...`);
+        try {
+          const payload: any = { make: nhtsaData.make, model: nhtsaData.model, year: nhtsaData.year };
           if (userName) payload.userName = userName;
           if (userEmail) payload.userEmail = userEmail;
-          
-          console.log('Calling AI prediction for:', payload);
           const response = await apiRequest("POST", "/api/ai/predict", payload);
-          
-          if (!response.ok) {
-            console.error('AI prediction failed with status:', response.status);
-            throw new Error(`AI prediction failed: ${response.status}`);
-          }
-          
+          if (!response.ok) throw new Error(`AI prediction failed: ${response.status}`);
           const prediction = await response.json();
-          console.log('AI prediction response:', prediction);
-          
+          setDecodeStatus("");
           if (prediction.predictions) {
             const isExactMatch = prediction.exactMatch === true || prediction.predictions.source === 'database_exact';
-            allResults.push({
-              vin,
-              success: true,
-              make: nhtsaData.make,
-              model: nhtsaData.model,
-              year: nhtsaData.year,
-              portType: prediction.predictions.portType,
-              deviceType: prediction.predictions.deviceType,
-              confidence: prediction.predictions.portConfidence || 100,
-              source: isExactMatch ? "Database (Exact Match)" : 
-                      prediction.predictions.source === 'gemini_api' ? 'Gemini AI - Pending Approval' : 
-                      prediction.predictions.source === 'database_tier1' ? 'Database (±5 years) - Pending Approval' : 
-                      'AI Prediction',
-              nhtsaWarning: nhtsaData.warning
-            });
-          } else {
-            allResults.push({
-              vin,
-              success: true,
-              make: nhtsaData.make,
-              model: nhtsaData.model,
-              year: nhtsaData.year,
-              portType: "Unknown",
-              deviceType: "Unknown",
-              confidence: 0,
-              source: "No prediction available",
-              nhtsaWarning: nhtsaData.warning
-            });
+            return {
+              results: [{
+                vin,
+                success: true,
+                make: nhtsaData.make,
+                model: nhtsaData.model,
+                year: nhtsaData.year,
+                portType: prediction.predictions.portType,
+                deviceType: prediction.predictions.deviceType,
+                confidence: prediction.predictions.portConfidence || 100,
+                source: isExactMatch ? "Database (Exact Match)" :
+                        prediction.predictions.source === 'gemini_api' ? 'Gemini AI - Pending Approval' :
+                        prediction.predictions.source === 'database_tier1' ? 'Database (±5 years) - Pending Approval' :
+                        'AI Prediction',
+                nhtsaWarning: nhtsaData.warning
+              }]
+            };
           }
-        } catch (predError) {
-          allResults.push({
-            vin,
-            success: true,
-            make: nhtsaData.make,
-            model: nhtsaData.model,
-            year: nhtsaData.year,
-            portType: "Unknown",
-            deviceType: "Unknown",
-            confidence: 0,
-            source: "Prediction failed",
-            nhtsaWarning: nhtsaData.warning
-          });
+          return {
+            results: [{
+              vin, success: true, make: nhtsaData.make, model: nhtsaData.model, year: nhtsaData.year,
+              portType: "Unknown", deviceType: "Unknown", confidence: 0, source: "No prediction available",
+              nhtsaWarning: nhtsaData.warning
+            }]
+          };
+        } catch {
+          setDecodeStatus("");
+          return {
+            results: [{
+              vin, success: true, make: nhtsaData.make, model: nhtsaData.model, year: nhtsaData.year,
+              portType: "Unknown", deviceType: "Unknown", confidence: 0, source: "Prediction failed",
+              nhtsaWarning: nhtsaData.warning
+            }]
+          };
         }
       }
-      
+
+      // Bulk VINs: use backend batch endpoint (NHTSA batch API + AI prediction, all server-side)
+      setDecodeStatus(`Submitting ${vins.length} VINs for batch decoding...`);
+      const payload: any = { vins };
+      if (userName) payload.userName = userName;
+      if (userEmail) payload.userEmail = userEmail;
+      const response = await apiRequest("POST", "/api/vin/decode", payload);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || `Batch decode failed: ${response.status}`);
+      }
+      const data = await response.json();
       setDecodeStatus("");
-      return { results: allResults };
+      return { results: data.results as VinResult[] };
     },
     onSuccess: (data) => {
       setResults(data.results);
@@ -215,7 +201,7 @@ export default function VinDecoder() {
     if (!singleVin.trim()) return;
     const cleanVin = singleVin.trim().toUpperCase();
     setResults([]);
-    decodeMutation.mutate([cleanVin]);
+    decodeMutation.mutate({ vins: [cleanVin], isBulk: false });
   };
 
   const handleBulkDecode = () => {
@@ -227,7 +213,7 @@ export default function VinDecoder() {
     
     if (vins.length === 0) return;
     setResults([]);
-    decodeMutation.mutate(vins);
+    decodeMutation.mutate({ vins, isBulk: true });
   };
 
   const getConfidenceColor = (confidence?: number) => {
@@ -284,7 +270,7 @@ export default function VinDecoder() {
 
               <TabsContent value="bulk" className="space-y-2 mt-3">
                 <div className="space-y-1">
-                  <Label htmlFor="bulk-vins" className="text-xs">VINs (one per line)</Label>
+                  <Label htmlFor="bulk-vins" className="text-xs">VINs (one per line, up to 100)</Label>
                   <Textarea
                     id="bulk-vins"
                     placeholder="1HGBH41JXMN109186&#10;5UXWX7C5XBA123456"
@@ -294,6 +280,9 @@ export default function VinDecoder() {
                     className="font-mono text-xs"
                     data-testid="input-bulk-vins"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    {bulkVins.trim() ? `${bulkVins.split('\n').filter(v => v.trim().length > 0).length} VIN(s) entered` : "Paste VINs, one per line"}
+                  </p>
                 </div>
               </TabsContent>
             </Tabs>
