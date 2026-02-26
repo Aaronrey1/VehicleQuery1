@@ -250,7 +250,7 @@ export default function ApiDocs() {
             <div>
               <h3 className="font-medium mb-2">Base URL</h3>
               <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-                <code>{window.location.origin}</code>
+                <code>{typeof window !== 'undefined' ? window.location.origin : ''}</code>
               </pre>
             </div>
           </CardContent>
@@ -315,7 +315,7 @@ export default function ApiDocs() {
                 <div>
                   <h3 className="font-medium mb-2">Example Request</h3>
                   <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-                    <code>{`curl -X GET '${window.location.origin}/api/ai/predict?make=FORD&model=F150&year=2020&userName=John%20Doe&userEmail=john@example.com' \\
+                    <code>{`curl -X GET '${typeof window !== 'undefined' ? window.location.origin : ''}/api/ai/predict?make=FORD&model=F150&year=2020&userName=John%20Doe&userEmail=john@example.com' \\
   -H 'X-API-Key: vdb_abc123_your-secret-key-here'`}</code>
                   </pre>
                 </div>
@@ -490,7 +490,7 @@ export default function ApiDocs() {
                 <div>
                   <h3 className="font-medium mb-2">Example Request</h3>
                   <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-                    <code>{`curl -X POST '${window.location.origin}/api/vin/decode' \\
+                    <code>{`curl -X POST '${typeof window !== 'undefined' ? window.location.origin : ''}/api/vin/decode' \\
   -H 'Content-Type: application/json' \\
   -H 'X-API-Key: vdb_abc123_your-secret-key-here' \\
   -d '{

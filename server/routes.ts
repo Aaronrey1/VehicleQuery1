@@ -2560,6 +2560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const year = yearStr ? parseInt(yearStr) : null;
             const errorText = item.ErrorText?.trim();
             const nhtsaWarning = errorText && errorText !== "0" && !errorText.startsWith("0 -") ? errorText : null;
+            
             if (make && model && year) {
               nhtsaDecodedMap.set(vin, { make, model, year, nhtsaWarning });
             } else {
