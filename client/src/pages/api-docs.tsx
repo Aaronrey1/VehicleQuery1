@@ -600,8 +600,7 @@ export default function ApiDocs() {
                     </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
+              </CardContent>
             </Card>
           </TabsContent>
 
