@@ -263,6 +263,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ isAuthenticated: req.session?.isAuthenticated || false });
   });
 
+  // Health check endpoint for deployment monitoring
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   // Logout endpoint
   app.post("/api/auth/logout", async (req, res) => {
     req.session.destroy((err) => {
