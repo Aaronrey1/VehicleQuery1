@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, Loader2, CheckCircle, XCircle, Hash, Mail, User, Sparkles } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import VehicleFeaturesDisplay from "./vehicle-features-display";
 
 interface VinResult {
@@ -104,6 +105,7 @@ async function decodeVinFromBrowser(vin: string): Promise<{ make: string; model:
 }
 
 export default function VinDecoder() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"single" | "bulk">("single");
   const [singleVin, setSingleVin] = useState("");
   const [bulkVins, setBulkVins] = useState("");
@@ -212,6 +214,14 @@ export default function VinDecoder() {
       .filter(v => v.length > 0);
     
     if (vins.length === 0) return;
+    if (vins.length > 100) {
+      toast({
+        title: "Limit Exceeded",
+        description: "Please enter a maximum of 100 VINs at a time.",
+        variant: "destructive"
+      });
+      return;
+    }
     setResults([]);
     decodeMutation.mutate({ vins, isBulk: true });
   };
@@ -281,7 +291,7 @@ export default function VinDecoder() {
                     data-testid="input-bulk-vins"
                   />
                   <p className="text-xs text-muted-foreground">
-                    {bulkVins.trim() ? `${bulkVins.split('\n').filter(v => v.trim().length > 0).length} VIN(s) entered` : "Paste VINs, one per line"}
+                    {bulkVins.trim() ? `${bulkVins.split('\n').filter(v => v.trim().length > 0).length} VIN(s) entered` : "Paste VINs, one per line (max 100)"}
                   </p>
                 </div>
               </TabsContent>

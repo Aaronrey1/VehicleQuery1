@@ -124,21 +124,13 @@ export default function ApiDocs() {
     yPos += 3;
 
     addSubtitle("Request Body:");
-    addText("• vins (required): Array of VINs (max 50)", 10);
+    addText("• vins (required): Array of VINs (max 100)", 10);
     addText("• userName (optional): User name for notifications", 10);
     addText("• userEmail (optional): User email for notifications", 10);
     yPos += 3;
 
     addSubtitle("Example Request:");
-    addCode(`POST ${baseUrl}/api/vin/decode
-X-API-Key: vdb_abc123_your-secret-key-here
-Content-Type: application/json
-
-{
-  "vins": ["1FTFW1E84MFA12345"],
-  "userName": "John Doe",
-  "userEmail": "john@example.com"
-}`);
+    addCode(`POST ${baseUrl}/api/vin/decode\nX-API-Key: vdb_abc123_your-secret-key-here\nContent-Type: application/json\n\n{\n  "vins": ["1FTFW1E84MFA12345"],\n  "userName": "John Doe",\n  "userEmail": "john@example.com"\n}`);
     yPos += 3;
 
     addSubtitle("Example Response:");
@@ -157,90 +149,6 @@ Content-Type: application/json
 }`);
     yPos += 5;
 
-    // 3. Vehicle Search Endpoint
-    addTitle("3. Vehicle Search");
-    addSubtitle("Endpoint: GET /api/vehicles/search");
-    addText("Search vehicle database with flexible filtering.", 10);
-    yPos += 3;
-
-    addSubtitle("Query Parameters (all optional):");
-    addText("• make, model, year, portType, deviceType", 10);
-    addText("• page (default: 1), limit (default: 50)", 10);
-    addText("• sortBy (default: make), sortOrder (asc/desc)", 10);
-    yPos += 3;
-
-    addSubtitle("Example Request:");
-    addCode(`GET ${baseUrl}/api/vehicles/search?make=FORD&year=2020
-X-API-Key: vdb_abc123_your-secret-key-here`);
-    yPos += 3;
-
-    addSubtitle("Example Response:");
-    addCode(`{
-  "vehicles": [{
-    "id": 1,
-    "make": "FORD",
-    "model": "F-150",
-    "year": 2020,
-    "deviceType": "STANDARD",
-    "portType": "OBD2"
-  }],
-  "total": 2
-}`);
-    yPos += 5;
-
-    // 4. Bulk Search Endpoint
-    addTitle("4. Bulk Search");
-    addSubtitle("Endpoint: POST /api/vehicles/bulk-search");
-    addText("Search multiple vehicles in a single request.", 10);
-    yPos += 3;
-
-    addSubtitle("Request Body:");
-    addText("• queries (required): Array of {make, model, year}", 10);
-    addText("• oneToOne (optional): Return only first match per query", 10);
-    yPos += 3;
-
-    addSubtitle("Example Request:");
-    addCode(`POST ${baseUrl}/api/vehicles/bulk-search
-X-API-Key: vdb_abc123_your-secret-key-here
-Content-Type: application/json
-
-{
-  "queries": [
-    {"make": "FORD", "model": "F150", "year": 2020},
-    {"make": "TOYOTA", "model": "CAMRY", "year": 2019}
-  ]
-}`);
-    yPos += 5;
-
-    // 5. Geometris Endpoint
-    addTitle("5. Geometris (Harness Search)");
-    addSubtitle("Endpoint: GET /api/harnesses/search");
-    addText("Search for vehicle harness types.", 10);
-    yPos += 3;
-
-    addSubtitle("Query Parameters (all optional):");
-    addText("• make, model, year, page, limit", 10);
-    yPos += 3;
-
-    addSubtitle("Example Request:");
-    addCode(`GET ${baseUrl}/api/harnesses/search?make=FORD&model=F-150&year=2020
-X-API-Key: vdb_abc123_your-secret-key-here`);
-    yPos += 3;
-
-    addSubtitle("Example Response:");
-    addCode(`{
-  "harnesses": [{
-    "id": 42,
-    "make": "FORD",
-    "model": "F-150",
-    "yearFrom": 2015,
-    "yearTo": 2020,
-    "harnessType": "FORD-2015-UP"
-  }],
-  "total": 2
-}`);
-    yPos += 5;
-
     // Error Responses
     addTitle("Error Responses");
     addText("All endpoints return standard error responses:", 10);
@@ -250,10 +158,19 @@ X-API-Key: vdb_abc123_your-secret-key-here`);
 }`);
     yPos += 3;
 
-    addText("Common HTTP Status Codes:", 10);
-    addText("• 400: Bad Request (invalid parameters)", 10);
+    addSubtitle("Common HTTP Status Codes:");
+    addText("• 400: Bad Request (invalid parameters, limit exceeded)", 10);
     addText("• 401: Unauthorized (missing/invalid API key)", 10);
-    addText("• 500: Internal Server Error", 10);
+    addText("• 404: Not Found (resource does not exist)", 10);
+    addText("• 429: Too Many Requests (rate limiting)", 10);
+    addText("• 500: Internal Server Error (API or service unavailable)", 10);
+    addText("• 503: Service Unavailable (NHTSA down)", 10);
+    yPos += 5;
+
+    addSubtitle("Specific Error Messages:");
+    addText("• \"Maximum 100 VINs per request\"", 10);
+    addText("• \"NHTSA server is not responding. Please try again.\"", 10);
+    addText("• \"Invalid VIN format (must be 10-17 alphanumeric characters)\"", 10);
     yPos += 5;
 
     // Salesforce Integration
@@ -512,28 +429,63 @@ X-API-Key: vdb_abc123_your-secret-key-here`);
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div>
-                  <h3 className="font-medium mb-2">Endpoint</h3>
-                  <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-                    <code>POST /api/vin/decode</code>
-                  </pre>
-                </div>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-medium mb-2">Endpoint</h3>
+                    <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+                      <code>POST /api/vin/decode</code>
+                    </pre>
+                  </div>
 
-                <div>
-                  <h3 className="font-medium mb-2">Request Body</h3>
-                  <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-                    <code>{`{
+                  <div>
+                    <h3 className="font-medium mb-2">Request Body</h3>
+                    <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+                      <code>{`{
   "vins": ["1FTFW1E84MFA12345", "5FNRL6H76KB123456"],
   "userName": "John Doe",
   "userEmail": "john@example.com"
 }`}</code>
-                  </pre>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Note: <code className="bg-muted px-1 py-0.5 rounded">userName</code> and <code className="bg-muted px-1 py-0.5 rounded">userEmail</code> are optional. Supports 1-50 VINs per request. VINs must be 10-17 alphanumeric characters.
-                  </p>
-                </div>
+                    </pre>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Note: <code className="bg-muted px-1 py-0.5 rounded">userName</code> and <code className="bg-muted px-1 py-0.5 rounded">userEmail</code> are optional. Supports 1-100 VINs per request. VINs must be 10-17 alphanumeric characters.
+                    </p>
+                  </div>
 
-                <Separator />
+                  <Separator />
+
+                  <div>
+                    <h3 className="font-medium mb-2">Error Responses</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm font-medium text-destructive mb-1">400 Bad Request (Limit Exceeded)</p>
+                        <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+                          <code>{`{ "message": "Maximum 100 VINs per request" }`}</code>
+                        </pre>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-destructive mb-1">400 Bad Request (Invalid Format)</p>
+                        <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+                          <code>{`{
+  "results": [
+    {
+      "vin": "INVALID123",
+      "success": false,
+      "error": "Invalid VIN format (must be 10-17 alphanumeric characters)"
+    }
+  ]
+}`}</code>
+                        </pre>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-destructive mb-1">503 Service Unavailable (NHTSA Down)</p>
+                        <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+                          <code>{`{ "message": "NHTSA server is not responding. Please try again." }`}</code>
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
 
                 <div>
                   <h3 className="font-medium mb-2">Example Request</h3>
@@ -648,7 +600,8 @@ X-API-Key: vdb_abc123_your-secret-key-here`);
                     </div>
                   </div>
                 </div>
-              </CardContent>
+              </div>
+            </CardContent>
             </Card>
           </TabsContent>
 
