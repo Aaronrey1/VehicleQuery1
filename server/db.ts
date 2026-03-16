@@ -13,7 +13,7 @@ if (!process.env.DATABASE_URL) {
 
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 30000,
   idleTimeoutMillis: 30000,
   max: 10
 });
@@ -24,6 +24,36 @@ pool.on('error', (err) => {
 });
 
 export const db = drizzle({ client: pool, schema });
+
+// Retry wrapper for database operations that may fail due to Neon endpoint suspension
+export async function withDbRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries = 3,
+  delayMs = 2000
+): Promise<T> {
+  let lastError: any;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (err: any) {
+      lastError = err;
+      const msg = err?.message || '';
+      const isNeonSuspended =
+        msg.includes('endpoint has been disabled') ||
+        msg.includes('endpoint is disabled') ||
+        msg.includes('Control plane request failed') ||
+        msg.includes('connection timeout');
+
+      if (isNeonSuspended && attempt < maxRetries) {
+        console.warn(`Database endpoint sleeping, retrying in ${delayMs}ms (attempt ${attempt}/${maxRetries})...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs * attempt));
+      } else {
+        throw err;
+      }
+    }
+  }
+  throw lastError;
+}
 
 // Ensure vehicle_features table exists (for production database sync)
 export async function ensureVehicleFeaturesTable() {

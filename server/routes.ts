@@ -12,6 +12,7 @@ import { predictVehicleSpecs, checkIfHeavyVehicle as geminiCheckHeavyVehicle, pr
 import { getVehicleImageAsync } from "./images";
 import { sendApprovalEmail } from "./email";
 import { getClientIp, getClientCountry } from "./geolocation";
+import { withDbRetry } from "./db";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -207,7 +208,7 @@ async function validateApiKey(req: any, res: any, next: any) {
     
     // If API key is provided, validate it
     if (apiKey && typeof apiKey === 'string') {
-      const keyRecord = await storage.validateApiKey(apiKey);
+      const keyRecord = await withDbRetry(() => storage.validateApiKey(apiKey));
       
       if (!keyRecord) {
         return res.status(401).json({ message: "Invalid or revoked API key" });
